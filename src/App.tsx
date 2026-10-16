@@ -16,7 +16,7 @@ export type Ctx = {
 type Tab = 'day' | 'reports' | 'foods' | 'settings';
 const TABS: [Tab, string, string][] = [['day', 'יומן', '📖'], ['reports', 'דוחות', '📊'], ['foods', 'מזונות', '🥗'], ['settings', 'הגדרות', '⚙️']];
 
-export default function App() {
+export default function App({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>('day');
   const [date, setDate] = useState(today);
   const [foods, setFoods] = useState<Food[]>([]);
@@ -39,7 +39,13 @@ export default function App() {
       else if (Date.now() - hiddenAt > 30 * 60000) setDate(today());
     };
     document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    // A save that fails (offline, session gone) rejects; show it rather than losing it silently.
+    const onReject = (e: PromiseRejectionEvent) => setStatus('שגיאה: ' + (e.reason?.message ?? e.reason) + ' · לחץ לטעינה מחדש');
+    window.addEventListener('unhandledrejection', onReject);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('unhandledrejection', onReject);
+    };
   }, []);
 
   const ctx: Ctx = { foods, setFoods, meals, setMeals, profile, setProfile };
@@ -56,7 +62,7 @@ export default function App() {
         {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} />}
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
         {tab === 'foods' && <Foods ctx={ctx} />}
-        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} />}
+        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} />}
       </main>
     </div>
   );

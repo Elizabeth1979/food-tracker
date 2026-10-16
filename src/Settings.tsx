@@ -1,11 +1,11 @@
 import { useState, type ChangeEvent } from 'react';
 import type { Ctx } from './App';
-import { client, today } from './lib';
-import { exportAll, restoreAll } from './db';
+import { client, loadMoh, today } from './lib';
+import { exportAll, restoreAll, supabase } from './db';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
 
-export default function Settings({ ctx }: { ctx: Ctx }) {
+export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   const p = ctx.profile;
   const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(GOALS.map(([k]) => [k, String(p?.[k] ?? '')])));
   const [msg, setMsg] = useState('');
@@ -29,7 +29,7 @@ export default function Settings({ ctx }: { ctx: Ctx }) {
     e.target.value = ''; // allow picking the same file again
     if (!file || !confirm('השחזור יחליף את כל הנתונים באפליקציה בתוכן הגיבוי. להמשיך?')) return;
     try {
-      await restoreAll(JSON.parse(await file.text()));
+      await restoreAll(JSON.parse(await file.text()), await loadMoh());
       location.reload();
     } catch (err: any) { setMsg('השחזור נכשל: ' + err.message); }
   };
@@ -46,12 +46,17 @@ export default function Settings({ ctx }: { ctx: Ctx }) {
       </section>
       <section className="card pad form">
         <h3>גיבוי</h3>
-        <p className="muted small">הנתונים נשמרים רק בדפדפן הזה, במכשיר הזה. ניקוי נתוני האתר או החלפת מכשיר ימחקו אותם, אז כדאי להוריד גיבוי באופן קבוע.</p>
+        <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>
         <button className="btn primary" onClick={download}>הורדת גיבוי</button>
         <label className="btn">
           <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
           שחזור מגיבוי
         </label>
+      </section>
+      <section className="card pad form">
+        <h3>חשבון</h3>
+        <p className="muted small">מחובר בתור <b dir="ltr">{email}</b></p>
+        <button className="btn" onClick={() => supabase.auth.signOut()}>יציאה</button>
       </section>
       <div role="status">{msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}</div>
     </div>

@@ -57,7 +57,7 @@ export default function Foods({ ctx }: { ctx: Ctx }) {
   const saved = (f: Food) => { ctx.setFoods(edit?.id ? ctx.foods.map((x) => (x.id === f.id ? f : x)) : [...ctx.foods, f]); setEdit(null); };
   const hide = async (f: Food) => {
     if (!confirm(`להסיר את "${f.name}" מהרשימה?`)) return;
-    await client.models.Food.update({ id: f.id, hidden: true });
+    await client.models.Food.update({ ...f, hidden: true }); // whole food: a MoH food has no row of its own yet
     ctx.setFoods(ctx.foods.map((x) => (x.id === f.id ? { ...x, hidden: true } : x)));
   };
   const delMeal = async (id: string) => {

@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "idb-keyval": "^6.3.0",
+    "@supabase/supabase-js": "2.117.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

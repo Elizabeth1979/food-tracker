@@ -1,4 +1,4 @@
-import { client, type Food } from './db';
+import { client, listEntries, type Food } from './db';
 
 export { client };
 export type { Food, Entry, SavedMeal, Profile } from './db';
@@ -73,7 +73,7 @@ export const amountLabel = (e: { grams: number; qty?: number | null; unit?: stri
 // The MoH (Tzameret) database is read from /foods/moh.json at runtime and never copied into the DB.
 // Local Food rows override MoH rows with the same id (edits, `hidden`); other local rows are the user's own foods.
 let moh: Promise<Food[]> | undefined;
-const loadMoh = (): Promise<Food[]> =>
+export const loadMoh = (): Promise<Food[]> =>
   (moh ??= fetch('/foods/moh.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`moh.json ${r.status}`)))).catch((e) => { moh = undefined; console.error(e); return []; }));
 
 export async function loadFoods(): Promise<Food[]> {
@@ -84,8 +84,7 @@ export async function loadFoods(): Promise<Food[]> {
   return [...merged, ...local.filter((f) => !ids.has(f.id) && f.name)];
 }
 export const loadSavedMeals = async () => (await client.models.SavedMeal.list()).data;
-export const loadEntries = async (from: string, to: string) =>
-  (await client.models.Entry.list()).data.filter((e) => e.date >= from && e.date <= to);
+export const loadEntries = listEntries;
 
 export const addEntries = (date: string, meal: MealKey, items: Item[]) =>
   Promise.all(items.map((it) => client.models.Entry.create({ ...it, date, meal }).then((r) => r.data)));
