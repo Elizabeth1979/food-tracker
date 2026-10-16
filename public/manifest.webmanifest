@@ -1,0 +1,24 @@
+{
+  "name": "יומן תזונה",
+  "short_name": "תזונה",
+  "id": "/",
+  "dir": "rtl",
+  "lang": "he",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10141b",
+  "theme_color": "#10141b",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "הוסף לארוחת בוקר", "short_name": "בוקר", "url": "/?add=breakfast", "icons": [{ "src": "/icons/sc-breakfast.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "הוסף לארוחת צהריים", "short_name": "צהריים", "url": "/?add=lunch", "icons": [{ "src": "/icons/sc-lunch.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "הוסף לארוחת ערב", "short_name": "ערב", "url": "/?add=dinner", "icons": [{ "src": "/icons/sc-dinner.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "הוסף ארוחה שמורה", "short_name": "ארוחה שמורה", "url": "/?add=saved", "icons": [{ "src": "/icons/sc-saved.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

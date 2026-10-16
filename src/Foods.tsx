@@ -1,0 +1,104 @@
+import { useMemo, useState } from 'react';
+import type { Ctx } from './App';
+import { client, json, searchFoods, sum, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { FoodSummary, Modal } from './ui';
+import { MealEditor } from './MealEditor';
+
+const FIELDS = [
+  ['kcal', 'קלוריות', true], ['carbs', 'פחמימות (ג׳)', true], ['fat', 'שומן (ג׳)', true], ['protein', 'חלבון (ג׳)', true],
+  ['sodium', 'נתרן (מ״ג)', false], ['calcium', 'סידן (מ״ג)', false], ['potassium', 'אשלגן (מ״ג)', false], ['b12', 'B12 (מק״ג)', false],
+] as const;
+
+export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: Food) => void }) {
+  const [v, setV] = useState<Record<string, string>>(() =>
+    Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
+  const [units, setUnits] = useState<Unit[]>(() => json<Unit[]>(init.units, []));
+  const [err, setErr] = useState('');
+  const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
+  const save = async () => {
+    if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
+    const input = {
+      name: v.name.trim(), servingG: num('servingG') || 100, source: 'user', // app edits win over the shipped food files
+      kcal: num('kcal')!, carbs: num('carbs')!, fat: num('fat')!, protein: num('protein')!, sodium: num('sodium'), calcium: num('calcium'), potassium: num('potassium'), b12: num('b12'),
+      units: JSON.stringify(units.filter((u) => u.n && u.g > 0)),
+    };
+    const { data, errors } = init.id ? await client.models.Food.update({ id: init.id, ...input }) : await client.models.Food.create(input);
+    if (errors) return setErr(errors[0].message);
+    onSaved(data!);
+  };
+  const inp = (k: string, label: string) => (
+    <label key={k}><span>{label}</span><input type={k === 'name' ? 'text' : 'number'} inputMode={k === 'name' ? 'text' : 'decimal'} step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></label>
+  );
+  return (
+    <div className="form">
+      {inp('name', 'שם')}
+      {inp('servingG', 'הערכים הם עבור (גרם)')}
+      <div className="grid2">{FIELDS.map(([k, l]) => inp(k, l))}</div>
+      <h4>יחידות (אופציונלי)</h4>
+      {units.map((u, i) => (
+        <div key={i} className="amount-row">
+          <input placeholder="שם יחידה, למשל ״פרוסה״" value={u.n} onChange={(e) => setUnits(units.map((x, j) => (j === i ? { ...x, n: e.target.value } : x)))} />
+          <input type="number" inputMode="decimal" placeholder="גרם" value={u.g || ''} onChange={(e) => setUnits(units.map((x, j) => (j === i ? { ...x, g: Number(e.target.value) } : x)))} />
+          <button className="icon" onClick={() => setUnits(units.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+      <button className="link" onClick={() => setUnits([...units, { n: '', g: 0 }])}>＋ הוסף יחידה</button>
+      {err && <p className="error">{err}</p>}
+      <button className="btn primary" onClick={save}>שמור</button>
+    </div>
+  );
+}
+
+export default function Foods({ ctx }: { ctx: Ctx }) {
+  const [q, setQ] = useState('');
+  const [edit, setEdit] = useState<Partial<Food> | null>(null);
+  const [mealEdit, setMealEdit] = useState<SavedMeal | 'new' | null>(null);
+  const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, []) : ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden)), [ctx.foods, q]);
+  const saved = (f: Food) => { ctx.setFoods(edit?.id ? ctx.foods.map((x) => (x.id === f.id ? f : x)) : [...ctx.foods, f]); setEdit(null); };
+  const hide = async (f: Food) => {
+    if (!confirm(`להסיר את "${f.name}" מהרשימה?`)) return;
+    await client.models.Food.update({ id: f.id, hidden: true });
+    ctx.setFoods(ctx.foods.map((x) => (x.id === f.id ? { ...x, hidden: true } : x)));
+  };
+  const delMeal = async (id: string) => {
+    if (!confirm('למחוק את הארוחה השמורה?')) return;
+    await client.models.SavedMeal.delete({ id });
+    ctx.setMeals(ctx.meals.filter((m) => m.id !== id));
+  };
+  return (
+    <div className="stack">
+      <section className="card pad">
+        <div className="amount-row"><h3 className="grow">ארוחות שמורות</h3><button className="btn primary small" onClick={() => setMealEdit('new')}>＋ חדשה</button></div>
+        {!ctx.meals.length && <p className="muted">צור ארוחה כאן, או שמור ארוחה מהיומן עם ״☆ שמור כארוחה״.</p>}
+        {ctx.meals.map((m) => {
+          const items = json<Item[]>(m.items, []);
+          return (
+            <div key={m.id} className="row static">
+              <div className="grow"><div>{m.name}</div><small className="muted">{items.map((i) => i.name).join(' · ')}</small></div>
+              <b>{sum(items).kcal}</b><button className="icon" onClick={() => setMealEdit(m)}>✎</button><button className="icon" onClick={() => delMeal(m.id)}>🗑</button>
+            </div>
+          );
+        })}
+      </section>
+      <section className="card pad">
+        <h3>מאגר מזונות <small className="muted">({ctx.foods.filter((f) => !f.hidden).length})</small></h3>
+        <div className="amount-row">
+          <input className="search" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="btn primary" onClick={() => setEdit({ name: q })}>＋ חדש</button>
+        </div>
+        {!q && <div className="muted small">המזונות שהוספת (חפש כדי לראות גם את מאגר משרד הבריאות)</div>}
+        <div className="list">
+          {hits.map((f) => (
+            <div key={f.id} className="row static">
+              <div className="grow"><div>{f.name}</div><FoodSummary f={f} kcal /></div>
+              <button className="icon" onClick={() => setEdit(f)}>✎</button>
+              <button className="icon" onClick={() => hide(f)}>🗑</button>
+            </div>
+          ))}
+        </div>
+      </section>
+      {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
+      {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
+    </div>
+  );
+}
