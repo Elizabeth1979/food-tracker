@@ -1,0 +1,7 @@
+{
+  // Type-checks the tests, which run in plain Node, so Node's types are added. Used by `npm test`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node", "vite/client"], "allowImportingTsExtensions": true },
+  "include": ["src/**/*.test.ts"],
+  "exclude": []
+}
