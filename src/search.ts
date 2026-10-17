@@ -14,8 +14,11 @@ export const isFFQ = (f: { name: string }) => f.name.startsWith('FFQ');
 // Forms people rarely mean unless they type the word: "ענבים" should find grapes before grape juice or grape-seed oil,
 // and "ביצה" a hen's egg before a turkey's.
 const PROCESSED = ['מיץ', 'שמן', 'סירופ', 'בסירופ', 'משומר', 'משומרים', 'משקה', 'אבקה', 'אבקת', 'ממרח', 'חטיף', 'עוגיות', 'מחית', 'רוטב', 'תרכיז',
-  'מיובש', 'מיובשת', 'מיובשים', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
-const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות', 'גמלים', 'כבשים', 'עזים', 'אווז', 'ברווז', 'שליו'];
+  'מיובש', 'מיובשת', 'מיובשים', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
+const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות', 'גמלים', 'כבשים', 'עזים', 'אווז', 'ברווז', 'שליו',
+  // organs, odd cuts and fast food: "עוף" means the meat, not its liver, feet or a McDonald's item
+  'לב', 'לבבות', 'כבד', 'טחול', 'קורקבן', 'קורקבנים', 'כליות', 'לשון', 'מוח', 'קיבה', 'גב', 'צוואר', 'עצמות', 'רגליים',
+  'מקדונלדס'];
 const FRESH = ['טרי', 'טריה', 'טריים', 'טריות', 'רגיל'];
 // "ביצים" should find "ביצה", "עגבניות" "עגבניה": also accept a rough singular of Hebrew plurals.
 const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, w.slice(0, -2)] : w.endsWith('ות') ? [w, w.slice(0, -2) + 'ה', w.slice(0, -2)] : [w]);
@@ -27,7 +30,9 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
   const has = (text: string, phrase: string) => ` ${text} `.includes(` ${phrase} `);
   const rank = (f: Food) => {
     const name = norm(f.name);
-    const first = norm(f.name.split(',')[0]);
+    // "בשר עוף, חזה…" is chicken: a leading "בשר" (meat of) doesn't count, unless it was typed.
+    const head = norm(f.name.split(',')[0]);
+    const first = words[0] === 'בשר' ? head : head.replace(/^בשר /, '');
     const firstWord = first.split(' ')[0];
     const r = recent.indexOf(f.id);
     let s = r >= 0 ? r - 1000 : 0;

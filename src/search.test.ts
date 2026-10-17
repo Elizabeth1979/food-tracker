@@ -21,6 +21,13 @@ test('plain foods come before processed ones', () => {
   assert.match(first('אננס מיובש'), /מיובש/);
 });
 
+test('a meat finds the meat, not a dish, an organ or its fat', () => {
+  assert.match(first('עוף'), /^בשר עוף,/); // was "פאי עוף", then "שומן עוף"
+  assert.match(first('בקר'), /^בשר בקר,/);
+  assert.match(first('חזה עוף'), /^בשר עוף, חזה, ללא עצם, מבושל/); // not stuffed or in sauce
+  assert.match(first('כבד עוף'), /כבד/); // typed, so found
+});
+
 test('a Hebrew plural finds the singular', () => {
   assert.match(first('ביצים'), /^ביצה/);
   assert.match(first('עגבניות'), /^עגבניה/);
