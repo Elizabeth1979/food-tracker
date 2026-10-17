@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { client, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
+import { addDays, client, hasPending, loadEntries, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
 import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
@@ -26,6 +26,7 @@ export default function App({ email }: { email: string }) {
   const [meals, setMeals] = useState<SavedMeal[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('');
+  const [waiting, setWaiting] = useState(hasPending);
 
   useEffect(() => {
     // Each piece shows as soon as it's ready; the 1.6 MB food file doesn't hold up goals or meals.
@@ -38,8 +39,13 @@ export default function App({ email }: { email: string }) {
     // Changes made offline go out on start, when the connection is back, and when the app comes back to the front.
     // A refused one rejects, so it shows in the banner below.
     const sync = () => void syncPending();
-    sync();
-    window.addEventListener('online', sync);
+    const onPending = () => setWaiting(hasPending());
+    // Keeps the past week on the device too, so those days open offline even if they weren't viewed.
+    const keepWeek = () => void loadEntries(addDays(today(), -6), today()).catch(() => {});
+    const onOnline = () => { sync(); keepWeek(); };
+    onOnline();
+    window.addEventListener('online', onOnline);
+    window.addEventListener('pending-changed', onPending);
     // reopening the app after a while always lands on today
     let hiddenAt = Date.now();
     const onVis = () => {
@@ -52,7 +58,8 @@ export default function App({ email }: { email: string }) {
     const onReject = (e: PromiseRejectionEvent) => setStatus('שגיאה: ' + (e.reason?.message ?? e.reason) + ' · לחץ לטעינה מחדש');
     window.addEventListener('unhandledrejection', onReject);
     return () => {
-      window.removeEventListener('online', sync);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('pending-changed', onPending);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('unhandledrejection', onReject);
     };
@@ -77,6 +84,7 @@ export default function App({ email }: { email: string }) {
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><span>{icon}</span>{label}</button>
         ))}
       </nav>
+      {waiting && <div role="status" className="banner pending">⏳ יש שינויים שממתינים לשליחה · יישלחו כשיחזור החיבור</div>}
       {status && <div role="alert"><button className="banner" onClick={() => location.reload()}>{status}</button></div>}
       <main>
         {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} />}

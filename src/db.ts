@@ -64,6 +64,9 @@ export const setOfflineUser = (id: string) => { uid = id; };
 const kept = <T,>(k: string, d: T) => store.get<T>(`offline:${uid}:${k}`, d);
 const keep = (k: string, v: unknown) => store.set(`offline:${uid}:${k}`, v);
 const pending = () => kept<Op[]>('pending', []);
+// The app shows a "waiting to send" line while anything is queued; it listens for this event.
+const setPending = (ops: Op[]) => { keep('pending', ops); window.dispatchEvent(new Event('pending-changed')); };
+export const hasPending = () => pending().length > 0;
 
 class Offline extends Error { constructor() { super('אין חיבור לאינטרנט'); } }
 // Status 0: the request got no answer. Anything Supabase answered and refused is a real error and throws as before.
@@ -146,7 +149,7 @@ function model<K extends TableName>(t: K) {
       } catch (e) { if (!(e instanceof Offline)) throw e; }
     }
     const before = local<Row>(t, kept<Row[]>(cacheKey(t), [])).find((r) => r.id === row.id);
-    keep('pending', [...pending(), { t, op, row }]);
+    setPending([...pending(), { t, op, row }]);
     void syncPending();
     return { data: (op === 'delete' ? null : { ...before, ...row }) as R };
   };
@@ -187,7 +190,7 @@ export const syncPending = (): Promise<void> =>
         if (e instanceof Offline) return;
         if ((e as PostgrestError).code !== '23505') throw e;
       }
-      keep('pending', pending().slice(1));
+      setPending(pending().slice(1));
     }
   })().finally(() => { syncing = undefined; }));
 
