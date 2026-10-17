@@ -115,3 +115,12 @@ export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
   if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
   return data.items.map((i) => ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit }));
 }
+// Reads a nutrition table (טבלת ערכים תזונתיים) into per-100 g values for the new-food form. The one exception to
+// "calories come from the database": a packaged product the database lacks, checked by the user before saving.
+// Labels have small print, so the photo is kept larger than for a meal.
+export type Label = Nut & { name: string; unit: Unit | null; perServing: boolean };
+export async function readLabel(file: File): Promise<Label> {
+  const { data, error } = await supabase.functions.invoke<{ label?: Label; error?: string }>('meal-photo', { body: { image: await shrink(file, 1568), mode: 'label' } });
+  if (error || !data?.label) throw new Error(data?.error ?? 'קריאת הטבלה לא זמינה כרגע. אפשר למלא את הערכים ידנית.');
+  return data.label;
+}

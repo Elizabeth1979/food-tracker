@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { Ctx } from './App';
-import { MEALS, client, json, mealNow, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
 import { FoodSummary, Modal } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
@@ -15,6 +15,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
   const [units, setUnits] = useState<Unit[]>(() => json<Unit[]>(init.units, []));
   const [err, setErr] = useState('');
+  const [label, setLabel] = useState<'busy' | 'done' | 'serving' | ''>('');
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
   // Supplements (creatine, vitamins): no energy or macros, logged by the serving.
   // With nothing to scale, the serving is just the scoop: 5 g unless one was typed over the 100 g default.
@@ -22,6 +23,20 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     const g = v.servingG === '100' || !Number(v.servingG) ? '5' : v.servingG;
     setV({ ...v, servingG: g, kcal: '0', carbs: '0', fat: '0', protein: '0' });
     if (!units.some((u) => u.n)) setUnits([{ n: 'מנה', g: Number(g) }]);
+  };
+  // Fills the form from a photo of the package's nutrition table; everything stays editable until שמור.
+  const photo = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr(''); setLabel('busy');
+    try {
+      const l = await readLabel(file);
+      const vals = Object.fromEntries(FIELDS.map(([k]) => [k, l[k] == null ? '' : String(l[k])]));
+      setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: '100' }));
+      if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), l.unit!]);
+      setLabel(l.perServing ? 'serving' : 'done');
+    } catch (x: any) { setErr(x.message); setLabel(''); }
   };
   const save = async () => {
     if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
@@ -39,6 +54,15 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   );
   return (
     <div className="form">
+      <label className={`btn${label === 'busy' ? ' disabled' : ''}`}>
+        <input type="file" accept="image/*" className="sr-only" disabled={label === 'busy'} onChange={photo} />
+        {label === 'busy' ? 'קורא את הטבלה…' : '📷 צלם טבלת ערכים'}
+      </label>
+      {(label === 'done' || label === 'serving') && (
+        <p className="muted small" role="status">
+          הערכים מולאו מהתמונה{label === 'serving' ? ' וחושבו ל־100 גרם לפי משקל המנה' : ''}. כדאי לבדוק אותם מול האריזה לפני השמירה.
+        </p>
+      )}
       {inp('name', 'שם')}
       {inp('servingG', 'הערכים הם עבור (גרם)')}
       <button className="link start" onClick={supplement}>💊 תוסף תזונה / ללא קלוריות: מלא אפסים</button>

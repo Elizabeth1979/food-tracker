@@ -11,6 +11,7 @@ Data lives in **Supabase**, so it syncs across devices. You sign in with a magic
 - Whole meals in one go: type a line like `יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים`, or take a photo, then check the list and add everything at once (add dialog → ✍️ כתיבה ותמונה). Calories always come from the food database; the photo only names foods and guesses amounts.
 - Search prefers plain foods ("ענבים" finds fresh grapes before grape juice), shows FFQ questionnaire averages last with a tag, and puts recently logged foods first on every device.
 - Tap any food in the מזונות tab to log it. New units ("פרוסה" = 20 g) can be added right in the amount picker, and the new-food form has a zero-calorie shortcut for supplements.
+- Packaged products the database lacks: in the new-food form, "📷 צלם טבלת ערכים" reads the package's nutrition table (טבלת ערכים תזונתיים) and fills in the values per 100 g, plus the serving as a unit ("יחידה" = 30 g) when the label gives one. Labels that list only per-serving values are converted. Check the numbers against the package, then save. This is the one place calories come from a photo, and only into a food you check and save yourself.
 - Daily goals (default 2000 kcal, 250 g carbs, 65 g fat, 100 g protein), a calorie and macro donut, and weekly or monthly reports. Any date range exports to CSV, or to PDF through the print dialog ("Save as PDF").
 - Download and restore as a JSON file (Settings → גיבוי). The format matches the earlier local-only version, so old backups restore here.
 
@@ -21,7 +22,7 @@ Requires Node 20 or later.
 npm install
 cp .env.example .env   # then fill in the project URL and publishable key
 npm run dev            # http://localhost:5173
-npm run dev:test       # http://localhost:5174, test mode: no sign-in, data only in this browser, sample photo answer
+npm run dev:test       # http://localhost:5174, test mode: no sign-in, data only in this browser, sample photo and label answers
 npm run build          # type-check + production build into dist/
 npm run preview        # serve the production build locally
 ```
@@ -33,7 +34,7 @@ npm run preview        # serve the production build locally
 4. Sign in once to create your account. Then turn off **Authentication → Sign In / Providers → Allow new users to sign up**.
 
 ## Photo logging (optional)
-The photo button calls the `meal-photo` Edge Function ([`supabase/functions/meal-photo`](supabase/functions/meal-photo/index.ts)), which asks Claude (Haiku by default) to name the foods. It needs an Anthropic API key, kept as a Supabase secret and never shipped to the browser. Without one, the button shows a "not set up" message and typing still works.
+The photo buttons call the `meal-photo` Edge Function ([`supabase/functions/meal-photo`](supabase/functions/meal-photo/index.ts)), which asks Claude (Haiku by default) to name the foods in a meal photo, or, with `mode: 'label'`, to read a nutrition table for the new-food form. It needs an Anthropic API key, kept as a Supabase secret and never shipped to the browser. Without one, the button shows a "not set up" message and typing still works.
 
 1. Create a key at [console.anthropic.com](https://console.anthropic.com) and add a few dollars of credit. A photo costs a fraction of a cent. Setting a monthly spend limit there is a good idea.
 2. Store it as a secret: Supabase dashboard → **Edge Functions → Secrets** → `ANTHROPIC_API_KEY`, or `supabase secrets set ANTHROPIC_API_KEY=...`.
@@ -55,7 +56,7 @@ The photo button calls the `meal-photo` Edge Function ([`supabase/functions/meal
 | The app (production) | **https://food-tracker-nine-khaki.vercel.app**, Vercel project `food-tracker` in the team *Elizabeth's projects*. |
 | Deploys | Automatic: Vercel watches `main` on [GitHub](https://github.com/Elizabeth1979/food-tracker) and deploys every push. There is no `.vercel/` folder here because nothing deploys from this computer. |
 | Database and sign-in | Supabase project `food-tracker` (ref `ujlbjojzjrwkzhymmhfs`, region eu-central-1). Schema: [`supabase/schema.sql`](supabase/schema.sql). The `profiles.recent` column was added as migration `profiles_recent_foods`. |
-| Photo recognition | Supabase Edge Function `meal-photo` in the same project. It needs the secret `ANTHROPIC_API_KEY` (Edge Functions → Secrets). |
+| Photo recognition | Supabase Edge Function `meal-photo` in the same project: meal photos, and nutrition labels (`mode: 'label'`). It needs the secret `ANTHROPIC_API_KEY` (Edge Functions → Secrets). |
 | Environment variables | `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`: in `.env` locally (not in git), and in the Vercel project settings for production. |
 
 ## Deploy

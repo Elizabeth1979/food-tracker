@@ -43,7 +43,8 @@ export const listEntries = async (from: string, to: string) => (db.Entry as unkn
 export const exportAll = async (): Promise<Backup> => structuredClone(db) as unknown as Backup;
 export async function restoreAll(b: unknown) { db = { ...load(), ...(b as object) }; save(); }
 
-// A signed-in "test user", and a photo reader that answers with a fixed sample meal instead of calling Claude.
+// A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
+// a meal, or for `mode: 'label'` a granola bar's nutrition table (per 100 g, with a 30 g bar as the serving).
 const session = { user: { id: 'test-user', email: 'מצב בדיקה' } };
 export const supabase = {
   auth: {
@@ -53,8 +54,13 @@ export const supabase = {
     signOut: async () => { if (confirm('למחוק את כל נתוני הבדיקה?')) { localStorage.removeItem(KEY); location.reload(); } },
   },
   functions: {
-    invoke: async <D,>(_name: string, _opts: unknown): Promise<{ data: D; error: null }> => {
+    invoke: async <D,>(_name: string, opts: { body?: { mode?: string } }): Promise<{ data: D; error: null }> => {
       await new Promise((r) => setTimeout(r, 800));
+      if (opts.body?.mode === 'label')
+        return {
+          data: { label: { name: 'חטיף גרנולה שוקולד', kcal: 433, carbs: 63.3, fat: 16.7, protein: 6.7, sodium: 233, calcium: 50, potassium: null, b12: null, unit: { n: 'יחידה', g: 30 }, perServing: false } } as D,
+          error: null,
+        };
       return {
         data: { items: [{ name: 'יוגורט', qty: 1, unit: 'גביע' }, { name: 'ענבים', qty: 10, unit: 'יחידה' }, { name: 'חמאת בוטנים', qty: 1, unit: 'כפית' }, { name: 'גרנולה', qty: 2, unit: 'כף' }] } as D,
         error: null,
