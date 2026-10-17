@@ -28,6 +28,14 @@ test('a meat finds the meat, not a dish, an organ or its fat', () => {
   assert.match(first('כבד עוף'), /כבד/); // typed, so found
 });
 
+test('everyday searches: whole words, either/or names, niche versions last', () => {
+  assert.match(first('קולה'), /^משקה קל, קולה/); // not "רום וקולה"
+  assert.match(first('פסטה'), /^אטריות\/פסטה, חיטה/); // "X/Y" is either word; not gluten-free corn pasta
+  assert.doesNotMatch(first('סלמון'), /מוס/); // not salmon mousse
+  assert.match(first('סלט ירקות'), /^סלט ירקות/); // "ללא תוספת שמן" (no added oil) isn't an oil dish
+  assert.match(first('פסטה ללא גלוטן'), /גלוטן/); // typed, so found
+});
+
 test('a Hebrew plural finds the singular', () => {
   assert.match(first('ביצים'), /^ביצה/);
   assert.match(first('עגבניות'), /^עגבניה/);
