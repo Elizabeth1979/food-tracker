@@ -14,11 +14,11 @@ export const isFFQ = (f: { name: string }) => f.name.startsWith('FFQ');
 // Forms people rarely mean unless they type the word: "ענבים" should find grapes before grape juice or grape-seed oil,
 // and "ביצה" a hen's egg before a turkey's.
 const PROCESSED = ['מיץ', 'שמן', 'סירופ', 'בסירופ', 'משומר', 'משומרים', 'משקה', 'אבקה', 'אבקת', 'ממרח', 'חטיף', 'עוגיות', 'מחית', 'רוטב', 'תרכיז',
-  'מיובש', 'מיובשת', 'מיובשים', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
+  'מיובש', 'מיובשת', 'מיובשים', 'מוס', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
 const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות', 'גמלים', 'כבשים', 'עזים', 'אווז', 'ברווז', 'שליו',
   // organs, odd cuts and fast food: "עוף" means the meat, not its liver, feet or a McDonald's item
   'לב', 'לבבות', 'כבד', 'טחול', 'קורקבן', 'קורקבנים', 'כליות', 'לשון', 'מוח', 'קיבה', 'גב', 'צוואר', 'עצמות', 'רגליים',
-  'מקדונלדס'];
+  'מקדונלדס', 'גלוטן', 'הצומח']; // gluten-free and plant-based ("מן הצומח") versions only when typed
 const FRESH = ['טרי', 'טריה', 'טריים', 'טריות', 'רגיל'];
 // "ביצים" should find "ביצה", "עגבניות" "עגבניה": also accept a rough singular of Hebrew plurals.
 const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, w.slice(0, -2)] : w.endsWith('ות') ? [w, w.slice(0, -2) + 'ה', w.slice(0, -2)] : [w]);
@@ -33,13 +33,18 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     // "בשר עוף, חזה…" is chicken: a leading "בשר" (meat of) doesn't count, unless it was typed.
     const head = norm(f.name.split(',')[0]);
     const first = words[0] === 'בשר' ? head : head.replace(/^בשר /, '');
-    const firstWord = first.split(' ')[0];
+    // "אטריות/פסטה" is either word
+    const firstWords = first.split(' ')[0].split('/');
+    // "ללא תוספת שמן" (no added oil) isn't an oil dish
+    const what = name.replace(/ללא( תוספת)? \S+/g, '');
     const r = recent.indexOf(f.id);
     let s = r >= 0 ? r - 1000 : 0;
     if (f.source === 'moh') s += 100; // your own foods first
     if (isFFQ(f)) s += 400;
-    s += name === query ? 0 : first === query || sameWord(firstWord, words[0] ?? '') ? 10 : name.startsWith(query) ? 20 : name.startsWith(words[0] ?? '') ? 30 : 50;
-    s += PROCESSED.filter((w) => !words.includes(w) && has(name, w)).length * 15;
+    s += name === query ? 0 : first === query || firstWords.some((w) => sameWord(w, words[0] ?? '')) ? 10 : name.startsWith(query) ? 20 : name.startsWith(words[0] ?? '') ? 30 : 50;
+    // a typed word found only inside another ("רום וקולה" for "קולה") is a weaker match
+    if (!words.every((w) => forms(w).some((x) => name.split(/[ \/]/).some((t) => t.startsWith(x))))) s += 20;
+    s += PROCESSED.filter((w) => !words.includes(w) && has(what, w)).length * 15;
     s += RARE.filter((w) => !words.includes(w) && has(name, w)).length * 20;
     if (has(name, 'לא מבושל') && !words.includes('מבושל')) s += 10;
     if ((has(first, 'עם') || has(first, 'או')) && !words.includes('עם')) s += 10; // mixed dishes: "אורז עם בצל"
