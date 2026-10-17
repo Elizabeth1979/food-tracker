@@ -49,6 +49,15 @@ The photo button calls the `meal-photo` Edge Function ([`supabase/functions/meal
 | `src/` components | `Day`, `AddDialog`, `Review` (the list a typed meal or photo becomes), `Reports`, `Foods`, `MealEditor`, `Settings` |
 | `public/sw.js` | A network-first service worker for the app shell. The data itself needs a connection. |
 
+## Where it runs
+| What | Where |
+|---|---|
+| The app (production) | **https://food-tracker-nine-khaki.vercel.app**, Vercel project `food-tracker` in the team *Elizabeth's projects*. |
+| Deploys | Automatic: Vercel watches `main` on [GitHub](https://github.com/Elizabeth1979/food-tracker) and deploys every push. There is no `.vercel/` folder here because nothing deploys from this computer. |
+| Database and sign-in | Supabase project `food-tracker` (ref `ujlbjojzjrwkzhymmhfs`, region eu-central-1). Schema: [`supabase/schema.sql`](supabase/schema.sql). The `profiles.recent` column was added as migration `profiles_recent_foods`. |
+| Photo recognition | Supabase Edge Function `meal-photo` in the same project. It needs the secret `ANTHROPIC_API_KEY` (Edge Functions → Secrets). |
+| Environment variables | `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`: in `.env` locally (not in git), and in the Vercel project settings for production. |
+
 ## Deploy
 It's a static Vite site. On Vercel, use framework **Vite**, build command `npm run build`, and output directory `dist`. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as environment variables.
 
