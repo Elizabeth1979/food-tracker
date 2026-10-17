@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut } from './lib';
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -8,6 +8,28 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור">✕</button></header>
         <div className="modal-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+// Two ways to give a photo: open the camera now (`capture`, from the HTML Media Capture spec) or pick one already taken.
+export function PhotoPick({ take, busy, busyText, onFile }: { take: string; busy: boolean; busyText: string; onFile: (f: File) => void }) {
+  const pick = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) onFile(file);
+  };
+  if (busy) return <label className="btn disabled" role="status">{busyText}</label>;
+  return (
+    <div className="grid2">
+      <label className="btn">
+        <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
+        📷 {take}
+      </label>
+      <label className="btn">
+        <input type="file" accept="image/*" className="sr-only" onChange={pick} />
+        🖼️ בחר מהגלריה
+      </label>
     </div>
   );
 }

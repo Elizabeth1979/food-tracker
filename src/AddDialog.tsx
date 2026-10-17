@@ -1,7 +1,7 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, parseLine, readPhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type Nut, type Parsed, type Unit } from './lib';
-import { FoodSummary, MicroLine, Modal } from './ui';
+import { FoodSummary, MicroLine, Modal, PhotoPick } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
 
@@ -143,10 +143,7 @@ function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void 
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const photo = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+  const photo = async (file: File) => {
     setErr(''); setBusy(true);
     try { setParsed(await readPhoto(file, text)); } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   };
@@ -164,10 +161,7 @@ function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void 
         <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus />
       </label>
       <button className="btn primary" disabled={!text.trim() || busy} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
-      <label className={`btn${busy ? ' disabled' : ''}`}>
-        <input type="file" accept="image/*" className="sr-only" disabled={busy} onChange={photo} />
-        {busy ? 'מזהה מזונות בתמונה…' : '📷 צלם או בחר תמונה'}
-      </label>
+      <PhotoPick take="צלם ארוחה" busy={busy} busyText="מזהה מזונות בתמונה…" onFile={photo} />
       <p className="muted small">בתמונה כדאי לכתוב גם הערה קצרה למעלה (״כף חמאת בוטנים בפנים״), כדי לדייק כמויות ודברים שלא רואים.</p>
       {err && <p className="error">{err}</p>}
     </div>

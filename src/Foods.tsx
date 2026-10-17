@@ -1,7 +1,7 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
-import { FoodSummary, Modal } from './ui';
+import { FoodSummary, Modal, PhotoPick } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 
@@ -25,10 +25,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     if (!units.some((u) => u.n)) setUnits([{ n: 'מנה', g: Number(g) }]);
   };
   // Fills the form from a photo of the package's nutrition table; everything stays editable until שמור.
-  const photo = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+  const photo = async (file: File) => {
     setErr(''); setLabel('busy');
     try {
       const l = await readLabel(file);
@@ -54,10 +51,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   );
   return (
     <div className="form">
-      <label className={`btn${label === 'busy' ? ' disabled' : ''}`}>
-        <input type="file" accept="image/*" className="sr-only" disabled={label === 'busy'} onChange={photo} />
-        {label === 'busy' ? 'קורא את הטבלה…' : '📷 צלם טבלת ערכים'}
-      </label>
+      <PhotoPick take="צלם טבלת ערכים" busy={label === 'busy'} busyText="קורא את הטבלה…" onFile={photo} />
       {(label === 'done' || label === 'serving') && (
         <p className="muted small" role="status">
           הערכים מולאו מהתמונה{label === 'serving' ? ' וחושבו ל־100 גרם לפי משקל המנה' : ''}. כדאי לבדוק אותם מול האריזה לפני השמירה.
