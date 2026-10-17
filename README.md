@@ -25,6 +25,7 @@ cp .env.example .env   # then fill in the project URL and publishable key
 npm run dev            # http://localhost:5173
 npm run dev:test       # http://localhost:5174, test mode: no sign-in, data only in this browser, sample photo and label answers
 npm run build          # type-check + production build into dist/
+npm test               # search and meal-parser tests (Vercel runs them before every deploy)
 npm run preview        # serve the production build locally
 ```
 
