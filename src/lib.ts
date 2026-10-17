@@ -1,7 +1,7 @@
-import { client, listEntries, supabase, type Food } from './db';
+import { client, listEntries, supabase, syncPending, type Food } from './db';
 import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
-export { client };
+export { client, syncPending };
 export { GRAMS, json, unitsOf, searchFoods, matchFoods, parseLine, splitAnd, unitFor, isFFQ, type Unit, type Parsed } from './search';
 export type { Food, Entry, SavedMeal, Profile } from './db';
 export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -94,10 +94,7 @@ export async function addUnit(food: Food, unit: Unit): Promise<Food> {
 export const addEntries = (date: string, meal: MealKey, items: Item[]) =>
   Promise.all(items.map((it) => client.models.Entry.create({ ...it, date, meal }).then((r) => r.data)));
 
-export const store = {
-  get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? '') ?? d; } catch { return d; } },
-  set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
-};
+export { store } from './store';
 
 // ---------- photo ----------
 // Shrinks the photo on the device (cost and upload time follow the pixel count, recognition doesn't need more),

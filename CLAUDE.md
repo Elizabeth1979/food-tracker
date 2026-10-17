@@ -15,5 +15,7 @@ Push to `main` and Vercel deploys production by itself, in about a minute. The h
 ## Things to know
 - Calories always come from the food database (`moh.json` plus the user's own `foods` rows). A meal photo only names foods and guesses amounts. The one exception is label scanning (`mode: 'label'`, the new-food form's "צלם טבלת ערכים"): it fills a new food from a package's nutrition table, and the user checks it before saving.
 - MoH foods are never copied into the database. A `foods` row with the same id overrides one; that is how edits, added units and "hidden" work.
+- Offline (`src/db.ts`): lists are kept in localStorage per user, and writes made offline queue in `pending` and are replayed in order by `syncPending` (on start, `online`, and when the app comes back to the front). While anything is queued, new writes queue behind it. Ids are made on the device, so a replayed create keeps its id, and a duplicate (23505) counts as sent. A request with status 0 means no answer; anything Supabase refuses still throws. Offline, `main.tsx` keeps the last signed-in user instead of showing Login.
+- Security headers live in `vercel.json`. A new outside origin (API, font, image) means widening the CSP on purpose. Camera is left out of Permissions-Policy so photo capture keeps working.
 - Schema changes: update `supabase/schema.sql` too, and record the migration name in the README table.
 - The `meal-photo` function code lives in `supabase/functions/meal-photo/`. Redeploy it after changes; it reads `ANTHROPIC_API_KEY` and optional `MEAL_PHOTO_MODEL`.
