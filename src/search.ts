@@ -41,9 +41,9 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     if (FRESH.some((w) => has(name, w))) s -= 3;
     return s + f.name.length / 100;
   };
-  const hits = words.length
-    ? foods.filter((f) => { const t = norm(f.name + ' ' + (f.nameEn ?? '')); return words.every((w) => forms(w).some((x) => t.includes(x))); })
-    : foods.filter((f) => recent.includes(f.id));
+  // With nothing typed the list is "recent": newest first, nothing else counts.
+  if (!words.length) return recent.flatMap((id) => foods.find((f) => f.id === id && !f.hidden) ?? []).slice(0, 60);
+  const hits = foods.filter((f) => { const t = norm(f.name + ' ' + (f.nameEn ?? '')); return words.every((w) => forms(w).some((x) => t.includes(x))); });
   return hits.filter((f) => !f.hidden).sort((a, b) => rank(a) - rank(b)).slice(0, 60);
 }
 
@@ -106,7 +106,9 @@ export function unitFor(food: Food, p: Pick<Parsed, 'qty' | 'unit'>): { qty: num
   const piece = ['יחידה בינונית', 'יחידה', 'פרוסה', 'פרוסה בינונית', 'גביע', 'מנה בינונית', 'מנה', 'ספל', 'כוס'].map((n) => units.find((u) => u.n === n)).find(Boolean);
   if (p.unit === GRAMS) return { qty: p.qty ?? food.servingG, unit: grams };
   if (p.unit) {
-    const u = units.find((x) => x.n === p.unit) ?? units.find((x) => x.n.startsWith(p.unit + ' ')) ?? units.find((x) => x.n.startsWith(p.unit!.split(' ')[0]));
+    // "יחידה" with no size means a medium one, not the first size listed (often "קטנה").
+    const u = units.find((x) => x.n === p.unit) ?? units.find((x) => x.n === `${p.unit} בינונית`)
+      ?? units.find((x) => x.n.startsWith(p.unit + ' ')) ?? units.find((x) => x.n.startsWith(p.unit!.split(' ')[0]));
     if (u) return { qty: p.qty ?? 1, unit: u };
     const g = FALLBACK_G[p.unit.split(' ')[0]];
     if (g) return { qty: p.qty ?? 1, unit: { n: p.unit, g } };

@@ -113,5 +113,5 @@ async function shrink(file: File, max = 1024): Promise<string> {
 export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
   const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
   if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
-  return data.items.map((i) => ({ text: `${i.qty} ${i.unit} ${i.name}`, query: i.name, qty: i.qty, unit: i.unit }));
+  return data.items.map((i) => ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit }));
 }

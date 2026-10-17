@@ -21,6 +21,7 @@ Requires Node 20 or later.
 npm install
 cp .env.example .env   # then fill in the project URL and publishable key
 npm run dev            # http://localhost:5173
+npm run dev:test       # http://localhost:5174, test mode: no sign-in, data only in this browser, sample photo answer
 npm run build          # type-check + production build into dist/
 npm run preview        # serve the production build locally
 ```

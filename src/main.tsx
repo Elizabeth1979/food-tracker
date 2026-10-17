@@ -15,7 +15,8 @@ function Root() {
     return () => data.subscription.unsubscribe();
   }, []);
   if (session === undefined) return null;
-  return session ? <App key={session.user.id} email={session.user.email ?? ''} /> : <Login />;
+  const app = session ? <App key={session.user.id} email={session.user.email ?? ''} /> : <Login />;
+  return import.meta.env.MODE === 'demo' ? <><div className="test-mode">מצב בדיקה · הנתונים נשמרים רק בדפדפן הזה, לא בחשבון</div>{app}</> : app;
 }
 
 createRoot(document.getElementById('root')!).render(<Root />);
