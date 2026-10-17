@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import type { Ctx } from './App';
 import { client, loadMoh, today } from './lib';
 import { exportAll, restoreAll, supabase } from './db';
+import { APP_VERSION } from './update';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
 
@@ -56,6 +57,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
       <section className="card pad form">
         <h3>חשבון</h3>
         <p className="muted small">מחובר בתור <b dir="ltr">{email}</b></p>
+        <p className="muted small">גרסה <span dir="ltr">{APP_VERSION}</span></p>
         <button className="btn" onClick={() => supabase.auth.signOut()}>יציאה</button>
       </section>
       <div role="status">{msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}</div>

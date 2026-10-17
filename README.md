@@ -51,3 +51,5 @@ The photo button calls the `meal-photo` Edge Function ([`supabase/functions/meal
 
 ## Deploy
 It's a static Vite site. On Vercel, use framework **Vite**, build command `npm run build`, and output directory `dist`. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as environment variables.
+
+The Vercel project is connected to the GitHub repo, so every push to `main` deploys to production by itself. Each build writes its id (the commit on Vercel) into the app and into `/version.json`. An open or home-screen copy of the app checks that file whenever it comes back to the front, and every half hour while it stays open. When a newer build is live, it reloads right away, or shows a "גרסה חדשה" bar if a dialog is open so nothing half-entered is lost. Settings → חשבון shows the running version.
