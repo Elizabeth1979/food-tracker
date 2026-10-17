@@ -13,6 +13,7 @@ Data lives in **Supabase**, so it syncs across devices. You sign in with a magic
 - Tap any food in the מזונות tab to log it. New units ("פרוסה" = 20 g) can be added right in the amount picker, and the new-food form has a zero-calorie shortcut for supplements.
 - Packaged products the database lacks: in the new-food form, "📷 צלם טבלת ערכים" reads the package's nutrition table (טבלת ערכים תזונתיים) and fills in the values per 100 g, plus the serving as a unit ("יחידה" = 30 g) when the label gives one. Labels that list only per-serving values are converted. Check the numbers against the package, then save. This is the one place calories come from a photo, and only into a food you check and save yourself.
 - Daily goals (default 2000 kcal, 250 g carbs, 65 g fat, 100 g protein), a calorie and macro donut, and weekly or monthly reports. Any date range exports to CSV, or to PDF through the print dialog ("Save as PDF").
+- Works without a connection: the app opens on the phone with your foods, saved meals and the last three months of the diary, and anything you log, edit or delete offline is sent in order once the connection is back. You stay signed in offline.
 - Download and restore as a JSON file (Settings → גיבוי). The format matches the earlier local-only version, so old backups restore here.
 
 ## Run it
@@ -43,12 +44,13 @@ The photo buttons call the `meal-photo` Edge Function ([`supabase/functions/meal
 ## How the data works
 | Path | What |
 |---|---|
-| `src/db.ts` | Supabase client and data layer. Exposes `client.models.X.list/create/update/delete` for `Food`, `Entry`, `SavedMeal`, `Profile` (tables `foods`, `entries`, `saved_meals`, `profiles`), plus backup export and restore. |
+| `src/db.ts` | Supabase client and data layer. Exposes `client.models.X.list/create/update/delete` for `Food`, `Entry`, `SavedMeal`, `Profile` (tables `foods`, `entries`, `saved_meals`, `profiles`), plus backup export and restore. It also keeps a copy of each list on the device and queues changes made offline (`syncPending` sends them). |
 | `src/lib.ts` | Loading, nutrition math and the photo call. MoH foods are fetched from `/foods/moh.json` at runtime and never copied into the database. A `foods` row with the same id overrides a MoH food; that is how edits, added units and "hidden" work. |
 | `src/search.ts` | Search ranking and the free-text meal parser. No data-layer imports, so it runs under plain Node for quick checks. |
 | `src/Login.tsx`, `src/main.tsx` | Magic-link sign-in, and the gate that shows the app only with a session. |
 | `src/` components | `Day`, `AddDialog`, `Review` (the list a typed meal or photo becomes), `Reports`, `Foods`, `MealEditor`, `Settings` |
-| `public/sw.js` | A network-first service worker for the app shell. The data itself needs a connection. |
+| `public/sw.js` | A network-first service worker for the app shell and `moh.json`. The data's offline copy lives in `src/db.ts`. |
+| `vercel.json` | Security headers. The Content-Security-Policy allows only the app itself, the Supabase project and Google Fonts. |
 
 ## Where it runs
 | What | Where |

@@ -3,6 +3,7 @@
 // `client.models.X` keeps the small list/create/update/delete surface the app was written against.
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import type { MealKey } from './lib';
+import { store } from './store';
 
 type Micros = { sodium?: number | null; calcium?: number | null; potassium?: number | null; b12?: number | null };
 type Nutrients = { kcal: number; carbs: number; fat: number; protein: number } & Micros;
@@ -50,44 +51,112 @@ const clean = (t: TableName, row: object) => {
   );
 };
 
-type Page<T> = PromiseLike<{ data: T[] | null; error: PostgrestError | null }>;
+// ---------- offline ----------
+// With no connection the app still opens and logging still works. Each list is kept on the device when it
+// loads (entries from the last KEEP_DAYS days), and changes made offline wait in order in `pending` until
+// syncPending sends them. What the app shows = the kept copy with the pending changes on top.
+type Row = Record<string, unknown> & { id: string };
+type Op = { t: TableName; op: 'create' | 'update' | 'delete'; row: Row };
+const KEEP_DAYS = 92;
+// Kept per user, so another account on this device never sees or sends them.
+let uid = '';
+export const setOfflineUser = (id: string) => { uid = id; };
+const kept = <T,>(k: string, d: T) => store.get<T>(`offline:${uid}:${k}`, d);
+const keep = (k: string, v: unknown) => store.set(`offline:${uid}:${k}`, v);
+const pending = () => kept<Op[]>('pending', []);
+
+class Offline extends Error { constructor() { super('אין חיבור לאינטרנט'); } }
+// Status 0: the request got no answer. Anything Supabase answered and refused is a real error and throws as before.
+// Offline it isn't even tried: an expired sign-in would first spend ~25 s retrying its refresh.
+async function send<T>(q: () => PromiseLike<{ data: T; error: PostgrestError | null; status: number }>): Promise<T> {
+  if (!navigator.onLine) throw new Offline();
+  const { data, error, status } = await q();
+  if (status === 0) throw new Offline();
+  if (error) throw error;
+  return data;
+}
+
+// Applies changes to a list of rows. `inList` drops rows that don't belong (an entry moved to another day).
+function apply<T extends { id: string }>(rows: T[], ops: Op[], inList: (r: T) => boolean = () => true): T[] {
+  return ops.reduce((xs, { op, row }) => {
+    const old = xs.find((x) => x.id === row.id);
+    const next = { ...old, ...row } as T;
+    if (op === 'delete' || !inList(next)) return xs.filter((x) => x.id !== row.id);
+    return old ? xs.map((x) => (x === old ? next : x)) : [...xs, next];
+  }, rows);
+}
+const cacheKey = (t: TableName) => (t === 'Entry' ? 'entries' : t);
+// A change Supabase now has: put it in the kept copy too, so it's there next time the app is offline.
+const remember = (o: Op) => {
+  const rows = kept<Row[] | null>(cacheKey(o.t), null);
+  if (rows) keep(cacheKey(o.t), apply(rows, [o]));
+};
+const local = <T extends { id: string }>(t: TableName, rows: T[], inList?: (r: T) => boolean) => apply(rows, pending().filter((o) => o.t === t), inList);
+
+type Page<T> = PromiseLike<{ data: T[] | null; error: PostgrestError | null; status: number }>;
 const PAGE = 1000; // PostgREST's default row cap per request
 async function fetchAll<T>(page: (from: number, to: number) => Page<T>): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw error;
+    const data = await send(() => page(from, from + PAGE - 1));
     out.push(...(data ?? []));
     if (!data || data.length < PAGE) return out;
   }
 }
 const listAll = <K extends TableName>(t: K) =>
   fetchAll<Tables[K]>((a, b) => supabase.from(TABLE[t]).select('*').order(ORDER[t]).order('id').range(a, b));
+// Fresh rows are kept; offline the kept copy stands in (none kept yet: the error shows as before).
+async function cached<T>(load: () => Promise<T>, fallback: () => T | null): Promise<T> {
+  try { return await load(); } catch (e) {
+    const old = e instanceof Offline ? fallback() : null;
+    if (old == null) throw e;
+    return old;
+  }
+}
 
-// Failures throw (the app shows them in its error banner) instead of handing callers a null row.
-function model<K extends TableName>(t: K) {
+// Straight to Supabase. Failures throw (the app shows them in its error banner) instead of handing callers a null row.
+function remote<K extends TableName>(t: K) {
   type T = Tables[K];
-  const create = async (input: Omit<T, 'id'> & { id?: string }): Promise<Res<T>> => {
-    const { data, error } = await supabase.from(TABLE[t]).insert(clean(t, input)).select().single();
-    if (error) throw error;
-    return { data: data as T };
-  };
+  const create = async (input: Row) => (await send(() => supabase.from(TABLE[t]).insert(clean(t, input)).select().single())) as T;
   return {
-    list: async (): Promise<Res<T[]>> => ({ data: await listAll(t) }),
     create,
     // Updates the row, or creates it when there is none yet: that is how a MoH food gets its first
     // local override (an edit, or hidden: true), so callers pass the whole food in that case.
-    update: async (input: Partial<T> & { id: string }): Promise<Res<T>> => {
-      const { id, ...patch } = clean(t, input);
-      const { data, error } = await supabase.from(TABLE[t]).update(patch).eq('id', input.id).select();
-      if (error) throw error;
-      return data.length ? { data: data[0] as T } : create(input as Omit<T, 'id'> & { id: string });
+    update: async (input: Row): Promise<T> => {
+      const { id: _, ...patch } = clean(t, input);
+      const data = await send(() => supabase.from(TABLE[t]).update(patch).eq('id', input.id).select());
+      return data?.length ? (data[0] as T) : create(input);
     },
-    delete: async ({ id }: { id: string }): Promise<Res<null>> => {
-      const { error } = await supabase.from(TABLE[t]).delete().eq('id', id);
-      if (error) throw error;
-      return { data: null };
-    },
+    delete: async ({ id }: Row) => { await send(() => supabase.from(TABLE[t]).delete().eq('id', id)); return null; },
+  };
+}
+
+function model<K extends TableName>(t: K) {
+  type T = Tables[K];
+  const server = remote(t);
+  // Ids are made here, so a row logged offline keeps the same id once it reaches Supabase. A profile's id is the user's.
+  const write = <R,>(op: Op['op']) => async (input: object): Promise<Res<R>> => {
+    const row = { ...input, id: (input as Row).id ?? (t === 'Profile' ? uid : crypto.randomUUID()) } as Row;
+    // While older changes still wait, newer ones queue behind them, so they reach Supabase in order.
+    if (!pending().length) {
+      try {
+        const data = await server[op](row);
+        remember({ t, op, row: (data as Row | null) ?? row });
+        return { data: data as R };
+      } catch (e) { if (!(e instanceof Offline)) throw e; }
+    }
+    const before = local<Row>(t, kept<Row[]>(cacheKey(t), [])).find((r) => r.id === row.id);
+    keep('pending', [...pending(), { t, op, row }]);
+    void syncPending();
+    return { data: (op === 'delete' ? null : { ...before, ...row }) as R };
+  };
+  return {
+    list: async (): Promise<Res<T[]>> => ({
+      data: local(t, await cached(async () => { const rows = await listAll(t); keep(cacheKey(t), rows); return rows; }, () => kept<T[] | null>(cacheKey(t), null))),
+    }),
+    create: write<T>('create') as (input: Omit<T, 'id'> & { id?: string }) => Promise<Res<T>>,
+    update: write<T>('update') as (input: Partial<T> & { id: string }) => Promise<Res<T>>,
+    delete: write<null>('delete') as (input: { id: string }) => Promise<Res<null>>,
   };
 }
 
@@ -95,8 +164,32 @@ export const client = {
   models: { Food: model('Food'), Entry: model('Entry'), SavedMeal: model('SavedMeal'), Profile: model('Profile') },
 };
 
-export const listEntries = (from: string, to: string) =>
-  fetchAll<Entry>((a, b) => supabase.from('entries').select('*').gte('date', from).lte('date', to).order('created_at').order('id').range(a, b));
+// Entries of the last KEEP_DAYS days are kept, whichever range loaded them.
+export async function listEntries(from: string, to: string): Promise<Entry[]> {
+  const inRange = (e: Entry) => e.date >= from && e.date <= to;
+  const rows = await cached(async () => {
+    const fresh = await fetchAll<Entry>((a, b) => supabase.from('entries').select('*').gte('date', from).lte('date', to).order('created_at').order('id').range(a, b));
+    const since = new Date(Date.now() - KEEP_DAYS * 864e5).toLocaleDateString('en-CA');
+    keep('entries', [...kept<Entry[]>('entries', []).filter((e) => !inRange(e) && e.date >= since), ...fresh.filter((e) => e.date >= since)]);
+    return fresh;
+  }, () => kept<Entry[]>('entries', []).filter(inRange));
+  return local('Entry', rows, inRange);
+}
+
+// Sends the waiting changes in order; stops while still offline. A change Supabase refuses stays queued and the
+// error shows in the banner, so nothing logged is ever dropped. A create that already arrived (23505) counts as sent.
+let syncing: Promise<void> | undefined;
+export const syncPending = (): Promise<void> =>
+  (syncing ??= (async () => {
+    for (let o: Op | undefined; (o = pending()[0]); ) {
+      try { remember({ ...o, row: ((await remote(o.t)[o.op](o.row)) as Row | null) ?? o.row }); }
+      catch (e) {
+        if (e instanceof Offline) return;
+        if ((e as PostgrestError).code !== '23505') throw e;
+      }
+      keep('pending', pending().slice(1));
+    }
+  })().finally(() => { syncing = undefined; }));
 
 // Same shape as the local-only app's backups, so files move freely between the two.
 export const exportAll = async (): Promise<Backup> =>

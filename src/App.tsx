@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { client, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
+import { client, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
 import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
@@ -35,17 +35,24 @@ export default function App({ email }: { email: string }) {
     client.models.Profile.list()
       .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create({ kcal: 2000, carbs: 250, fat: 65, protein: 100 })).data))
       .catch(fail);
+    // Changes made offline go out on start, when the connection is back, and when the app comes back to the front.
+    // A refused one rejects, so it shows in the banner below.
+    const sync = () => void syncPending();
+    sync();
+    window.addEventListener('online', sync);
     // reopening the app after a while always lands on today
     let hiddenAt = Date.now();
     const onVis = () => {
-      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
-      else if (Date.now() - hiddenAt > 30 * 60000) setDate(today());
+      if (document.visibilityState === 'hidden') return void (hiddenAt = Date.now());
+      sync();
+      if (Date.now() - hiddenAt > 30 * 60000) setDate(today());
     };
     document.addEventListener('visibilitychange', onVis);
     // A save that fails (offline, session gone) rejects; show it rather than losing it silently.
     const onReject = (e: PromiseRejectionEvent) => setStatus('שגיאה: ' + (e.reason?.message ?? e.reason) + ' · לחץ לטעינה מחדש');
     window.addEventListener('unhandledrejection', onReject);
     return () => {
+      window.removeEventListener('online', sync);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('unhandledrejection', onReject);
     };
