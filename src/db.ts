@@ -14,7 +14,7 @@ export type Entry = Nutrients & { id: string; date: string; meal: MealKey; foodI
 // items: Item[] (older backups hold a JSON string)
 export type SavedMeal = { id: string; name: string; items: unknown };
 // One row per user; id is the user's id.
-export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null };
+export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null; recent?: string[] | null };
 
 type Tables = { Food: Food; Entry: Entry; SavedMeal: SavedMeal; Profile: Profile };
 export type TableName = keyof Tables;
@@ -35,7 +35,7 @@ const COLS: Record<TableName, string[]> = {
   Food: ['id', 'name', 'nameEn', 'source', 'hidden', 'servingG', 'units', ...NUTS],
   Entry: ['id', 'date', 'meal', 'foodId', 'name', 'grams', 'qty', 'unit', ...NUTS],
   SavedMeal: ['id', 'name', 'items'],
-  Profile: ['id', 'kcal', 'carbs', 'fat', 'protein'],
+  Profile: ['id', 'kcal', 'carbs', 'fat', 'protein', 'recent'],
 };
 const JSON_COLS = new Set(['units', 'items']);
 // Foods are keyed per user, so a user can override a shipped MoH food under its own id.

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { amountLabel, client, json, searchFoods, store, sum, type Food, type Item, type SavedMeal } from './lib';
+import { amountLabel, client, json, searchFoods, sum, type Food, type Item, type SavedMeal } from './lib';
 import { FoodSummary, Modal } from './ui';
-import { Amount, NutLine } from './AddDialog';
+import { Amount, NutLine, unitSaver } from './AddDialog';
 
 // Build or edit a saved meal (a bundle of foods with fixed amounts).
 export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal; onClose: () => void }) {
@@ -11,7 +11,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<Food | null>(null);
   const [err, setErr] = useState('');
-  const hits = useMemo(() => searchFoods(ctx.foods, q, store.get('recent', [])), [ctx.foods, q]);
+  const hits = useMemo(() => searchFoods(ctx.foods, q, ctx.recent), [ctx.foods, q, ctx.recent]);
 
   const save = async () => {
     if (!name.trim() || !items.length) return setErr('יש לתת שם ולהוסיף לפחות מזון אחד');
@@ -36,7 +36,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
         <div className="picked">
           <button className="link" onClick={() => setSel(null)}>→ חזרה לחיפוש</button>
           <h3>{sel.name}</h3>
-          <Amount food={sel} onPick={(it) => { setItems([...items, it]); setSel(null); setQ(''); }} cta="הוסף לארוחה" />
+          <Amount key={sel.id} food={sel} onPick={(it) => { setItems([...items, it]); setSel(null); setQ(''); }} cta="הוסף לארוחה" onAddUnit={unitSaver(ctx, sel, setSel)} />
         </div>
       ) : (
         <>
@@ -45,7 +45,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
             <div className="list">
               {hits.map((f) => (
                 <button key={f.id} className="row" onClick={() => setSel(f)}>
-                  <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div><b>{f.kcal}</b>
+                  <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
                 </button>
               ))}
             </div>

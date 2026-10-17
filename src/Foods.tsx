@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { client, json, searchFoods, sum, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { MEALS, client, json, mealNow, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
 import { FoodSummary, Modal } from './ui';
 import { MealEditor } from './MealEditor';
+import { AddDialog } from './AddDialog';
 
 const FIELDS = [
   ['kcal', 'קלוריות', true], ['carbs', 'פחמימות (ג׳)', true], ['fat', 'שומן (ג׳)', true], ['protein', 'חלבון (ג׳)', true],
@@ -15,6 +16,13 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   const [units, setUnits] = useState<Unit[]>(() => json<Unit[]>(init.units, []));
   const [err, setErr] = useState('');
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
+  // Supplements (creatine, vitamins): no energy or macros, logged by the serving.
+  // With nothing to scale, the serving is just the scoop: 5 g unless one was typed over the 100 g default.
+  const supplement = () => {
+    const g = v.servingG === '100' || !Number(v.servingG) ? '5' : v.servingG;
+    setV({ ...v, servingG: g, kcal: '0', carbs: '0', fat: '0', protein: '0' });
+    if (!units.some((u) => u.n)) setUnits([{ n: 'מנה', g: Number(g) }]);
+  };
   const save = async () => {
     if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
     const input = {
@@ -33,6 +41,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     <div className="form">
       {inp('name', 'שם')}
       {inp('servingG', 'הערכים הם עבור (גרם)')}
+      <button className="link start" onClick={supplement}>💊 תוסף תזונה / ללא קלוריות: מלא אפסים</button>
       <div className="grid2">{FIELDS.map(([k, l]) => inp(k, l))}</div>
       <h4>יחידות (אופציונלי)</h4>
       {units.map((u, i) => (
@@ -49,11 +58,14 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   );
 }
 
-export default function Foods({ ctx }: { ctx: Ctx }) {
+export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const [q, setQ] = useState('');
+  const [logging, setLogging] = useState<Food | null>(null);
+  const [msg, setMsg] = useState('');
+  const logged = (es: Entry[]) => setMsg(`״${es[0]?.name}״ נוסף ל${MEALS.find((m) => m.key === es[0]?.meal)?.label ?? 'יומן'} ✓`);
   const [edit, setEdit] = useState<Partial<Food> | null>(null);
   const [mealEdit, setMealEdit] = useState<SavedMeal | 'new' | null>(null);
-  const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, []) : ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden)), [ctx.foods, q]);
+  const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, ctx.recent) : ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden)), [ctx.foods, q, ctx.recent]);
   const saved = (f: Food) => { ctx.setFoods(edit?.id ? ctx.foods.map((x) => (x.id === f.id ? f : x)) : [...ctx.foods, f]); setEdit(null); };
   const hide = async (f: Food) => {
     if (!confirm(`להסיר את "${f.name}" מהרשימה?`)) return;
@@ -86,17 +98,19 @@ export default function Foods({ ctx }: { ctx: Ctx }) {
           <input className="search" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
           <button className="btn primary" onClick={() => setEdit({ name: q })}>＋ חדש</button>
         </div>
-        {!q && <div className="muted small">המזונות שהוספת (חפש כדי לראות גם את מאגר משרד הבריאות)</div>}
+        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן · ✎ עריכה · 🗑 הסתרה מהחיפוש' : 'המזונות שהוספת. חפש כדי לראות גם את מאגר משרד הבריאות.'}</div>
+        {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
         <div className="list">
           {hits.map((f) => (
-            <div key={f.id} className="row static">
-              <div className="grow"><div>{f.name}</div><FoodSummary f={f} kcal /></div>
-              <button className="icon" onClick={() => setEdit(f)}>✎</button>
-              <button className="icon" onClick={() => hide(f)}>🗑</button>
+            <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
+              <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
+              <button className="icon" aria-label="עריכה" onClick={(e) => { e.stopPropagation(); setEdit(f); }}>✎</button>
+              <button className="icon" aria-label="הסתרה" onClick={(e) => { e.stopPropagation(); hide(f); }}>🗑</button>
             </div>
           ))}
         </div>
       </section>
+      {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
       {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
     </div>

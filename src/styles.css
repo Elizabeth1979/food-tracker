@@ -110,9 +110,22 @@ main button.banner { width: 100%; }
 .amount { display: flex; flex-direction: column; gap: 12px; }
 .amount-row { display: flex; gap: 8px; align-items: end; }
 .amount-row input[type=number] { max-width: 120px; }
-.food-sum .micros { opacity: .8; }
+.food-sum .kcal { color: var(--text); font-weight: 500; }
+.tag { display: inline-block; font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 6px; background: var(--line); color: var(--text); margin-inline-end: 6px; vertical-align: 1px; }
+.tag.warn { background: #4a3a1c; color: #f0c674; }
 .nutline { display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; }
 .picked h3 { margin: 6px 0; }
+textarea { font: inherit; color: var(--text); background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; resize: vertical; font-size: 16px; }
+textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.link.start { align-self: flex-start; text-align: start; font-size: 14px; }
+label.btn.disabled { opacity: .6; pointer-events: none; }
+.new-unit input:first-child { flex: 2; }
+.review { display: flex; flex-direction: column; gap: 10px; }
+.review-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.review-row .amount-row { align-items: center; }
+.review-row input[type=number] { max-width: 80px; }
+.warn-text { color: #f0c674; }
+.nowrap { white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form label, .report label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
 .form label input { color: var(--text); font-size: 16px; }

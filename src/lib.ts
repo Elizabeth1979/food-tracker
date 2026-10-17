@@ -1,9 +1,10 @@
-import { client, listEntries, type Food } from './db';
+import { client, listEntries, supabase, type Food } from './db';
+import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
 export { client };
+export { GRAMS, json, unitsOf, searchFoods, matchFoods, parseLine, splitAnd, unitFor, isFFQ, type Unit, type Parsed } from './search';
 export type { Food, Entry, SavedMeal, Profile } from './db';
 export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-export type Unit = { n: string; g: number };
 export const MICROS = [
   { key: 'sodium', label: 'נתרן', unit: 'מ״ג', dp: 0 },
   { key: 'calcium', label: 'סידן', unit: 'מ״ג', dp: 0 },
@@ -25,10 +26,10 @@ export const MACROS = [
   { key: 'fat', label: 'שומן', color: '#b88a12', kcalPerG: 9 },
   { key: 'protein', label: 'חלבון', color: '#e0607e', kcalPerG: 4 },
 ] as const;
-export const GRAMS = 'גרם';
 
 // ---------- dates (local timezone) ----------
 export const today = () => new Date().toLocaleDateString('en-CA');
+export const mealNow = (): MealKey => { const h = new Date().getHours(); return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack'; };
 export const addDays = (d: string, n: number) => {
   const x = new Date(d + 'T12:00:00');
   x.setDate(x.getDate() + n);
@@ -59,9 +60,6 @@ export const pickItem = (e: Item): Item => {
   const { foodId, name, grams, qty, unit, kcal, carbs, fat, protein } = e;
   return { foodId, name, grams, qty, unit, kcal, carbs, fat, protein, ...Object.fromEntries(MICROS.map((m) => [m.key, e[m.key] ?? null])) };
 };
-// a.json() fields arrive as JSON strings
-export const json = <T,>(x: unknown, d: T): T => (typeof x === 'string' ? JSON.parse(x) : (x as T) ?? d);
-export const unitsOf = (f?: Food | null): Unit[] => [{ n: GRAMS, g: 1 }, ...json<Unit[]>(f?.units, [])];
 export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };
@@ -86,25 +84,34 @@ export async function loadFoods(): Promise<Food[]> {
 export const loadSavedMeals = async () => (await client.models.SavedMeal.list()).data;
 export const loadEntries = listEntries;
 
+// Adds a unit ("פרוסה" = 20 g) to a food. A MoH food gets its first local row this way, so the whole food is sent.
+export async function addUnit(food: Food, unit: Unit): Promise<Food> {
+  const units = [...json<Unit[]>(food.units, []).filter((u) => u.n !== unit.n), unit];
+  const { data } = await client.models.Food.update({ ...food, units: JSON.stringify(units) });
+  return { ...food, ...data, units };
+}
+
 export const addEntries = (date: string, meal: MealKey, items: Item[]) =>
   Promise.all(items.map((it) => client.models.Entry.create({ ...it, date, meal }).then((r) => r.data)));
-
-// ---------- search ----------
-const norm = (s: string) => s.toLowerCase().replace(/["'׳״`,.()\-]/g, ' ');
-export function searchFoods(foods: Food[], q: string, recent: string[]) {
-  const words = norm(q).split(/\s+/).filter(Boolean);
-  const rank = (f: Food) => {
-    const r = recent.indexOf(f.id);
-    return (r >= 0 ? r - 1000 : 0) + (f.source === 'moh' ? 100 : 0) + (norm(f.name).trimStart().startsWith(words[0] ?? '') ? 0 : 50) + f.name.length / 100;
-  };
-  const hits = words.length
-    ? foods.filter((f) => { const t = norm(f.name + ' ' + (f.nameEn ?? '')); return words.every((w) => t.includes(w)); })
-    : foods.filter((f) => recent.includes(f.id));
-  return hits.filter((f) => !f.hidden).sort((a, b) => rank(a) - rank(b)).slice(0, 60);
-}
 
 export const store = {
   get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? '') ?? d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
 };
-export const pushRecent = (id: string) => store.set('recent', [id, ...store.get<string[]>('recent', []).filter((x) => x !== id)].slice(0, 40));
+
+// ---------- photo ----------
+// Shrinks the photo on the device (cost and upload time follow the pixel count, recognition doesn't need more),
+// then asks the meal-photo Edge Function which foods it shows. The answer is the same shape typed text parses to.
+async function shrink(file: File, max = 1024): Promise<string> {
+  const img = await createImageBitmap(file);
+  const s = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.8).split(',')[1];
+}
+export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
+  const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
+  if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
+  return data.items.map((i) => ({ text: `${i.qty} ${i.unit} ${i.name}`, query: i.name, qty: i.qty, unit: i.unit }));
+}

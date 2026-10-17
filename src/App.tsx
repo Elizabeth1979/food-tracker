@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { client, loadFoods, loadSavedMeals, today, type Food, type Profile, type SavedMeal } from './lib';
+import { client, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
 import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
@@ -12,6 +12,9 @@ export type Ctx = {
   setMeals: (m: SavedMeal[]) => void;
   profile: Profile | null;
   setProfile: (p: Profile) => void;
+  // Recently logged food ids, newest first. Kept on the profile so every device shares them.
+  recent: string[];
+  addRecent: (ids: string[]) => void;
 };
 type Tab = 'day' | 'reports' | 'foods' | 'settings';
 const TABS: [Tab, string, string][] = [['day', 'יומן', '📖'], ['reports', 'דוחות', '📊'], ['foods', 'מזונות', '🥗'], ['settings', 'הגדרות', '⚙️']];
@@ -48,7 +51,17 @@ export default function App({ email }: { email: string }) {
     };
   }, []);
 
-  const ctx: Ctx = { foods, setFoods, meals, setMeals, profile, setProfile };
+  // Before the profile had a `recent` column the list lived only in this browser; start from that copy.
+  const recent = profile?.recent ?? store.get<string[]>('recent', []);
+  const addRecent = (ids: string[]) => {
+    if (!profile || !ids.length) return;
+    const next = [...new Set([...ids, ...recent])].slice(0, 40);
+    store.set('recent', next);
+    setProfile({ ...profile, recent: next });
+    // A convenience only: a failed save must not raise the error banner over the entry that did save.
+    client.models.Profile.update({ id: profile.id, recent: next }).catch((e) => console.warn('recent foods not saved', e));
+  };
+  const ctx: Ctx = { foods, setFoods, meals, setMeals, profile, setProfile, recent, addRecent };
   return (
     <div className="app">
       <nav className="tabs">
@@ -61,7 +74,7 @@ export default function App({ email }: { email: string }) {
       <main>
         {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} />}
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
-        {tab === 'foods' && <Foods ctx={ctx} />}
+        {tab === 'foods' && <Foods ctx={ctx} date={date} />}
         {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} />}
       </main>
     </div>

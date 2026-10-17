@@ -45,7 +45,8 @@ create index saved_meals_user on saved_meals (user_id);
 -- Daily goals; one row per user, id = user id.
 create table profiles (
   id uuid primary key default auth.uid() references auth.users on delete cascade,
-  kcal real, carbs real, fat real, protein real
+  kcal real, carbs real, fat real, protein real,
+  recent text[] -- recently logged food ids, newest first (search favours them on every device)
 );
 
 alter table foods enable row level security;

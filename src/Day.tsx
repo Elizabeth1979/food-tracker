@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
-import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, sum, today, type Entry, type MealKey } from './lib';
+import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
 import { Donut, MacroLegend, MicroLine } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 
@@ -124,4 +124,3 @@ const Chevron = ({ right }: { right?: boolean }) => (
   </svg>
 );
 
-const mealNow = (): MealKey => { const h = new Date().getHours(); return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack'; };

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { MACROS, MICROS, type Nut } from './lib';
+import { MACROS, MICROS, isFFQ, type Nut } from './lib';
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
@@ -64,19 +64,21 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
   );
 }
 
-// Micronutrients; values the food doesn't have are omitted. `rda` shows B12 against its daily need.
+// Micronutrients; values the food doesn't have are omitted, and so are zeros except in the day summary
+// (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need.
 export function MicroLine({ n, rda }: { n: Nut; rda?: boolean }) {
-  const parts = MICROS.filter((m) => n[m.key] != null).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`);
+  const parts = MICROS.filter((m) => n[m.key] != null && (rda || n[m.key] !== 0)).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`);
   return parts.length ? <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div> : null;
 }
 
-// One-line nutrition summary for a food in search lists (values per its serving size).
-export function FoodSummary({ f, kcal }: { f: Nut & { servingG: number; source?: string | null }; kcal?: boolean }) {
-  const micros = MICROS.filter((m) => f[m.key] != null).map((m) => `${m.label} ${f[m.key]}`);
+// One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.
+// Micronutrients show once a food is picked (NutLine). Own foods and FFQ group averages get a tag.
+export function FoodSummary({ f }: { f: Nut & { name: string; servingG: number; source?: string | null } }) {
   return (
     <small className="muted food-sum">
-      {f.source === 'moh' ? 'משרד הבריאות · ' : ''}{f.servingG} ג׳{kcal ? ` · ${f.kcal} קק״ל` : ''} · פ׳ {f.carbs} · ש׳ {f.fat} · ח׳ {f.protein}
-      {micros.length > 0 && <span className="micros"> · {micros.join(' · ')}</span>}
+      {f.source !== 'moh' && <span className="tag">שלי</span>}
+      {isFFQ(f) && <span className="tag warn" title="ממוצע של כמה מזונות משאלון תזונה, לא מזון מסוים">ממוצע כללי</span>}
+      <span>ל־{f.servingG} ג׳: <b className="kcal">{f.kcal} קק״ל</b> · פחמימות {f.carbs} · שומן {f.fat} · חלבון {f.protein}</span>
     </small>
   );
 }
