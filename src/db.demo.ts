@@ -45,6 +45,7 @@ export async function restoreAll(b: unknown) { db = { ...load(), ...(b as object
 // Everything is local here, so there is never anything waiting to be sent.
 export const setOfflineUser = (_id: string) => {};
 export const syncPending = async () => {};
+export const hasPending = () => false;
 
 // A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
 // a meal, or for `mode: 'label'` a granola bar's nutrition table (per 100 g, with a 30 g bar as the serving).

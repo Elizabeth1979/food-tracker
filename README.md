@@ -13,7 +13,7 @@ Data lives in **Supabase**, so it syncs across devices. You sign in with a magic
 - Tap any food in the מזונות tab to log it. New units ("פרוסה" = 20 g) can be added right in the amount picker, and the new-food form has a zero-calorie shortcut for supplements.
 - Packaged products the database lacks: in the new-food form, "📷 צלם טבלת ערכים" reads the package's nutrition table (טבלת ערכים תזונתיים) and fills in the values per 100 g, plus the serving as a unit ("יחידה" = 30 g) when the label gives one. Labels that list only per-serving values are converted. Check the numbers against the package, then save. This is the one place calories come from a photo, and only into a food you check and save yourself.
 - Daily goals (default 2000 kcal, 250 g carbs, 65 g fat, 100 g protein), a calorie and macro donut, and weekly or monthly reports. Any date range exports to CSV, or to PDF through the print dialog ("Save as PDF").
-- Works without a connection: the app opens on the phone with your foods, saved meals and the last three months of the diary, and anything you log, edit or delete offline is sent in order once the connection is back. You stay signed in offline.
+- Works without a connection: the app opens on the phone with your foods, saved meals and the last three months of the diary, and anything you log, edit or delete offline is sent in order once the connection is back. A "⏳ waiting to send" line shows until it has gone. The past week is fetched on every start, so those days open offline even if you didn't look at them. You stay signed in offline.
 - Download and restore as a JSON file (Settings → גיבוי). The format matches the earlier local-only version, so old backups restore here.
 
 ## Run it
