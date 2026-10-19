@@ -1,6 +1,6 @@
 # Food tracker
 
-A personal Hebrew (RTL) calorie and macro diary: Vite + React + TypeScript, data in Supabase. The owner isn't a developer, so explain changes in plain words. Start with [README.md](README.md): features, setup, and the **Where it runs** table (Vercel project, Supabase project ref, Edge Function, secrets).
+A personal Hebrew (RTL) calorie and macro diary: Vite + React + TypeScript, data in Supabase. The owner isn't a developer, so explain changes in plain words. Start with [README.md](README.md): features, setup, and the **Where it runs** table (Vercel project, Supabase project ref, Edge Function, secrets). [NOTES.md](NOTES.md) has what each work session did and what's next; add a short entry at the top when a session ends.
 
 ## Commands
 - `npm run dev`: the real app on http://localhost:5173. Needs the magic-link email to sign in, which only the owner can open.
