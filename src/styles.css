@@ -83,6 +83,10 @@ main button.banner { width: 100%; }
 .micro span { white-space: nowrap; }
 .meal header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--card2); }
 .meal-icon { font-size: 20px; }
+.meal-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; }
+.meal-toggle small { font-weight: 400; }
+.chev { color: var(--muted); transition: transform .2s; }
+.meal-toggle[aria-expanded=false] .chev { transform: rotate(90deg); }
 .add { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 20px; font-weight: 700; margin-inline-start: 6px; }
 .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .row.static:hover { background: none; }

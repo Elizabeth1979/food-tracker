@@ -15,6 +15,14 @@ export const NutLine = ({ n }: { n: Nut }) => (
 
 const PREFERRED = ['יחידה בינונית', 'יחידה', 'פרוסה', 'פרוסה בינונית', 'מנה בינונית'];
 
+// Rescale from an item's own snapshot so it works even if the food was edited or removed.
+export const itemFood = (foods: Food[], it: Item) => {
+  const f = foods.find((x) => x.id === it.foodId);
+  return { ...(f ?? {}), id: it.foodId, name: it.name, servingG: it.grams, units: f?.units ?? null, ...scale(it, 1) } as Food;
+};
+// An item's amount as the amount picker takes it: pieces as counted, grams as grams.
+export const itemInit = (it: Item) => (it.unit && it.unit !== GRAMS ? { qty: it.qty ?? 1, unit: it.unit } : { qty: it.grams, unit: GRAMS });
+
 // qty + unit picker for a food; returns an Item. With onAddUnit, the unit list ends in "＋ יחידה חדשה".
 export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; init?: { qty: number; unit: string }; onPick: (it: Item) => void; cta: string; onAddUnit?: (u: Unit) => Promise<unknown> }) {
   const [extra, setExtra] = useState<Unit[]>([]);
@@ -148,7 +156,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}>→ חזרה לחיפוש</button>}
           <h3>{sel.name}</h3>
-          <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && lastAmount(last[sel.id])} onPick={(it) => add(`f:${sel.id}`, [it])} cta={fromFoods ? 'הוסף' : `הוסף ל${label}`} onAddUnit={unitSaver(ctx, sel, setSel)} />
+          <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta={fromFoods ? 'הוסף' : `הוסף ל${label}`} onAddUnit={unitSaver(ctx, sel, setSel)} />
         </div>
       ) : writing ? (
         <>
@@ -183,9 +191,6 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     </Modal>
   );
 }
-
-// An entry's amount as the amount picker takes it: pieces as counted, grams as grams (same rule as EntryDialog).
-const lastAmount = (e: Entry) => (e.unit && e.unit !== GRAMS ? { qty: e.qty ?? 1, unit: e.unit } : { qty: e.grams, unit: GRAMS });
 
 // A usual thing: tap adds it, tap again takes it out. Saved meals carry a small star.
 function Pick({ name, detail, kcal, on, saved, onClick }: { name: string; detail?: string; kcal?: number; on: boolean; saved?: boolean; onClick: () => void }) {
@@ -236,12 +241,8 @@ function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void 
 
 export function EntryDialog({ ctx, entry, onClose, onSaved, onDelete }: { ctx: Ctx; entry: Entry; onClose: () => void; onSaved: (e: Entry) => void; onDelete: () => void }) {
   const [meal, setMeal] = useState(entry.meal as MealKey);
-  // Rescale from the entry's own snapshot so it works even if the food was edited or removed.
   const real = ctx.foods.find((x) => x.id === entry.foodId);
-  const food = useMemo(() => {
-    const f = real;
-    return { ...(f ?? {}), id: entry.foodId, name: entry.name, servingG: entry.grams, units: f?.units ?? null, ...scale(entry as Nut, 1) } as Food;
-  }, [ctx.foods, entry]);
+  const food = useMemo(() => itemFood(ctx.foods, entry as Item), [ctx.foods, entry]);
   const save = async (it: Item) => {
     const { data } = await client.models.Entry.update({ id: entry.id, meal, ...it });
     onSaved(data!);
@@ -252,7 +253,7 @@ export function EntryDialog({ ctx, entry, onClose, onSaved, onDelete }: { ctx: C
       <div className="seg">
         {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} onClick={() => setMeal(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
       </div>
-      <Amount food={food} init={{ qty: entry.unit && entry.unit !== 'גרם' ? entry.qty ?? 1 : entry.grams, unit: entry.unit ?? 'גרם' }} onPick={save} cta="שמור"
+      <Amount food={food} init={itemInit(entry as Item)} onPick={save} cta="שמור"
         onAddUnit={real ? unitSaver(ctx, real) : undefined} />
       <button className="btn danger" onClick={onDelete}>מחק</button>
     </Modal>
