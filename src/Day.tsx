@@ -37,11 +37,6 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
     setUndo(null);
     added(await addEntries(e.date, e.meal as MealKey, [pickItem(e)]));
   };
-  const copyYesterday = async (meal: MealKey) => {
-    const y = (await loadEntries(addDays(date, -1), addDays(date, -1))).filter((e) => e.meal === meal);
-    if (!y.length) return setMsg('אין פריטים בארוחה הזו אתמול');
-    added(await addEntries(date, meal, y.map(pickItem)));
-  };
   const saveMeal = async (meal: MealKey) => {
     const items = list.filter((e) => e.meal === meal).map(pickItem);
     const name = items.length && prompt('שם לארוחה השמורה:');
@@ -96,10 +91,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
                 <button className="icon del" aria-label="מחק" onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
               </div>
             ))}
-            <footer>
-              <button onClick={() => copyYesterday(m.key)}>⎘ העתק מאתמול</button>
-              {es.length > 0 && <button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button>}
-            </footer>
+            {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button></footer>}
           </section>
         );
       })}
@@ -108,7 +100,8 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         <button className="btn" onClick={onExport}>⇩ ייצוא CSV / PDF</button>
       </div>
 
-      {adding && <AddDialog ctx={ctx} meal={adding} date={date} onClose={() => setAdding(null)} onAdded={added} savedTab={shortcut === 'saved'} />}
+      {adding && <AddDialog ctx={ctx} meal={adding} date={date} onClose={() => setAdding(null)} onAdded={added}
+        onRemoved={(es) => setEntries((cur) => cur!.filter((x) => !es.some((e) => e.id === x.id)))} />}
       {editing && (
         <EntryDialog ctx={ctx} entry={editing} onClose={() => setEditing(null)} onDelete={() => { remove(editing); setEditing(null); }}
           onSaved={(e) => { setEntries((cur) => cur!.map((x) => (x.id === e.id ? e : x))); setEditing(null); }} />

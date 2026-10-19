@@ -19,8 +19,26 @@ export type Ctx = {
 type Tab = 'day' | 'reports' | 'foods' | 'settings';
 const TABS: [Tab, string, string][] = [['day', 'יומן', '📖'], ['reports', 'דוחות', '📊'], ['foods', 'מזונות', '🥗'], ['settings', 'הגדרות', '⚙️']];
 
+const hashTab = (): Tab => TABS.find(([k]) => `#${k}` === location.hash)?.[0] ?? 'day';
+
 export default function App({ email }: { email: string }) {
-  const [tab, setTab] = useState<Tab>('day');
+  // Tabs live in the browser history, so the phone's back button returns to the diary instead of leaving the app.
+  // The diary is the bottom entry; any other tab sits one entry above it (switching between them replaces it).
+  const [tab, setTabState] = useState<Tab>(hashTab);
+  const setTab = (t: Tab) => {
+    if (t === tab) return;
+    if (t === 'day') return history.back(); // popstate below brings the diary back
+    const url = `${location.pathname}${location.search}#${t}`;
+    if (tab === 'day') history.pushState(null, '', url); else history.replaceState(null, '', url);
+    setTabState(t);
+  };
+  useEffect(() => {
+    // Opened straight on a tab (a reload): put the diary underneath it.
+    if (hashTab() !== 'day') { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); history.pushState(null, '', h); }
+    const onPop = () => setTabState(hashTab());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [date, setDate] = useState(today);
   const [foods, setFoods] = useState<Food[]>([]);
   const [meals, setMeals] = useState<SavedMeal[]>([]);

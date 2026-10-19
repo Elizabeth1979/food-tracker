@@ -128,7 +128,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
           ))}
         </div>
       </section>
-      {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
+      {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} fromFoods initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
       {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
     </div>

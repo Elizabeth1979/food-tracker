@@ -99,9 +99,12 @@ main button.banner { width: 100%; }
 .day-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* modal */
-.overlay { position: fixed; inset: 0; background: #000a; z-index: 10; display: flex; align-items: flex-end; justify-content: center; }
-.modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; border-radius: 18px 18px 0 0; display: flex; flex-direction: column; }
-@media (min-width: 600px) { .overlay { align-items: center; } .modal { border-radius: 18px; } }
+/* native <dialog>: a bottom sheet on phones, centered from 600px */
+.modal { border: 0; padding: 0; color: var(--text); background: var(--card); width: 100%; max-width: min(560px, 100%); max-height: 92vh; max-height: 92dvh;
+  margin: auto auto 0; border-radius: 18px 18px 0 0; overflow: hidden; }
+.modal[open] { display: flex; flex-direction: column; }
+.modal::backdrop { background: #000a; }
+@media (min-width: 600px) { .modal { margin: auto; border-radius: 18px; } }
 .modal header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
 .modal-body { padding: 8px 16px 20px; overflow: auto; flex: 1; min-height: 0; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; }
 .modal-body > * { flex-shrink: 0; } /* overflow scrolls instead of squashing rows */
@@ -110,6 +113,15 @@ main button.banner { width: 100%; }
 .seg button.on { background: var(--line); color: var(--text); }
 .list { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; }
 .list .row { padding-inline: 4px; }
+/* add dialog: one list of usual things; tap adds, tap again takes back */
+.usual { display: flex; flex-direction: column; }
+.usual .row { padding-inline: 4px; min-height: 56px; }
+.row.pick .kcal { color: var(--muted); font-variant-numeric: tabular-nums; }
+.row.pick .mark { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--line); color: var(--accent); transition: background .15s ease-out, border-color .15s ease-out; }
+.row.pick.on .mark { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.row.pick.on .kcal { color: var(--text); }
+.row.pick .star { color: var(--accent); margin-inline-end: 6px; vertical-align: -1px; }
+.btn.done { position: sticky; bottom: 0; box-shadow: 0 -12px 16px var(--card); }
 .amount { display: flex; flex-direction: column; gap: 12px; }
 .amount-row { display: flex; gap: 8px; align-items: end; }
 .amount-row input[type=number] { max-width: 120px; }

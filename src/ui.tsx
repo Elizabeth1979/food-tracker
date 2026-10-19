@@ -1,14 +1,19 @@
-import type { ChangeEvent, ReactNode } from 'react';
+import { useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut } from './lib';
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+// A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
+// button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
+// press first and returns true when it handled it (going back one step inside the dialog) instead of closing.
+export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => boolean; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (!ref.current!.open) ref.current!.showModal(); }, []);
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור">✕</button></header>
-        <div className="modal-body">{children}</div>
-      </div>
-    </div>
+    <dialog ref={ref} className="modal" aria-label={title}
+      onCancel={(e) => { e.preventDefault(); if (!onBack?.()) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור">✕</button></header>
+      <div className="modal-body">{children}</div>
+    </dialog>
   );
 }
 
