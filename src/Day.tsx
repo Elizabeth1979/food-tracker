@@ -16,6 +16,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
   const [editing, setEditing] = useState<Entry | null>(null);
   const [msg, setMsg] = useState('');
   const [undo, setUndo] = useState<Entry | null>(null);
+  const [toggled, setToggled] = useState<Record<string, boolean>>({}); // `${date}:${meal}` → open
 
   useEffect(() => {
     setEntries(null);
@@ -26,7 +27,13 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
   const tot = sum(list);
   const goal = ctx.profile?.kcal ?? 0;
 
-  const added = (es: Entry[]) => setEntries((cur) => [...(cur ?? []), ...es]);
+  // Today, meals before the current one start collapsed; a tap on the header overrides.
+  const isOpen = (meal: MealKey) => toggled[`${date}:${meal}`] ?? !(date === today() && MEALS.findIndex((m) => m.key === meal) < MEALS.findIndex((m) => m.key === mealNow()));
+  const setOpen = (meal: string, open: boolean) => setToggled((t) => ({ ...t, [`${date}:${meal}`]: open }));
+  const added = (es: Entry[]) => {
+    setEntries((cur) => [...(cur ?? []), ...es]);
+    if (es[0]) setOpen(es[0].meal, true);
+  };
   const remove = async (e: Entry) => {
     await client.models.Entry.delete({ id: e.id });
     setEntries((cur) => cur!.filter((x) => x.id !== e.id));
@@ -75,23 +82,28 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
 
       {MEALS.map((m) => {
         const es = list.filter((e) => e.meal === m.key);
+        const open = isOpen(m.key);
         return (
           <section key={m.key} className="card meal">
             <header>
-              <span className="meal-icon">{m.icon}</span>
-              <h3>{m.label}</h3>
-              <span className="grow" />
-              <b>{sum(es).kcal}</b><small className="muted">קק״ל</small>
+              <h3 className="grow">
+                <button className="meal-toggle" aria-expanded={open} aria-controls={`meal-${m.key}`} onClick={() => setOpen(m.key, !open)}>
+                  <span className="meal-icon">{m.icon}</span>{m.label}<span className="grow" />
+                  <b>{sum(es).kcal}</b><small className="muted">קק״ל</small><span className="chev" aria-hidden="true">▾</span>
+                </button>
+              </h3>
               <button className="add" onClick={() => setAdding(m.key)} aria-label="הוסף">＋</button>
             </header>
-            {es.map((e) => (
-              <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
-                <div className="grow"><div>{e.name}</div><small className="accent">{amountLabel(e)}</small></div>
-                <b>{e.kcal}</b>
-                <button className="icon del" aria-label="מחק" onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
-              </div>
-            ))}
-            {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button></footer>}
+            <div id={`meal-${m.key}`} hidden={!open}>
+              {es.map((e) => (
+                <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
+                  <div className="grow"><div>{e.name}</div><small className="accent">{amountLabel(e)}</small></div>
+                  <b>{e.kcal}</b>
+                  <button className="icon del" aria-label="מחק" onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
+                </div>
+              ))}
+              {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button></footer>}
+            </div>
           </section>
         );
       })}

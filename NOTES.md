@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-19: change amounts in saved meals, fold diary meals
+
+**Done** (branch `claude/port-meal-editing`, draft PR, not live yet), ported from the upstream repo:
+- Saved-meal editor: tap a food to change its amount ("עדכן כמות") instead of removing and re-adding it.
+- Diary: tap a meal's header to fold or unfold it. Today, meals before the current one start folded; adding to a meal unfolds it.
+
 ## 2026-10-19: the ＋ screen and the phone's back button
 
 **Done** (commit 954bf3d, live):
