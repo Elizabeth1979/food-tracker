@@ -138,7 +138,9 @@ textarea { font: inherit; color: var(--text); background: var(--card2); border: 
 textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .link.start { align-self: flex-start; text-align: start; font-size: 14px; }
 label.btn.disabled { opacity: .6; pointer-events: none; }
-.new-unit input:first-child { flex: 2; }
+.unit-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.unit-row p { flex-basis: 100%; margin: 0; }
+.unit-row .unit-k { width: 56px; } .unit-row .unit-g { width: 72px; } .unit-row .unit-n { flex: 1; min-width: 6em; }
 .review { display: flex; flex-direction: column; gap: 10px; }
 .review-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .review-row .amount-row { align-items: center; }

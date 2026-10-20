@@ -33,7 +33,6 @@ const Label = z.object({
   name: z.string().describe('Product name in Hebrew as printed on the package, or "" when not visible'),
   per: z.enum(['100g', 'serving']).describe('Which column the values below come from: "100g" (also per 100 ml) whenever the label has it'),
   servingG: z.number().nullable().describe('Grams (or ml) in one serving, when the label states it'),
-  servingUnit: z.enum(UNITS.filter((u) => u !== 'גרם') as [string, ...string[]]).describe('What one serving is: יחידה for a bar/piece, פרוסה for a slice, כוס for a cup, otherwise מנה'),
   kcal: num('Energy in kcal (קלוריות), not kJ'),
   carbs: num('Total carbohydrates (פחמימות) in g, not just the sugars line'),
   fat: num('Total fat (שומנים) in g'),
@@ -68,7 +67,8 @@ async function readLabel(image: string) {
       name: l.name.trim(),
       kcal: at(l.kcal, 0), carbs: at(l.carbs), fat: at(l.fat), protein: at(l.protein),
       sodium: at(l.sodium, 0), calcium: at(l.calcium, 0), potassium: at(l.potassium, 0), b12: at(l.b12, 2),
-      unit: servingG ? { n: l.servingUnit, g: servingG } : null,
+      // Always "מנה": a serving is often the whole bag, and calling it "יחידה" took the name a single piece needs.
+      unit: servingG ? { n: 'מנה', g: servingG } : null,
       perServing: l.per === 'serving',
     },
   });

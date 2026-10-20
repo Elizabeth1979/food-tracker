@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
-import { FoodSummary, Modal, PhotoPick } from './ui';
+import { FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 
@@ -13,7 +13,7 @@ const FIELDS = [
 export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: Food) => void }) {
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
-  const [units, setUnits] = useState<Unit[]>(() => json<Unit[]>(init.units, []));
+  const [units, setUnits] = useState<UnitDraft[]>(() => json<Unit[]>(init.units, []).map(draftOf));
   const [err, setErr] = useState('');
   const [label, setLabel] = useState<'busy' | 'done' | 'serving' | ''>('');
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
@@ -22,7 +22,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   const supplement = () => {
     const g = v.servingG === '100' || !Number(v.servingG) ? '5' : v.servingG;
     setV({ ...v, servingG: g, kcal: '0', carbs: '0', fat: '0', protein: '0' });
-    if (!units.some((u) => u.n)) setUnits([{ n: 'מנה', g: Number(g) }]);
+    if (!units.some((u) => u.n)) setUnits([{ k: '1', n: 'מנה', g }]);
   };
   // Fills the form from a photo of the package's nutrition table; everything stays editable until שמור.
   const photo = async (file: File) => {
@@ -31,7 +31,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
       const l = await readLabel(file);
       const vals = Object.fromEntries(FIELDS.map(([k]) => [k, l[k] == null ? '' : String(l[k])]));
       setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: '100' }));
-      if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), l.unit!]);
+      if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), draftOf(l.unit!)]);
       setLabel(l.perServing ? 'serving' : 'done');
     } catch (x: any) { setErr(x.message); setLabel(''); }
   };
@@ -40,7 +40,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     const input = {
       name: v.name.trim(), servingG: num('servingG') || 100, source: 'user', // app edits win over the shipped food files
       kcal: num('kcal')!, carbs: num('carbs')!, fat: num('fat')!, protein: num('protein')!, sodium: num('sodium'), calcium: num('calcium'), potassium: num('potassium'), b12: num('b12'),
-      units: JSON.stringify(units.filter((u) => u.n && u.g > 0)),
+      units: JSON.stringify(units.map(unitOf).filter((u) => u.n && u.g > 0)),
     };
     const { data, errors } = init.id ? await client.models.Food.update({ id: init.id, ...input }) : await client.models.Food.create(input);
     if (errors) return setErr(errors[0].message);
@@ -62,14 +62,14 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
       <button className="link start" onClick={supplement}>💊 תוסף תזונה / ללא קלוריות: מלא אפסים</button>
       <div className="grid2">{FIELDS.map(([k, l]) => inp(k, l))}</div>
       <h4>יחידות (אופציונלי)</h4>
+      <p className="muted small">{UNIT_HINT}</p>
       {units.map((u, i) => (
-        <div key={i} className="amount-row">
-          <input placeholder="שם יחידה, למשל ״פרוסה״" value={u.n} onChange={(e) => setUnits(units.map((x, j) => (j === i ? { ...x, n: e.target.value } : x)))} />
-          <input type="number" inputMode="decimal" placeholder="גרם" value={u.g || ''} onChange={(e) => setUnits(units.map((x, j) => (j === i ? { ...x, g: Number(e.target.value) } : x)))} />
-          <button className="icon" onClick={() => setUnits(units.filter((_, j) => j !== i))}>✕</button>
+        <div key={i} className="unit-row">
+          <UnitInputs d={u} set={(d) => setUnits(units.map((x, j) => (j === i ? d : x)))} />
+          <button className="icon" aria-label="מחק יחידה" onClick={() => setUnits(units.filter((_, j) => j !== i))}>✕</button>
         </div>
       ))}
-      <button className="link" onClick={() => setUnits([...units, { n: '', g: 0 }])}>＋ הוסף יחידה</button>
+      <button className="link" onClick={() => setUnits([...units, { k: '1', n: '', g: '' }])}>＋ הוסף יחידה</button>
       {err && <p className="error">{err}</p>}
       <button className="btn primary" onClick={save}>שמור</button>
     </div>
