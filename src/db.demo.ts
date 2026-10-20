@@ -62,7 +62,7 @@ export const supabase = {
       await new Promise((r) => setTimeout(r, 800));
       if (opts.body?.mode === 'label')
         return {
-          data: { label: { name: 'חטיף גרנולה שוקולד', kcal: 433, carbs: 63.3, fat: 16.7, protein: 6.7, sodium: 233, calcium: 50, potassium: null, b12: null, unit: { n: 'יחידה', g: 30 }, perServing: false } } as D,
+          data: { label: { name: 'חטיף גרנולה שוקולד', kcal: 433, carbs: 63.3, fat: 16.7, protein: 6.7, sodium: 233, calcium: 50, potassium: null, b12: null, unit: { n: 'מנה', g: 30 }, perServing: false } } as D,
           error: null,
         };
       return {

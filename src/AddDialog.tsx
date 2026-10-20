@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type Nut, type Parsed, type Unit } from './lib';
 import { norm } from './search';
-import { FoodSummary, MicroLine, Modal, PhotoPick } from './ui';
+import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, unitOf, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
 
@@ -30,10 +30,10 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
   const [unit, setUnit] = useState(() => units.find((u) => u.n === init?.unit)
     ?? (food.source === 'moh' ? PREFERRED.map((n) => units.find((u) => u.n === n)).find(Boolean) : units[1]) ?? units[0]);
   const [qty, setQty] = useState(String(init?.qty ?? (unit.g === 1 ? food.servingG : 1)));
-  const [newUnit, setNewUnit] = useState<{ n: string; g: string } | null>(null);
+  const [newUnit, setNewUnit] = useState<UnitDraft | null>(null);
   const it = itemFor(food, Number(qty) || 0, unit);
   const saveUnit = async () => {
-    const u = { n: newUnit!.n.trim(), g: Number(newUnit!.g) };
+    const u = unitOf(newUnit!);
     if (!u.n || !(u.g > 0)) return;
     await onAddUnit!(u);
     setExtra([...extra, u]); setUnit(u); setQty('1'); setNewUnit(null);
@@ -43,7 +43,7 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
       <div className="amount-row">
         <input type="number" inputMode="decimal" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus onFocus={(e) => e.target.select()} />
         <select value={newUnit ? '+' : unit.n} onChange={(e) => {
-          if (e.target.value === '+') return setNewUnit({ n: '', g: '' });
+          if (e.target.value === '+') return setNewUnit({ k: '1', n: '', g: '' });
           const u = units.find((x) => x.n === e.target.value)!; setUnit(u); setQty(u.g === 1 ? String(food.servingG) : '1');
         }}>
           {units.map((u) => <option key={u.n} value={u.n}>{u.g === 1 ? u.n : `${u.n} (${u.g} ג׳)`}</option>)}
@@ -51,9 +51,9 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
         </select>
       </div>
       {newUnit && (
-        <div className="amount-row new-unit">
-          <input placeholder="שם, למשל ״פרוסה״" value={newUnit.n} onChange={(e) => setNewUnit({ ...newUnit, n: e.target.value })} autoFocus />
-          <input type="number" inputMode="decimal" placeholder="גרם" value={newUnit.g} onChange={(e) => setNewUnit({ ...newUnit, g: e.target.value })} />
+        <div className="unit-row">
+          <p className="muted small">{UNIT_HINT}</p>
+          <UnitInputs d={newUnit} set={setNewUnit} autoFocus />
           <button className="btn small primary" onClick={saveUnit}>שמור</button>
           <button className="icon" aria-label="ביטול" onClick={() => setNewUnit(null)}>✕</button>
         </div>

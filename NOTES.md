@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-20: units you can add without knowing a piece's weight
+
+**Done** (branch `claude/fervent-heisenberg-zpz8pi`, draft PR, not live yet):
+- A new unit is typed as "how many weigh how many grams": "20 מסטיק = 28 ג׳" saves one מסטיק as 1.4 g. Same row in the food's ✎ form and in the amount picker's "＋ יחידה חדשה…", with a one-line explanation above it.
+- The label photo now always names the package's serving "מנה". It used to call it "יחידה", so peanut chocolate lentils got "יחידה" = 300 g (the whole bag), and the name for a single lentil was taken.
+
+**Next:**
+1. **Redeploy the `meal-photo` function** after merging (`supabase functions deploy meal-photo`), or the label fix doesn't take effect.
+2. **Fix the existing food:** עדשי שוקולד עם בוטנים has "יחידה" = 300 g. In ✎, rename it "שקית" and add e.g. "<count in bag> עדשה = 300 ג׳".
+
 ## 2026-10-19: change amounts in saved meals, fold diary meals
 
 **Done** (branch `claude/port-meal-editing`, draft PR, not live yet), ported from the upstream repo:

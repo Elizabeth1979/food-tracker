@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
-import { MACROS, MICROS, isFFQ, type Nut } from './lib';
+import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -107,5 +107,24 @@ export function FoodSummary({ f }: { f: Nut & { name: string; servingG: number; 
       {isFFQ(f) && <span className="tag warn" title="ממוצע של כמה מזונות משאלון תזונה, לא מזון מסוים">ממוצע כללי</span>}
       <span>ל־{f.servingG} ג׳: <b className="kcal">{f.kcal} קק״ל</b> · פחמימות {f.carbs} · שומן {f.fat} · חלבון {f.protein}</span>
     </small>
+  );
+}
+
+// A unit as typed: "k of n weigh g grams". People know a package's weight and how many pieces are in it,
+// rarely what one piece weighs, so the app divides. Saved as the weight of one.
+export type UnitDraft = { k: string; n: string; g: string };
+export const draftOf = (u: Unit): UnitDraft => ({ k: '1', n: u.n, g: String(u.g) });
+export const unitOf = (d: UnitDraft): Unit => ({ n: d.n.trim(), g: Math.round((Number(d.g) / (Number(d.k) || 1)) * 100) / 100 });
+export const UNIT_HINT = 'כמה יחידות שוקלות כמה גרם. לא יודעים כמה שוקלת אחת? כתבו את משקל האריזה וכמה יחידות יש בה, למשל 20 מסטיק = 28 ג׳, והמשקל של אחת יחושב לבד.';
+
+export function UnitInputs({ d, set, autoFocus }: { d: UnitDraft; set: (d: UnitDraft) => void; autoFocus?: boolean }) {
+  return (
+    <>
+      <input type="number" inputMode="decimal" min="0" step="any" className="unit-k" aria-label="כמה יחידות" value={d.k} onChange={(e) => set({ ...d, k: e.target.value })} />
+      <input className="unit-n" placeholder="שם, למשל ״עדשה״" aria-label="שם היחידה" value={d.n} onChange={(e) => set({ ...d, n: e.target.value })} autoFocus={autoFocus} />
+      <span aria-hidden="true">=</span>
+      <input type="number" inputMode="decimal" min="0" step="any" className="unit-g" placeholder="גרם" aria-label="שוקלות יחד (גרם)" value={d.g} onChange={(e) => set({ ...d, g: e.target.value })} />
+      <span className="muted">ג׳</span>
+    </>
   );
 }
