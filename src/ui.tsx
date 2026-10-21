@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
 
@@ -43,6 +43,17 @@ function Reading({ file, text }: { file: File; text: string }) {
       {src && <img src={src} alt="" />}
       <figcaption><span className="spinner" aria-hidden="true" /><b>{text}</b><span>זה לוקח כמה שניות</span></figcaption>
     </figure>
+  );
+}
+
+// A titled part of a page: the title (and an optional action) above a card, as in the diary's "ארוחות".
+export function Group({ title, action, body = 'pad', className, children }: { title: ReactNode; action?: ReactNode; body?: string; className?: string; children: ReactNode }) {
+  const id = useId();
+  return (
+    <section className={className} aria-labelledby={id}>
+      <div className="group-head"><h2 id={id} className="eyebrow">{title}</h2>{action}</div>
+      <div className={`card ${body}`}>{children}</div>
+    </section>
   );
 }
 

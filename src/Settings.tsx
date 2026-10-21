@@ -3,6 +3,7 @@ import type { Ctx } from './App';
 import { client, loadMoh, today } from './lib';
 import { exportAll, restoreAll, supabase } from './db';
 import { APP_VERSION } from './update';
+import { Group } from './ui';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
 
@@ -37,29 +38,27 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
 
   return (
     <div className="stack">
-      <section className="card pad form">
-        <h3>יעדים יומיים</h3>
+      <h1 className="page-title">הגדרות</h1>
+      <Group title="יעדים יומיים" body="pad form">
         <div className="grid2">
           {GOALS.map(([k, l]) => <label key={k}><span>{l}</span><input type="number" inputMode="decimal" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></label>)}
         </div>
         <p className="muted small">המקרו־נוטריינטים שווים {Math.round(macroKcal)} קק״ל (פחמימות וחלבון 4 קק״ל/ג׳, שומן 9 קק״ל/ג׳).</p>
         <button className="btn primary" onClick={save}>שמור יעדים</button>
-      </section>
-      <section className="card pad form">
-        <h3>גיבוי</h3>
+      </Group>
+      <Group title="גיבוי" body="pad form">
         <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>
         <button className="btn primary" onClick={download}>הורדת גיבוי</button>
         <label className="btn">
           <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
           שחזור מגיבוי
         </label>
-      </section>
-      <section className="card pad form">
-        <h3>חשבון</h3>
+      </Group>
+      <Group title="חשבון" body="pad form">
         <p className="muted small">מחובר בתור <b dir="ltr">{email}</b></p>
         <p className="muted small">גרסה <span dir="ltr">{APP_VERSION}</span></p>
         <button className="btn" onClick={() => supabase.auth.signOut()}>יציאה</button>
-      </section>
+      </Group>
       <div role="status">{msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}</div>
     </div>
   );

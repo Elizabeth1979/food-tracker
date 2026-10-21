@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
-import { FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
+import { Group, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 import { Icon } from './icons';
@@ -99,8 +99,8 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   };
   return (
     <div className="stack">
-      <section className="card pad">
-        <div className="amount-row"><h3 className="grow">ארוחות שמורות</h3><button className="btn primary small" onClick={() => setMealEdit('new')}><Icon name="plus" />חדשה</button></div>
+      <h1 className="page-title">מזונות</h1>
+      <Group title="ארוחות שמורות" action={<button className="btn small" onClick={() => setMealEdit('new')}><Icon name="plus" />ארוחה חדשה</button>}>
         {!ctx.meals.length && <p className="muted">צור ארוחה כאן, או שמור ארוחה מהיומן עם ״שמור כארוחה״.</p>}
         {ctx.meals.map((m) => {
           const items = json<Item[]>(m.items, []);
@@ -111,13 +111,9 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
             </div>
           );
         })}
-      </section>
-      <section className="card pad">
-        <h3>מאגר מזונות <small className="muted">({ctx.foods.filter((f) => !f.hidden).length})</small></h3>
-        <div className="amount-row">
-          <input className="search" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="btn primary" onClick={() => setEdit({ name: q })}><Icon name="plus" />חדש</button>
-        </div>
+      </Group>
+      <Group title={<>מאגר מזונות <small>({ctx.foods.filter((f) => !f.hidden).length})</small></>} action={<button className="btn small" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
+        <input className="search" type="search" aria-label="חיפוש במאגר" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן. העיפרון עורך, הפח מסתיר מהחיפוש.' : 'המזונות שהוספת. חפש כדי לראות גם את מאגר משרד הבריאות.'}</div>
         {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
         <div className="list">
@@ -129,7 +125,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
             </div>
           ))}
         </div>
-      </section>
+      </Group>
       {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} fromFoods initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
       {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}

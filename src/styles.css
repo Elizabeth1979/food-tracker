@@ -110,7 +110,10 @@ main button.banner { width: 100%; }
 .ring-fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .3s; }
 .ring-fill.over { stroke: var(--danger); }
 /* meals: one card, a section per meal */
-.eyebrow { font-size: 14px; font-weight: 500; color: var(--muted); margin: 8px 4px; }
+.page-title { font-size: 22px; font-weight: 600; padding: 4px; }
+.group-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 4px; }
+.eyebrow { font-size: 14px; font-weight: 500; color: var(--muted); }
+.card > .search:first-child { margin-bottom: 12px; }
 .meal + .meal { border-top: 1px solid var(--line); }
 .meal header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
 .meal .row { border: 0; padding-block: 6px; padding-inline-start: 58px; }
@@ -196,6 +199,7 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .warn-text { color: var(--warn); }
 .nowrap { white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
+.form p { margin: 0; }
 .form label:not(.btn), .report label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); } /* field labels; a <label class=btn> is a button */
 .form label input { color: var(--text); font-size: 16px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut } from './lib';
-import { Donut, MacroLegend, MicroLine } from './ui';
+import { Group, Donut, MacroLegend, MicroLine } from './ui';
 import { Icon } from './icons';
 
 const PRESETS: [string, number][] = [['יום', 0], ['שבוע', 6], ['חודש', 29]];
@@ -34,7 +34,8 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
 
   return (
     <div className="stack report">
-      <section className="card pad no-print">
+      <h1 className="page-title no-print">דוחות</h1>
+      <Group title="טווח וייצוא" body="pad form" className="no-print">
         <div className="seg">
           {PRESETS.map(([l, n]) => <button key={l} className={from === addDays(to, -n) ? 'on' : ''} onClick={() => setFrom(addDays(to, -n))}>{l}</button>)}
         </div>
@@ -42,12 +43,12 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
           <label className="grow"><span className="muted small">מתאריך</span><input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
           <label className="grow"><span className="muted small">עד תאריך</span><input type="date" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} /></label>
         </div>
-        <div className="amount-row">
+        <div className="grid2">
           <button className="btn" onClick={csv} disabled={!entries?.length}><Icon name="download" />CSV</button>
-          <button className="btn primary" onClick={() => print()} disabled={!entries?.length}><Icon name="download" />PDF</button>
+          <button className="btn" onClick={() => print()} disabled={!entries?.length}><Icon name="download" />PDF</button>
         </div>
         <p className="muted small">PDF: בחלון ההדפסה בחר ״שמירה כ-PDF״.</p>
-      </section>
+      </Group>
 
       <h2 className="print-title">דוח תזונה · {title}</h2>
       {entries === null ? <div className="muted center">טוען…</div> : !logged.length ? <div className="muted center">אין רישומים בטווח הזה</div> : (
