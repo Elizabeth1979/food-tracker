@@ -99,3 +99,9 @@ test('a food that exists only as a dish ingredient falls back to the plain food'
   assert.match(matchFoods(moh, 'פלפל חריף כבוש', [])[0].name, /^פלפל חריף, כבוש/);
   assert.match(matchFoods(moh, 'חזה עוף', [])[0].name, /^בשר עוף, חזה/); // "חזה" is in the name, not the head: unchanged
 });
+
+test('staples find the plain everyday version', () => {
+  assert.match(first('פיתה'), /^פיתה, פיתה ביס/); // not toasted ("קלויה") or a brand's
+  assert.match(first('פיתות'), /^פיתה, פיתה ביס/);
+  assert.match(first('פיתה דרוזית'), /^פיתה דרוזית/); // a typed kind still wins
+});
