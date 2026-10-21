@@ -147,16 +147,10 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       </Modal>
     );
   return (
-    <Modal title={`${fromFoods ? 'הוספה ליומן' : `הוספה ל${label}`}${day}`} onClose={onClose}
-      heading={fromFoods ? undefined : <>הוספה ל<select className="title-select" aria-label="ארוחה" value={meal} onChange={(e) => setMeal(e.target.value as MealKey)}>
-        {MEALS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-      </select>{day}</>}
+    <Modal title={`הוספה ליומן${day}`} onClose={onClose}
       onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } return false; }}>
-      {fromFoods && (
-        <div className="seg">
-          {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} onClick={() => setMeal(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
-        </div>
-      )}
+      {/* The meal starts at the time of day's; one tap changes it, on every step (list, amount, photo review) */}
+      <MealSeg meal={meal} onChange={setMeal} />
       {sel ? (
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}>→ חזרה לחיפוש</button>}
@@ -165,7 +159,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
         </div>
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} file={photo} onAdd={(items) => add(`w:${Date.now()}`, items)} />
+          <TextOrPhoto ctx={ctx} file={photo} cta={`הוסף ל${label}`} onAdd={(items) => add(`w:${Date.now()}`, items)} />
         </>
       ) : (
         <>
@@ -199,6 +193,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   );
 }
 
+// Which meal an entry goes to: four tabs, the chosen one pressed.
+const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => void }) => (
+  <div className="seg" role="group" aria-label="ארוחה">
+    {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} aria-pressed={meal === m.key} onClick={() => onChange(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
+  </div>
+);
+
 // A usual thing: tap adds it, tap again takes it out. Saved meals carry a small star.
 function Pick({ name, detail, kcal, on, saved, onClick }: { name: string; detail?: string; kcal?: number; on: boolean; saved?: boolean; onClick: () => void }) {
   return (
@@ -217,7 +218,7 @@ const Check = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 const Star = () => <svg className="star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>;
 
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
-function TextOrPhoto({ ctx, file, onAdd }: { ctx: Ctx; file?: File | null; onAdd: (items: Item[]) => void }) {
+function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[]) => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -230,7 +231,7 @@ function TextOrPhoto({ ctx, file, onAdd }: { ctx: Ctx; file?: File | null; onAdd
   if (parsed)
     return (
       <>
-        <ReviewList ctx={ctx} parsed={parsed} cta="הוסף ליומן" onAdd={onAdd} />
+        <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={onAdd} />
       </>
     );
   return (
@@ -258,9 +259,7 @@ export function EntryDialog({ ctx, entry, onClose, onSaved, onDelete }: { ctx: C
   return (
     <Modal title={entry.name} onClose={onClose}>
       <div className="muted small">{amountLabel(entry)}</div>
-      <div className="seg">
-        {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} onClick={() => setMeal(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
-      </div>
+      <MealSeg meal={meal} onChange={setMeal} />
       <Amount food={food} init={itemInit(entry as Item)} onPick={save} cta="שמור"
         onAddUnit={real ? unitSaver(ctx, real) : undefined} />
       <button className="btn danger" onClick={onDelete}>מחק</button>

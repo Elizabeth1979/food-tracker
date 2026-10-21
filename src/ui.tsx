@@ -4,15 +4,14 @@ import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
 // press first and returns true when it handled it (going back one step inside the dialog) instead of closing.
-export function Modal({ title, heading, onClose, onBack, children }: { title: string; heading?: ReactNode; onClose: () => void; onBack?: () => boolean; children: ReactNode }) {
+export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => boolean; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (!ref.current!.open) ref.current!.showModal(); }, []);
   return (
     <dialog ref={ref} className="modal" aria-label={title}
       onCancel={(e) => { e.preventDefault(); if (!onBack?.()) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      {/* ✕ first in the DOM (shown at the end by row-reverse), so opening focuses it, not a control in the heading */}
-      <header><button className="icon" onClick={onClose} aria-label="סגור">✕</button><h2>{heading ?? title}</h2></header>
+      <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור">✕</button></header>
       <div className="modal-body">{children}</div>
     </dialog>
   );
