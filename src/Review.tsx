@@ -4,6 +4,7 @@ import { GRAMS, itemFor, matchFoods, parseLine, splitAnd, sum, unitFor, unitsOf,
 import { Modal } from './ui';
 import { FoodForm } from './Foods';
 import { NutLine } from './AddDialog';
+import { Icon } from './icons';
 
 type Row = { id: number; p: Parsed; options: Food[]; food: Food | null; qty: string; unit: Unit };
 
@@ -53,7 +54,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
           <div key={r.id} className="review-row">
             <div className="amount-row">
               <small className="muted grow">״{r.p.text}״</small>
-              <button className="icon del" aria-label="הסר" onClick={() => setRows(rows.filter((x) => x.id !== r.id))}>✕</button>
+              <button className="icon del" aria-label={`הסר: ${r.p.text}`} onClick={() => setRows(rows.filter((x) => x.id !== r.id))}><Icon name="x" /></button>
             </div>
             {r.options.length ? (
               <select value={r.food?.id} aria-label="מזון" onChange={(e) => (e.target.value === '+' ? setCreating(r) : pick(r, r.options.find((f) => f.id === e.target.value)!))}>
@@ -63,7 +64,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
             ) : (
               <div className="amount-row">
                 <span className="grow warn-text">לא נמצא ״{r.p.query}״</span>
-                <button className="btn small" onClick={() => setCreating(r)}>＋ צור מזון</button>
+                <button className="btn small" onClick={() => setCreating(r)}><Icon name="plus" />צור מזון</button>
               </div>
             )}
             {r.food && (

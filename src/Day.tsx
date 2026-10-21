@@ -3,6 +3,7 @@ import type { Ctx } from './App';
 import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
 import { Donut, MacroLegend, MicroLine } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
+import { Icon } from './icons';
 
 export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void }) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
@@ -56,13 +57,13 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
   return (
     <div className="day">
       <div className="datebar card">
-        <button className="icon" onClick={() => setDate(addDays(date, -1))} aria-label="יום קודם"><Chevron right /></button>
+        <button className="icon" onClick={() => setDate(addDays(date, -1))} aria-label="יום קודם"><Icon name="chevron-right" /></button>
         <label className="date-pick">
           <b>{date === today() ? 'היום' : fmtDate(date, { weekday: 'long' })}</b>
           <span className="muted">{fmtDate(date, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           <input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </label>
-        <button className="icon" onClick={() => setDate(addDays(date, 1))} aria-label="יום הבא"><Chevron /></button>
+        <button className="icon" onClick={() => setDate(addDays(date, 1))} aria-label="יום הבא"><Icon name="chevron-left" /></button>
         {date !== today() && <button className="btn small" onClick={() => setDate(today())}>להיום</button>}
       </div>
 
@@ -77,7 +78,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
       </section>
 
       {/* One way in: the meal is picked from the time of day, and can be changed in the window's title */}
-      <button className="btn primary add-all" onClick={() => setAdding(mealNow())}>＋ הוספה</button>
+      <button className="btn primary add-all" onClick={() => setAdding(mealNow())}><Icon name="plus" />הוספה</button>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
       {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
@@ -91,8 +92,8 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
             <header>
               <h3 className="grow">
                 <button className="meal-toggle" aria-expanded={open} aria-controls={`meal-${m.key}`} onClick={() => setOpen(m.key, !open)}>
-                  <span className="meal-icon">{m.icon}</span>{m.label}<span className="grow" />
-                  <b>{sum(es).kcal}</b><small className="muted">קק״ל</small><span className="chev" aria-hidden="true">▾</span>
+                  <span className="meal-icon"><Icon name={m.icon} /></span>{m.label}<span className="grow" />
+                  <b>{sum(es).kcal}</b><small className="muted">קק״ל</small><span className="chev"><Icon name="chevron-down" /></span>
                 </button>
               </h3>
             </header>
@@ -101,17 +102,17 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
                 <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
                   <div className="grow"><div>{e.name}</div><small className="accent">{amountLabel(e)}</small></div>
                   <b>{e.kcal}</b>
-                  <button className="icon del" aria-label={`מחק: ${e.name}`} onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
+                  <button className="icon del" aria-label={`מחק: ${e.name}`} onClick={(ev) => { ev.stopPropagation(); remove(e); }}><Icon name="x" /></button>
                 </div>
               ))}
-              {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button></footer>}
+              {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}><Icon name="star" />שמור כארוחה</button></footer>}
             </div>
           </section>
         );
       })}
 
       <div className="day-actions">
-        <button className="btn" onClick={onExport}>⇩ ייצוא CSV / PDF</button>
+        <button className="btn" onClick={onExport}><Icon name="download" />ייצוא CSV / PDF</button>
       </div>
 
       {adding && <AddDialog ctx={ctx} meal={adding} date={date} onClose={() => setAdding(null)} onAdded={added}
@@ -124,10 +125,4 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
   );
 }
 
-// SVG so RTL bidi mirroring can't flip it; in RTL the previous day sits on the right, pointing right.
-const Chevron = ({ right }: { right?: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d={right ? 'M9 5l7 7-7 7' : 'M15 5l-7 7 7 7'} />
-  </svg>
-);
 

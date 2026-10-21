@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut } from './lib';
 import { Donut, MacroLegend, MicroLine } from './ui';
+import { Icon } from './icons';
 
 const PRESETS: [string, number][] = [['יום', 0], ['שבוע', 6], ['חודש', 29]];
 
@@ -42,8 +43,8 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
           <label className="grow"><span className="muted small">עד תאריך</span><input type="date" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} /></label>
         </div>
         <div className="amount-row">
-          <button className="btn" onClick={csv} disabled={!entries?.length}>⇩ CSV</button>
-          <button className="btn primary" onClick={() => print()} disabled={!entries?.length}>⇩ PDF</button>
+          <button className="btn" onClick={csv} disabled={!entries?.length}><Icon name="download" />CSV</button>
+          <button className="btn primary" onClick={() => print()} disabled={!entries?.length}><Icon name="download" />PDF</button>
         </div>
         <p className="muted small">PDF: בחלון ההדפסה בחר ״שמירה כ-PDF״.</p>
       </section>
@@ -76,7 +77,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
                 const es = x.es.filter((e) => e.meal === m.key);
                 return es.length ? (
                   <div key={m.key}>
-                    <h4>{m.icon} {m.label} <small className="muted">· {sum(es).kcal} קק״ל</small></h4>
+                    <h4><Icon name={m.icon} />{m.label} <small className="muted">· {sum(es).kcal} קק״ל</small></h4>
                     {es.map((e) => <div key={e.id} className="detail-row"><span className="grow">{e.name}</span><small className="muted">{amountLabel(e)}</small><b>{e.kcal}</b></div>)}
                   </div>
                 ) : null;

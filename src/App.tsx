@@ -4,6 +4,7 @@ import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
 import Settings from './Settings';
+import { Icon, type IconName } from './icons';
 
 export type Ctx = {
   foods: Food[];
@@ -17,7 +18,7 @@ export type Ctx = {
   addRecent: (ids: string[]) => void;
 };
 type Tab = 'day' | 'reports' | 'foods' | 'settings';
-const TABS: [Tab, string, string][] = [['day', 'יומן', '📖'], ['reports', 'דוחות', '📊'], ['foods', 'מזונות', '🥗'], ['settings', 'הגדרות', '⚙️']];
+const TABS: [Tab, string, IconName][] = [['day', 'יומן', 'book'], ['reports', 'דוחות', 'chart'], ['foods', 'מזונות', 'utensils'], ['settings', 'הגדרות', 'sliders']];
 
 const hashTab = (): Tab => TABS.find(([k]) => `#${k}` === location.hash)?.[0] ?? 'day';
 
@@ -110,7 +111,7 @@ export default function App({ email }: { email: string }) {
       <nav className="tabs">
         <b className="brand"><img src="/icon.svg" width={26} alt="" /> יומן תזונה</b>
         {TABS.map(([k, label, icon]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><span>{icon}</span>{label}</button>
+          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}><Icon name={icon} />{label}</button>
         ))}
       </nav>
       {waiting && <div role="status" className="banner pending">⏳ יש שינויים שממתינים לשליחה · יישלחו כשיחזור החיבור</div>}

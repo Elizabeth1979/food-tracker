@@ -4,6 +4,7 @@ import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, 
 import { FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
+import { Icon } from './icons';
 
 const FIELDS = [
   ['kcal', 'קלוריות', true], ['carbs', 'פחמימות (ג׳)', true], ['fat', 'שומן (ג׳)', true], ['protein', 'חלבון (ג׳)', true],
@@ -59,17 +60,17 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
       )}
       {inp('name', 'שם')}
       {inp('servingG', 'הערכים הם עבור (גרם)')}
-      <button className="link start" onClick={supplement}>💊 תוסף תזונה / ללא קלוריות: מלא אפסים</button>
+      <button className="link start" onClick={supplement}><Icon name="pill" />תוסף תזונה / ללא קלוריות: מלא אפסים</button>
       <div className="grid2">{FIELDS.map(([k, l]) => inp(k, l))}</div>
       <h4>יחידות (אופציונלי)</h4>
       <p className="muted small">{UNIT_HINT}</p>
       {units.map((u, i) => (
         <div key={i} className="unit-row">
           <UnitInputs d={u} set={(d) => setUnits(units.map((x, j) => (j === i ? d : x)))} />
-          <button className="icon" aria-label="מחק יחידה" onClick={() => setUnits(units.filter((_, j) => j !== i))}>✕</button>
+          <button className="icon" aria-label="מחק יחידה" onClick={() => setUnits(units.filter((_, j) => j !== i))}><Icon name="x" /></button>
         </div>
       ))}
-      <button className="link" onClick={() => setUnits([...units, { k: '1', n: '', g: '' }])}>＋ הוסף יחידה</button>
+      <button className="link" onClick={() => setUnits([...units, { k: '1', n: '', g: '' }])}><Icon name="plus" />הוסף יחידה</button>
       {err && <p className="error">{err}</p>}
       <button className="btn primary" onClick={save}>שמור</button>
     </div>
@@ -80,7 +81,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const [q, setQ] = useState('');
   const [logging, setLogging] = useState<Food | null>(null);
   const [msg, setMsg] = useState('');
-  const logged = (es: Entry[]) => setMsg(`״${es[0]?.name}״ נוסף ל${MEALS.find((m) => m.key === es[0]?.meal)?.label ?? 'יומן'} ✓`);
+  const logged = (es: Entry[]) => setMsg(`״${es[0]?.name}״ נוסף ל${MEALS.find((m) => m.key === es[0]?.meal)?.label ?? 'יומן'}`);
   const [edit, setEdit] = useState<Partial<Food> | null>(null);
   const [mealEdit, setMealEdit] = useState<SavedMeal | 'new' | null>(null);
   const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, ctx.recent) : ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden)), [ctx.foods, q, ctx.recent]);
@@ -98,14 +99,14 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   return (
     <div className="stack">
       <section className="card pad">
-        <div className="amount-row"><h3 className="grow">ארוחות שמורות</h3><button className="btn primary small" onClick={() => setMealEdit('new')}>＋ חדשה</button></div>
-        {!ctx.meals.length && <p className="muted">צור ארוחה כאן, או שמור ארוחה מהיומן עם ״☆ שמור כארוחה״.</p>}
+        <div className="amount-row"><h3 className="grow">ארוחות שמורות</h3><button className="btn primary small" onClick={() => setMealEdit('new')}><Icon name="plus" />חדשה</button></div>
+        {!ctx.meals.length && <p className="muted">צור ארוחה כאן, או שמור ארוחה מהיומן עם ״שמור כארוחה״.</p>}
         {ctx.meals.map((m) => {
           const items = json<Item[]>(m.items, []);
           return (
             <div key={m.id} className="row static">
               <div className="grow"><div>{m.name}</div><small className="muted">{items.map((i) => i.name).join(' · ')}</small></div>
-              <b>{sum(items).kcal}</b><button className="icon" onClick={() => setMealEdit(m)}>✎</button><button className="icon" onClick={() => delMeal(m.id)}>🗑</button>
+              <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" /></button>
             </div>
           );
         })}
@@ -114,16 +115,16 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
         <h3>מאגר מזונות <small className="muted">({ctx.foods.filter((f) => !f.hidden).length})</small></h3>
         <div className="amount-row">
           <input className="search" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="btn primary" onClick={() => setEdit({ name: q })}>＋ חדש</button>
+          <button className="btn primary" onClick={() => setEdit({ name: q })}><Icon name="plus" />חדש</button>
         </div>
-        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן · ✎ עריכה · 🗑 הסתרה מהחיפוש' : 'המזונות שהוספת. חפש כדי לראות גם את מאגר משרד הבריאות.'}</div>
+        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן. העיפרון עורך, הפח מסתיר מהחיפוש.' : 'המזונות שהוספת. חפש כדי לראות גם את מאגר משרד הבריאות.'}</div>
         {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
         <div className="list">
           {hits.map((f) => (
             <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
               <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
-              <button className="icon" aria-label="עריכה" onClick={(e) => { e.stopPropagation(); setEdit(f); }}>✎</button>
-              <button className="icon" aria-label="הסתרה" onClick={(e) => { e.stopPropagation(); hide(f); }}>🗑</button>
+              <button className="icon" aria-label={`עריכה: ${f.name}`} onClick={(e) => { e.stopPropagation(); setEdit(f); }}><Icon name="pencil" /></button>
+              <button className="icon" aria-label={`הסתרה: ${f.name}`} onClick={(e) => { e.stopPropagation(); hide(f); }}><Icon name="trash" /></button>
             </div>
           ))}
         </div>

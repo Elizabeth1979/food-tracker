@@ -6,6 +6,7 @@ import Login from './Login';
 import { setOfflineUser, supabase } from './db';
 import { store } from './store';
 import { watchForUpdate } from './update';
+import '@fontsource-variable/rubik'; // self-hosted, so it works offline; unicode-range loads only the Hebrew/Latin files used
 import './styles.css';
 
 type User = { id: string; email: string };

@@ -3,6 +3,7 @@ import type { Ctx } from './App';
 import { amountLabel, client, json, searchFoods, sum, type Food, type Item, type SavedMeal } from './lib';
 import { FoodSummary, Modal } from './ui';
 import { Amount, NutLine, itemFood, itemInit, unitSaver } from './AddDialog';
+import { Icon } from './icons';
 
 // Build or edit a saved meal (a bundle of foods with fixed amounts).
 export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal; onClose: () => void }) {
@@ -31,13 +32,13 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
       {items.map((it, i) => (
         <div key={i} className="row" role="button" tabIndex={0} onClick={() => { setEdit(i); setSel(itemFood(ctx.foods, it)); }}>
           <div className="grow"><div>{it.name}</div><small className="accent">{amountLabel(it)}</small></div>
-          <b>{it.kcal}</b><button className="icon" onClick={(ev) => { ev.stopPropagation(); setItems(items.filter((_, j) => j !== i)); setSel(null); setEdit(null); }} aria-label="הסר">✕</button>
+          <b>{it.kcal}</b><button className="icon" onClick={(ev) => { ev.stopPropagation(); setItems(items.filter((_, j) => j !== i)); setSel(null); setEdit(null); }} aria-label={`הסר: ${it.name}`}><Icon name="x" /></button>
         </div>
       ))}
       {items.length > 0 && <NutLine n={sum(items)} />}
       {sel ? (
         <div className="picked">
-          <button className="link" onClick={() => { setSel(null); setEdit(null); }}>→ חזרה לחיפוש</button>
+          <button className="link" onClick={() => { setSel(null); setEdit(null); }}><Icon name="arrow-right" />חזרה לחיפוש</button>
           <h3>{sel.name}</h3>
           <Amount key={edit ?? sel.id} food={sel} init={edit === null ? undefined : itemInit(items[edit])} cta={edit === null ? 'הוסף לארוחה' : 'עדכן כמות'}
             onPick={(it) => { setItems(edit === null ? [...items, it] : items.map((x, j) => (j === edit ? it : x))); setSel(null); setEdit(null); setQ(''); }}
