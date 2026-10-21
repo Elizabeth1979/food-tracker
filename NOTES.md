@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: diary top, less crammed
+
+**Done:**
+- At the owner's request the "הוספה" button moved from floating over the list to the top of the summary card, beside the ring (`.summary-top`). The calories line, nutrient bars and micros now run full width under them, so nothing is squeezed next to the ring. The floating `.fab` and its extra bottom padding are gone.
+- Noticed on the owner's screenshot: the protein goal is empty in their profile (the protein row shows no "/ goal"). A weigh-in or "שמור יעדים" in Settings fills it.
+
 ## 2026-10-21: new app icon
 
 **Done:**

@@ -67,17 +67,18 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         {date !== today() && <button className="btn small" onClick={() => setDate(today())}>להיום</button>}
       </header>
 
-      <section className="card summary" aria-label="סיכום היום">
-        <Ring value={tot.kcal} goal={goal} center={<><b>{goal ? Math.abs(Math.round(goal - tot.kcal)) : tot.kcal}</b><small>{goal ? (goal - tot.kcal >= 0 ? 'נותרו' : 'חריגה') : 'קלוריות'}</small></>} />
-        <div className="grow">
+      <section className="card pad stack" aria-label="סיכום היום">
+        {/* One way in, first thing on the screen: the meal starts at the time of day's and is one tap to change in the window */}
+        <div className="summary-top">
+          <Ring value={tot.kcal} goal={goal} center={<><b>{goal ? Math.abs(Math.round(goal - tot.kcal)) : tot.kcal}</b><small>{goal ? (goal - tot.kcal >= 0 ? 'נותרו' : 'חריגה') : 'קלוריות'}</small></>} />
+          <button className="btn primary" onClick={() => setAdding(mealNow())}><Icon name="plus" />הוספה</button>
+        </div>
+        <div>
           <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
           <MacroLegend n={tot} goals={ctx.profile ?? undefined} />
-          <MicroLine n={tot} rda />
         </div>
+        <MicroLine n={tot} rda />
       </section>
-
-      {/* One way in, always in reach: the meal starts at the time of day's and is one tap to change in the window */}
-      <button className="fab" onClick={() => setAdding(mealNow())}><Icon name="plus" />הוספה</button>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
       {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
