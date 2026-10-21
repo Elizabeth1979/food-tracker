@@ -48,7 +48,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     s += RARE.filter((w) => !words.includes(w) && has(name, w)).length * 20;
     if (has(name, 'לא מבושל') && !words.includes('מבושל')) s += 10;
     if ((has(first, 'עם') || has(first, 'או')) && !words.includes('עם')) s += 10; // mixed dishes: "אורז עם בצל"
-    if (FRESH.some((w) => has(name, w))) s -= 3;
+    // fresh produce: exactly what was typed ("גזר, טרי") before a longer name that starts with it ("גזר לבן", parsnip)
+    if (FRESH.some((w) => has(name, w))) s -= forms(query).includes(first) ? 4 : 3;
     return s + f.name.length / 100;
   };
   // With nothing typed the list is "recent": newest first, nothing else counts.
@@ -129,9 +130,17 @@ export function unitFor(food: Food, p: Pick<Parsed, 'qty' | 'unit'>): { qty: num
 }
 
 // Best matches for a typed name; retries without a leading "ו" ("וגרנולה"), since names like "ויטמין" start with one.
+// Is a typed word the food itself (in the name's first part), rather than one ingredient of a dish?
+const inHead = (f: Food, words: string[]) => norm(f.name.split(',')[0]).split(/[ \/]/).some((t) => words.some((w) => sameWord(t, w)));
 export function matchFoods(foods: Food[], query: string, recent: string[]) {
   const hits = searchFoods(foods, query, recent);
-  return hits.length || !/^ו\S{3}/.test(query) ? hits : searchFoods(foods, query.slice(1), recent);
+  if (!hits.length && /^ו\S{3}/.test(query)) return searchFoods(foods, query.slice(1), recent);
+  // "גזר כבוש" has no pickled-carrot food, only dishes that list carrot among their ingredients (potato salad).
+  // Then the plain food ("גזר") is the better guess; the dishes stay further down the list.
+  const words = norm(query).split(' ');
+  if (!hits.length || words.length < 2 || inHead(hits[0], words)) return hits;
+  const plain = searchFoods(foods, words[0], recent).filter((f) => inHead(f, words.slice(0, 1)));
+  return plain.length ? [...plain, ...hits.filter((f) => !plain.includes(f))] : hits;
 }
 
 // "קפה וגרנולה" matches nothing as one food: split it at the "ו" into two items. Only when the whole phrase has no match.

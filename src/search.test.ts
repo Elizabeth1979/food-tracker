@@ -91,3 +91,11 @@ test('a leading "ו" is dropped when nothing matches, and "X וY" splits in two'
   assert.match(matchFoods(moh, 'וגרנולה', [])[0].name, /גרנולה/);
   assert.deepEqual(splitAnd(moh, parseLine('קפה וגרנולה'), []).map((p) => p.query), ['קפה', 'גרנולה']);
 });
+
+test('a food that exists only as a dish ingredient falls back to the plain food', () => {
+  assert.match(first('גזר'), /^גזר, טרי/); // not "גזר לבן" (parsnip)
+  assert.match(matchFoods(moh, 'גזר כבוש', [])[0].name, /^גזר, טרי/); // not potato salad with carrot and pickles
+  assert.match(matchFoods(moh, 'סלט כרוב כבוש', [])[0].name, /^סלט כרוב כבוש/); // the real food when there is one
+  assert.match(matchFoods(moh, 'פלפל חריף כבוש', [])[0].name, /^פלפל חריף, כבוש/);
+  assert.match(matchFoods(moh, 'חזה עוף', [])[0].name, /^בשר עוף, חזה/); // "חזה" is in the name, not the head: unchanged
+});
