@@ -146,9 +146,11 @@ test('the foods tab lists saved meals and the food database', async () => {
 });
 
 test('a weigh-in updates the goals, and reports show the weight over time', async () => {
-  const weighIn = async (kg) => {
+  const waist = () => page.getByRole('spinbutton', { name: /^מותניים/ });
+  const weighIn = async (kg, cm) => {
     await button(/הגדרות/).tap();
     await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill(kg);
+    await waist().fill(cm);
     await button('שמור משקל ועדכן יעדים').tap();
     await page.getByRole('status').filter({ hasText: 'היעדים עודכנו' }).waitFor();
     await button(/יומן/).tap(); // leave, so the next visit starts fresh
@@ -157,6 +159,7 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   await page.clock.setFixedTime(new Date('2026-10-14T09:00:00'));
   await button(/הגדרות/).tap();
   await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill('76');
+  await waist().fill('90');
   assert.ok(await button('שמור משקל ועדכן יעדים').isDisabled());
   await page.getByRole('spinbutton', { name: 'גיל' }).fill('45');
   await page.getByRole('spinbutton', { name: 'גובה (ס״מ)' }).fill('165');
@@ -166,11 +169,12 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   await button(/יומן/).tap();
   // today: age and height are remembered, the goals follow the new weight
   await page.clock.setFixedTime(new Date('2026-10-21T13:00:00'));
-  await weighIn('75');
+  await weighIn('75', '88');
   await button(/הגדרות/).tap();
   assert.equal(await page.getByRole('spinbutton', { name: 'חלבון (ג׳)' }).inputValue(), '123');
   assert.ok(Number(await page.getByRole('spinbutton', { name: 'קלוריות' }).inputValue()) < Number(kcalBefore));
   await button(/דוחות/).tap();
   await button('חודש').tap();
   await page.getByRole('img', { name: /^משקל: מ־76 ק״ג .* ל־75 ק״ג/ }).waitFor();
+  await page.getByRole('img', { name: /^מותניים: מ־90 ס״מ .* ל־88 ס״מ/ }).waitFor();
 });

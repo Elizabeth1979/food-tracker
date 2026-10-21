@@ -55,7 +55,8 @@ create table weights (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
   date date not null,
-  kg real not null
+  kg real not null,
+  waist real -- cm, optional: with muscle gain, the waist shows fat loss better than the scale
 );
 create index weights_user_date on weights (user_id, date);
 

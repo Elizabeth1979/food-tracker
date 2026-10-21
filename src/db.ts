@@ -18,8 +18,8 @@ export type SavedMeal = { id: string; name: string; items: unknown };
 // body: what the goals are worked out from (weight comes from the weight log).
 export type BodyInfo = { sex: 'f' | 'm'; birthYear: number; heightCm: number; activity: number; aim: number };
 export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null; recent?: string[] | null; body?: BodyInfo | null };
-// One weigh-in; one per day (a second one that day replaces it). date: YYYY-MM-DD local
-export type Weight = { id: string; date: string; kg: number };
+// One weigh-in; one per day (a second one that day replaces it). date: YYYY-MM-DD local; waist in cm, optional
+export type Weight = { id: string; date: string; kg: number; waist?: number | null };
 
 type Tables = { Food: Food; Entry: Entry; SavedMeal: SavedMeal; Profile: Profile; Weight: Weight };
 export type TableName = keyof Tables;
@@ -41,7 +41,7 @@ const COLS: Record<TableName, string[]> = {
   Entry: ['id', 'date', 'meal', 'foodId', 'name', 'grams', 'qty', 'unit', ...NUTS],
   SavedMeal: ['id', 'name', 'items'],
   Profile: ['id', 'kcal', 'carbs', 'fat', 'protein', 'recent', 'body'],
-  Weight: ['id', 'date', 'kg'],
+  Weight: ['id', 'date', 'kg', 'waist'],
 };
 const JSON_COLS = new Set(['units', 'items', 'body']);
 // Foods are keyed per user, so a user can override a shipped MoH food under its own id.
