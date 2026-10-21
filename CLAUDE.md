@@ -11,7 +11,10 @@ A personal Hebrew (RTL) calorie and macro diary: Vite + React + TypeScript, data
 - `.claude/launch.json` has preview configs for all three: dev, test mode, built app.
 
 ## Deploying
-Push to `main` and Vercel deploys production by itself, in about a minute. The home-screen app notices the new build through `/version.json` and reloads (`src/update.ts`). Commit and push only when the owner asks.
+Push to `main` and Vercel deploys production by itself, in about a minute. The home-screen app notices the new build through `/version.json` and reloads (`src/update.ts`).
+
+**Ship without asking (the owner's standing rule).** For changes to the app, commit, push, open the PR, merge it and deploy it yourself once all of these hold: `npm test` and `npm run build` pass, and you clicked the change through in test mode (`npm run dev:test`) at phone size with touch taps. Then tell the owner, in plain words, that it's live and what changed. If something turns out wrong, roll back (Vercel: promote the previous production deployment) and tell them.
+**Still ask first** for: database changes (schema, migrations, editing or deleting stored rows), anything that costs money or changes a paid service (the photo AI model, Supabase/Vercel plans, secrets), and deleting anything.
 
 **After merging to `main`, start the production deploy yourself; don't wait for Vercel's GitHub hook** (the owner's standing request: Vercel has picked up merges 15+ minutes late or not at all). With the Vercel tools: create a deployment with `target: "production"` and `gitSource` `{type: "github", org: "Elizabeth1979", repo: "food-tracker-elli", ref: "main", sha: <merge commit>}` in project `prj_GF3n2aiehutDd5I6h01bhCICGhJz`, team `team_IluAXBY7tqQpBwOf1hRuqt6a`. It builds in under a minute and takes over `food-tracker-nine-khaki.vercel.app`; check it reaches READY and tell the owner it's live. A second build from the late hook is harmless.
 
