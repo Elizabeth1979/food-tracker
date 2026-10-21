@@ -88,8 +88,6 @@ main button.banner { width: 100%; }
 .chev { color: var(--muted); transition: transform .2s; }
 .meal-toggle[aria-expanded=false] .chev { transform: rotate(90deg); }
 .add-all { grid-column: 1 / -1; width: 100%; font-size: 18px; padding: 14px; }
-select.title-select { width: auto; padding: 0 2px; background: none; border: none; border-bottom: 2px dashed var(--accent); border-radius: 0; color: var(--accent); font: inherit; cursor: pointer; }
-select.title-select:focus { outline: none; } select.title-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .row.static:hover { background: none; }
 .row small { display: block; }
@@ -111,7 +109,7 @@ select.title-select:focus { outline: none; } select.title-select:focus-visible {
 .modal[open] { display: flex; flex-direction: column; }
 .modal::backdrop { background: #000a; }
 @media (min-width: 600px) { .modal { margin: auto; border-radius: 18px; } }
-.modal header { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
+.modal header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
 .modal-body { padding: 8px 16px 20px; overflow: auto; flex: 1; min-height: 0; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; }
 .modal-body > * { flex-shrink: 0; } /* overflow scrolls instead of squashing rows */
 .seg { display: flex; background: var(--card2); border-radius: 10px; padding: 3px; gap: 2px; }
