@@ -16,7 +16,8 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
   const [units, setUnits] = useState<UnitDraft[]>(() => json<Unit[]>(init.units, []).map(draftOf));
   const [err, setErr] = useState('');
-  const [label, setLabel] = useState<'busy' | 'done' | 'serving' | ''>('');
+  const [label, setLabel] = useState<'done' | 'serving' | ''>('');
+  const [reading, setReading] = useState<File | null>(null); // the label photo being read
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
   // Supplements (creatine, vitamins): no energy or macros, logged by the serving.
   // With nothing to scale, the serving is just the scoop: 5 g unless one was typed over the 100 g default.
@@ -27,14 +28,14 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   };
   // Fills the form from a photo of the package's nutrition table; everything stays editable until שמור.
   const photo = async (file: File) => {
-    setErr(''); setLabel('busy');
+    setErr(''); setReading(file);
     try {
       const l = await readLabel(file);
       const vals = Object.fromEntries(FIELDS.map(([k]) => [k, l[k] == null ? '' : String(l[k])]));
       setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: '100' }));
       if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), draftOf(l.unit!)]);
       setLabel(l.perServing ? 'serving' : 'done');
-    } catch (x: any) { setErr(x.message); setLabel(''); }
+    } catch (x: any) { setErr(x.message); setLabel(''); } finally { setReading(null); }
   };
   const save = async () => {
     if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
@@ -52,7 +53,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   );
   return (
     <div className="form">
-      <PhotoPick take="צלם טבלת ערכים" busy={label === 'busy'} busyText="קורא את הטבלה…" onFile={photo} />
+      <PhotoPick take="צילום טבלת ערכים" reading={reading} busyText="קורא את הטבלה…" onFile={photo} />
       {(label === 'done' || label === 'serving') && (
         <p className="muted small" role="status">
           הערכים מולאו מהתמונה{label === 'serving' ? ' וחושבו ל־100 גרם לפי משקל המנה' : ''}. כדאי לבדוק אותם מול האריזה לפני השמירה.

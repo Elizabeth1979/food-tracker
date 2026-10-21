@@ -27,6 +27,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 input, select { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; min-height: var(--tap); width: 100%; min-width: 0; }
 input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 h1, h2, h3, h4 { margin: 0; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 h3 { font-size: 17px; font-weight: 600; } h4 { font-size: 14px; font-weight: 500; margin-top: 12px; color: var(--muted); }
 h4 .i { margin-inline-end: 6px; }
 /* line icons (icons.tsx): sized by the text around them, colored by it */
@@ -173,7 +174,18 @@ main button.banner { width: 100%; }
 textarea { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; width: 100%; resize: vertical; font-size: 16px; }
 textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .link.start { align-self: flex-start; text-align: start; font-size: 15px; }
-label.btn.disabled { opacity: .6; pointer-events: none; }
+.big-choice { flex-direction: column; min-height: 76px; font-size: 16px; box-shadow: var(--shadow); }
+.big-choice .i { font-size: 24px; color: var(--accent); }
+/* a photo being read: the photo dimmed, a spinner and what's happening on top */
+.reading { position: relative; margin: 0; height: 220px; border-radius: var(--r); overflow: hidden; background: var(--card2); }
+.reading img { width: 100%; height: 100%; object-fit: cover; }
+.reading figcaption { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center;
+  background: color-mix(in srgb, #141312 55%, transparent); color: #fff; }
+.reading figcaption b { font-size: 18px; font-weight: 500; }
+.spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid color-mix(in srgb, #fff 30%, transparent); border-top-color: #fff; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.why { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; font-size: 15px; color: var(--muted); }
 .unit-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .unit-row p { flex-basis: 100%; margin: 0; }
 .unit-row .unit-k { width: 56px; } .unit-row .unit-g { width: 72px; } .unit-row .unit-n { flex: 1; min-width: 6em; }
@@ -184,7 +196,7 @@ label.btn.disabled { opacity: .6; pointer-events: none; }
 .warn-text { color: var(--warn); }
 .nowrap { white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
-.form label, .report label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.form label:not(.btn), .report label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); } /* field labels; a <label class=btn> is a button */
 .form label input { color: var(--text); font-size: 16px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 

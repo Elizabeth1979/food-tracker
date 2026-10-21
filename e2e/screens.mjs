@@ -54,7 +54,12 @@ test('switch the meal, then a photo goes to the review list', async () => {
   await mealTab('ערב').tap();
   assert.equal(await mealTab('ערב').getAttribute('aria-pressed'), 'true');
   // any real image will do: test mode answers every photo with the same sample meal
-  await dialog().getByLabel(/צלם ארוחה/).setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await dialog().getByLabel(/צילום או תמונה/).setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  // while it's being read: a visible status, and the rest locked with the reason given
+  await dialog().getByRole('status').filter({ hasText: 'מזהה מזונות בתמונה' }).waitFor();
+  const next = button('המשך לבדיקה', dialog());
+  assert.ok(await next.isDisabled());
+  assert.equal(await page.locator(`#${await next.getAttribute('aria-describedby')}`.replace(/:/g, '\\:')).innerText(), 'אפשר להמשיך כשהזיהוי יסתיים');
   await dialog().getByRole('combobox', { name: 'מזון' }).first().waitFor();
 });
 

@@ -2,6 +2,17 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: redesign step 3, the add window
+
+**Done:**
+- The list screen has two big buttons: "צילום או תמונה" (one file input without `capture`, so the phone offers camera or gallery; it was two buttons) and "כתיבה" (was a small link).
+- While a photo is read (meal or nutrition label), `PhotoPick` shows that photo dimmed under a spinner with "מזהה מזונות בתמונה… / זה לוקח כמה שניות" (`role="status"`), and the typing form is a disabled `<fieldset>`. The photo is shown from a `blob:` URL, so the CSP has `img-src 'self' blob:`.
+- Disabled buttons say why, in readable text linked with `aria-describedby` (`Why` in `ui.tsx`): "כתבו מה אכלתם כדי להמשיך", "אפשר להמשיך כשהזיהוי יסתיים", "כתבו כמות גדולה מאפס כדי להוסיף", "אין עדיין מזון עם כמות להוספה".
+- `.form label` styles field labels only (`:not(.btn)`), so a `<label class="btn">` file button looks like a button inside forms.
+- The screen test checks the loader and the reason on the locked button; giving the wrong reason on purpose made it fail.
+
+**Next:** step 4, the other tabs (foods, reports, settings) in the same style.
+
 ## 2026-10-21: redesign step 2, the diary
 
 **Done:**

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, itemFor, matchFoods, parseLine, splitAnd, sum, unitFor, unitsOf, type Food, type Item, type Parsed, type Unit } from './lib';
-import { Modal } from './ui';
+import { Modal, Why } from './ui';
 import { FoodForm } from './Foods';
 import { NutLine } from './AddDialog';
 import { Icon } from './icons';
@@ -21,6 +21,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
   const [rows, setRows] = useState<Row[]>(() => splitAnd(ctx.foods, parsed, ctx.recent).map((p, i) => rowFor(ctx, p, i)));
   const [creating, setCreating] = useState<Row | null>(null);
   const [more, setMore] = useState('');
+  const why = useId();
   // Something the photo missed: typed like a meal line ("2 פיתות, טחינה"), matched the same way, added as rows.
   const addMore = () => {
     const next = Math.max(-1, ...rows.map((r) => r.id)) + 1;
@@ -85,7 +86,8 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
       </form>
       {items.length > 0 && <NutLine n={sum(items)} />}
       {missing > 0 && <p className="muted small">{missing === 1 ? 'פריט אחד בלי התאמה לא יתווסף.' : `${missing} פריטים בלי התאמה לא יתווספו.`}</p>}
-      <button className="btn primary" disabled={!items.length} onClick={() => onAdd(items)}>{cta} ({items.length})</button>
+      <button className="btn primary" disabled={!items.length} aria-describedby={items.length ? undefined : why} onClick={() => onAdd(items)}>{cta} ({items.length})</button>
+      {!items.length && <Why id={why}>אין עדיין מזון עם כמות להוספה</Why>}
     </div>
   );
 }
