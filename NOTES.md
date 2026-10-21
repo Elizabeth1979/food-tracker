@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: new app icon
+
+**Done:**
+- The owner picked a curvy hourglass figure: two white curves (shoulders, waist, hips) on indigo, with golden sand gathering at the bottom. `public/icon.svg` is the source; `icons/icon-192/512.png` (rounded), `icon-maskable-512.png` (full bleed, art inside the safe zone) were rendered from it.
+- The 4 long-press shortcut icons are now the app's own line icons (sunrise, sun, moon, star) in white on indigo, instead of the old emoji-style pictures.
+- On the phone: Android refreshes the home-screen icon by itself within about a day, or at once after removing the app and adding it again; iPhone needs remove and add.
+
 ## 2026-10-21: waist measurement
 
 **Done:**
