@@ -15,11 +15,15 @@ export type Entry = Nutrients & { id: string; date: string; meal: MealKey; foodI
 // items: Item[] (older backups hold a JSON string)
 export type SavedMeal = { id: string; name: string; items: unknown };
 // One row per user; id is the user's id.
-export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null; recent?: string[] | null };
+// body: what the goals are worked out from (weight comes from the weight log).
+export type BodyInfo = { sex: 'f' | 'm'; birthYear: number; heightCm: number; activity: number; aim: number };
+export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null; recent?: string[] | null; body?: BodyInfo | null };
+// One weigh-in; one per day (a second one that day replaces it). date: YYYY-MM-DD local
+export type Weight = { id: string; date: string; kg: number };
 
-type Tables = { Food: Food; Entry: Entry; SavedMeal: SavedMeal; Profile: Profile };
+type Tables = { Food: Food; Entry: Entry; SavedMeal: SavedMeal; Profile: Profile; Weight: Weight };
 export type TableName = keyof Tables;
-export const TABLES: TableName[] = ['Food', 'Entry', 'SavedMeal', 'Profile'];
+export const TABLES: TableName[] = ['Food', 'Entry', 'SavedMeal', 'Profile', 'Weight'];
 export type Backup = { [K in TableName]: Tables[K][] };
 type Res<T> = { data: T; errors?: { message: string }[] };
 
@@ -29,20 +33,21 @@ if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PU
 // Implicit flow: the magic link carries the session itself, so it works in whichever browser opens it.
 export const supabase = createClient(url, key, { auth: { flowType: 'implicit' } });
 
-const TABLE: Record<TableName, string> = { Food: 'foods', Entry: 'entries', SavedMeal: 'saved_meals', Profile: 'profiles' };
+const TABLE: Record<TableName, string> = { Food: 'foods', Entry: 'entries', SavedMeal: 'saved_meals', Profile: 'profiles', Weight: 'weights' };
 const NUTS = ['kcal', 'carbs', 'fat', 'protein', 'sodium', 'calcium', 'potassium', 'b12'];
 // The columns the app writes. Rows from the UI or a backup can carry extras (user_id, created_at, Amplify's owner…).
 const COLS: Record<TableName, string[]> = {
   Food: ['id', 'name', 'nameEn', 'source', 'hidden', 'servingG', 'units', ...NUTS],
   Entry: ['id', 'date', 'meal', 'foodId', 'name', 'grams', 'qty', 'unit', ...NUTS],
   SavedMeal: ['id', 'name', 'items'],
-  Profile: ['id', 'kcal', 'carbs', 'fat', 'protein', 'recent'],
+  Profile: ['id', 'kcal', 'carbs', 'fat', 'protein', 'recent', 'body'],
+  Weight: ['id', 'date', 'kg'],
 };
-const JSON_COLS = new Set(['units', 'items']);
+const JSON_COLS = new Set(['units', 'items', 'body']);
 // Foods are keyed per user, so a user can override a shipped MoH food under its own id.
-const CONFLICT: Record<TableName, string> = { Food: 'user_id,id', Entry: 'id', SavedMeal: 'id', Profile: 'id' };
-// Entries keep the order they were logged in; the rest sort by name.
-const ORDER: Record<TableName, string> = { Food: 'name', Entry: 'created_at', SavedMeal: 'name', Profile: 'id' };
+const CONFLICT: Record<TableName, string> = { Food: 'user_id,id', Entry: 'id', SavedMeal: 'id', Profile: 'id', Weight: 'id' };
+// Entries keep the order they were logged in, weights go by date; the rest sort by name.
+const ORDER: Record<TableName, string> = { Food: 'name', Entry: 'created_at', SavedMeal: 'name', Profile: 'id', Weight: 'date' };
 
 const clean = (t: TableName, row: object) => {
   const r = row as Record<string, unknown>;
@@ -164,7 +169,7 @@ function model<K extends TableName>(t: K) {
 }
 
 export const client = {
-  models: { Food: model('Food'), Entry: model('Entry'), SavedMeal: model('SavedMeal'), Profile: model('Profile') },
+  models: { Food: model('Food'), Entry: model('Entry'), SavedMeal: model('SavedMeal'), Profile: model('Profile'), Weight: model('Weight') },
 };
 
 // Entries of the last KEEP_DAYS days are kept, whichever range loaded them.
@@ -214,6 +219,7 @@ export async function restoreAll(b: unknown, moh: Food[]) {
     SavedMeal: data.SavedMeal ?? [],
     // A backup's profile id belongs to whoever made it; the row here is always the signed-in user's.
     Profile: (data.Profile ?? []).slice(0, 1).map(({ id: _, ...p }) => p),
+    Weight: data.Weight ?? [],
   };
   for (const t of TABLES) {
     const rows = source[t].map((r) => clean(t, r));

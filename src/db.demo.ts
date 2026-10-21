@@ -1,16 +1,17 @@
 // Test mode (`npm run dev:test`): stands in for db.ts so the app runs with no sign-in and no Supabase.
 // Data lives in this browser's localStorage under one key. Vite swaps it in for './db' only in `--mode demo`
 // (vite.config.ts), so it never ships in a build.
-import type { Backup, Entry, Food, Profile, SavedMeal, TableName } from './db';
+import type { Backup, Entry, Food, Profile, SavedMeal, TableName, Weight } from './db';
 
-export type { Backup, Entry, Food, Profile, SavedMeal, TableName } from './db';
-export const TABLES: TableName[] = ['Food', 'Entry', 'SavedMeal', 'Profile'];
+export type { Backup, BodyInfo, Entry, Food, Profile, SavedMeal, TableName, Weight } from './db';
+export const TABLES: TableName[] = ['Food', 'Entry', 'SavedMeal', 'Profile', 'Weight'];
 
 type Row = Record<string, unknown> & { id: string };
 const KEY = 'food-tracker-test-data';
 const load = (): Record<TableName, Row[]> => {
-  try { return { Food: [], Entry: [], SavedMeal: [], Profile: [], ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; }
-  catch { return { Food: [], Entry: [], SavedMeal: [], Profile: [] }; }
+  const empty = Object.fromEntries(TABLES.map((t) => [t, []])) as unknown as Record<TableName, Row[]>;
+  try { return { ...empty, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; }
+  catch { return empty; }
 };
 let db = load();
 const save = () => localStorage.setItem(KEY, JSON.stringify(db));
@@ -37,7 +38,7 @@ function model<T>(t: TableName) {
 }
 
 export const client = {
-  models: { Food: model<Food>('Food'), Entry: model<Entry>('Entry'), SavedMeal: model<SavedMeal>('SavedMeal'), Profile: model<Profile>('Profile') },
+  models: { Food: model<Food>('Food'), Entry: model<Entry>('Entry'), SavedMeal: model<SavedMeal>('SavedMeal'), Profile: model<Profile>('Profile'), Weight: model<Weight>('Weight') },
 };
 export const listEntries = async (from: string, to: string) => (db.Entry as unknown as Entry[]).filter((e) => e.date >= from && e.date <= to);
 export const exportAll = async (): Promise<Backup> => structuredClone(db) as unknown as Backup;

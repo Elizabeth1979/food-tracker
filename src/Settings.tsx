@@ -1,39 +1,50 @@
 import { useId, useState, type ChangeEvent } from 'react';
 import type { Ctx } from './App';
-import { client, loadMoh, today } from './lib';
+import { client, fmtDate, loadMoh, today, type BodyInfo, type Profile, type Weight } from './lib';
 import { exportAll, restoreAll, supabase } from './db';
 import { APP_VERSION } from './update';
 import { Group, Why } from './ui';
 import { Icon } from './icons';
-import { ACTIVITY, AIMS, suggestGoals, type Body } from './goals';
+import { ACTIVITY, AIMS, suggestGoals } from './goals';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
-const BODY = [['age', 'גיל'], ['heightCm', 'גובה (ס״מ)'], ['weightKg', 'משקל (ק״ג)']] as const;
-// Body measurements stay on this phone only; they just fill the goal fields.
-const BODY_KEY = 'body';
-const loadBody = (): Record<string, string> => {
-  try { return JSON.parse(localStorage.getItem(BODY_KEY) || '{}'); } catch { return {}; }
-};
+const BODY = [['age', 'גיל'], ['heightCm', 'גובה (ס״מ)']] as const;
+const year = () => new Date().getFullYear();
+// The form's fields as text. Before the profile had `body`, the calculator kept these on the phone only.
+function bodyForm(b?: BodyInfo | null): Record<string, string> {
+  if (b) return { sex: b.sex, age: String(year() - b.birthYear), heightCm: String(b.heightCm), activity: String(b.activity), aim: String(b.aim) };
+  try { return { sex: 'f', activity: '1.375', aim: '-0.2', ...JSON.parse(localStorage.getItem('body') || '{}') }; } catch { return { sex: 'f', activity: '1.375', aim: '-0.2' }; }
+}
 
 export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   const p = ctx.profile;
   const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(GOALS.map(([k]) => [k, String(p?.[k] ?? '')])));
   const [msg, setMsg] = useState('');
-  const [body, setBody] = useState<Record<string, string>>(() => ({ sex: 'f', activity: '1.375', aim: '-0.2', ...loadBody() }));
+  const last = ctx.weights.at(-1);
+  const [kg, setKg] = useState(() => (last?.date === today() ? String(last.kg) : ''));
+  const [body, setBody] = useState(() => bodyForm(p?.body));
   const why = useId();
-  const bodyReady = BODY.every(([k]) => Number(body[k]) > 0);
-  const calc = () => {
-    try { localStorage.setItem(BODY_KEY, JSON.stringify(body)); } catch { /* still fills the fields */ }
-    const g = suggestGoals(Object.fromEntries(Object.entries(body).map(([k, x]) => [k, k === 'sex' ? x : Number(x)])) as Body);
-    setV(Object.fromEntries(GOALS.map(([k]) => [k, String(g[k])])));
-    setMsg('היעדים חושבו. אפשר לשנות ואז ״שמור יעדים״');
-  };
+  const ready = Number(kg) > 0 && BODY.every(([k]) => Number(body[k]) > 0);
   const macroKcal = Number(v.carbs) * 4 + Number(v.fat) * 9 + Number(v.protein) * 4;
 
-  const save = async () => {
-    const { data } = await client.models.Profile.update({ id: p!.id, ...Object.fromEntries(GOALS.map(([k]) => [k, Number(v[k]) || null])) });
+  const saveGoals = async (patch: Partial<Profile>) => {
+    const { data } = await client.models.Profile.update({ id: p!.id, ...patch });
     ctx.setProfile(data);
+    setV(Object.fromEntries(GOALS.map(([k]) => [k, String(data[k] ?? '')])));
+  };
+  const save = async () => {
+    await saveGoals(Object.fromEntries(GOALS.map(([k]) => [k, Number(v[k]) || null])));
     setMsg('נשמר');
+  };
+  // One weigh-in a day (a second one replaces it), then the goals follow the new weight.
+  const weighIn = async () => {
+    const info: BodyInfo = { sex: body.sex as BodyInfo['sex'], birthYear: year() - Number(body.age), heightCm: Number(body.heightCm), activity: Number(body.activity), aim: Number(body.aim) };
+    const row = { id: ctx.weights.find((w) => w.date === today())?.id, date: today(), kg: Number(kg) };
+    const { data } = row.id ? await client.models.Weight.update(row as Weight) : await client.models.Weight.create(row);
+    ctx.setWeights([...ctx.weights.filter((w) => w.id !== data.id), data].sort((a, b) => a.date.localeCompare(b.date)));
+    const g = suggestGoals({ ...info, age: Number(body.age), weightKg: row.kg });
+    await saveGoals({ body: info, ...g });
+    setMsg(`נשמר. היעדים עודכנו: ${g.kcal} קק״ל, חלבון ${g.protein} ג׳`);
   };
   const download = async () => {
     const a = document.createElement('a');
@@ -56,9 +67,11 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   return (
     <div className="stack">
       <h1 className="page-title">הגדרות</h1>
-      <Group title="יעדים יומיים" body="pad form">
-        <details>
-          <summary><Icon name="chevron-down" />חישוב לפי גובה ומשקל</summary>
+      <Group title="משקל ויעדים" body="pad form">
+        <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+        {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
+        <details open={!p?.body}>
+          <summary><Icon name="chevron-down" />פרטים לחישוב</summary>
           <div className="form">
             <div className="grid2">
               <label><span>מין</span><select value={body.sex} onChange={(e) => setBody({ ...body, sex: e.target.value })}><option value="f">אישה</option><option value="m">גבר</option></select></label>
@@ -66,16 +79,18 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
             </div>
             <label><span>פעילות</span><select value={body.activity} onChange={(e) => setBody({ ...body, activity: e.target.value })}>{ACTIVITY.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
             <label><span>מטרה</span><select value={body.aim} onChange={(e) => setBody({ ...body, aim: e.target.value })}>{AIMS.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
-            <p className="muted small">הערכה בלבד: חלבון 1.8 ג׳ לק״ג, שומן 30% מהקלוריות והשאר פחמימות. כדאי לחשב שוב כשהמשקל משתנה.</p>
-            <button className="btn" onClick={calc} disabled={!bodyReady} aria-describedby={bodyReady ? undefined : why}>חשב יעדים</button>
-            {!bodyReady && <Why id={why}>מלאו גיל, גובה ומשקל כדי לחשב</Why>}
           </div>
         </details>
+        <p className="muted small">שקילה פעם בשבוע מספיקה. היעדים מחושבים מחדש מכל שקילה: חלבון 1.8 ג׳ לק״ג, שומן 30% מהקלוריות והשאר פחמימות. זו הערכה; אם אחרי 3–4 שבועות המשקל לא זז, כדאי לשנות.</p>
+        <button className="btn primary" onClick={weighIn} disabled={!ready} aria-describedby={ready ? undefined : why}>שמור משקל ועדכן יעדים</button>
+        {!ready && <Why id={why}>מלאו משקל, גיל וגובה כדי לשמור</Why>}
+      </Group>
+      <Group title="יעדים יומיים" body="pad form">
         <div className="grid2">
           {GOALS.map(([k, l]) => <label key={k}><span>{l}</span><input type="number" inputMode="decimal" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></label>)}
         </div>
         <p className="muted small">המקרו־נוטריינטים שווים {Math.round(macroKcal)} קק״ל (פחמימות וחלבון 4 קק״ל/ג׳, שומן 9 קק״ל/ג׳).</p>
-        <button className="btn primary" onClick={save}>שמור יעדים</button>
+        <button className="btn" onClick={save}>שמור יעדים</button>
       </Group>
       <Group title="גיבוי" body="pad form">
         <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>

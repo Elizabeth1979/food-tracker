@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addDays, client, hasPending, loadEntries, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
+import { addDays, client, hasPending, loadEntries, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal, type Weight } from './lib';
 import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
@@ -13,6 +13,8 @@ export type Ctx = {
   setMeals: (m: SavedMeal[]) => void;
   profile: Profile | null;
   setProfile: (p: Profile) => void;
+  weights: Weight[]; // oldest first
+  setWeights: (w: Weight[]) => void;
   // Food ids you log, most often first (past 3 months), ties by most recent. Search and the ＋ list put them first.
   recent: string[];
   addRecent: (ids: string[]) => void;
@@ -44,6 +46,7 @@ export default function App({ email }: { email: string }) {
   const [foods, setFoods] = useState<Food[]>([]);
   const [meals, setMeals] = useState<SavedMeal[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [weights, setWeights] = useState<Weight[]>([]);
   const [status, setStatus] = useState('');
   const [waiting, setWaiting] = useState(hasPending);
   const [uses, setUses] = useState<Record<string, number>>({}); // food id → times logged in the past 3 months
@@ -53,6 +56,7 @@ export default function App({ email }: { email: string }) {
     const fail = (e: Error) => setStatus('שגיאה בטעינה: ' + e.message + ' · לחץ לטעינה מחדש');
     loadFoods().then(setFoods, fail);
     loadSavedMeals().then(setMeals, fail);
+    client.models.Weight.list().then((w) => setWeights(w.data), fail);
     loadEntries(addDays(today(), -91), today()).then((es) => {
       const n: Record<string, number> = {};
       for (const e of es) if (e.foodId) n[e.foodId] = (n[e.foodId] ?? 0) + 1;
@@ -105,7 +109,7 @@ export default function App({ email }: { email: string }) {
     // A convenience only: a failed save must not raise the error banner over the entry that did save.
     client.models.Profile.update({ id: profile.id, recent: next }).catch((e) => console.warn('recent foods not saved', e));
   };
-  const ctx: Ctx = { foods, setFoods, meals, setMeals, profile, setProfile, recent, addRecent };
+  const ctx: Ctx = { foods, setFoods, meals, setMeals, profile, setProfile, weights, setWeights, recent, addRecent };
   return (
     <div className="app">
       <nav className="tabs">
