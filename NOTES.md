@@ -2,14 +2,17 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: meal photo on the ＋ screen
+
+**Done** (branch `claude/meal-photo-button`, draft PR, not live yet):
+- The ＋ screen shows "📷 צלם ארוחה" and "🖼️ בחר מהגלריה" right under the search box. A photo goes straight to recognition and the review list, with no typing screen first. Before, the photo was only behind the small "או כתבו מה אכלתם, או צלמו" link under the list, and the owner looked for it in the new-food form instead.
+- The link is now "או כתבו מה אכלתם", for typing. A photo with a note still works from there.
+
 ## 2026-10-21: carrot search, and where the meal photo is
 
 **Done** (branch `claude/search-carrot`, draft PR, not live yet):
 - "גזר" finds fresh carrot first, not "גזר לבן" (parsnip). The same small tie-breaker moves 5 other plain-vegetable searches to the generic fresh version (דלעת, נבטים, כרישה, פלפל, פלפלים). Checked against all 1,667 one- and two-word names in the database: nothing else changed.
 - Typed lines and meal photos: a name that exists only as an ingredient of dishes ("גזר כבוש": the database has no pickled carrot, only potato salad with carrot and pickles) now suggests the plain food ("גזר, טרי") first. The dishes stay lower in the list.
-
-**Next:**
-1. The owner looked for the meal photo in the new-food form, which only has the label scan. It is under ＋ on a diary meal → "או כתבו מה אכלתם, או צלמו" → "📷 צלם ארוחה". Worth making easier to find.
 
 ## 2026-10-20: units you can add without knowing a piece's weight
 
