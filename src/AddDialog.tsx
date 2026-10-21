@@ -5,6 +5,7 @@ import { norm } from './search';
 import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, unitOf, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
+import { Icon } from './icons';
 
 export const NutLine = ({ n }: { n: Nut }) => (
   <div>
@@ -55,7 +56,7 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
           <p className="muted small">{UNIT_HINT}</p>
           <UnitInputs d={newUnit} set={setNewUnit} autoFocus />
           <button className="btn small primary" onClick={saveUnit}>שמור</button>
-          <button className="icon" aria-label="ביטול" onClick={() => setNewUnit(null)}>✕</button>
+          <button className="icon" aria-label="ביטול" onClick={() => setNewUnit(null)}><Icon name="x" /></button>
         </div>
       )}
       <NutLine n={it} />
@@ -153,7 +154,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       <MealSeg meal={meal} onChange={setMeal} />
       {sel ? (
         <div className="picked">
-          {fromFoods && <button className="link" onClick={() => setSel(null)}>→ חזרה לחיפוש</button>}
+          {fromFoods && <button className="link" onClick={() => setSel(null)}><Icon name="arrow-right" />חזרה לחיפוש</button>}
           <h3>{sel.name}</h3>
           <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta={fromFoods ? 'הוסף' : `הוסף ל${label}`} onAddUnit={unitSaver(ctx, sel, setSel)} />
         </div>
@@ -180,7 +181,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
               </button>
             ))}
             {!q && !usual.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
-            {q && <button className="row muted" onClick={() => setCreating(true)}>＋ מזון חדש: ״{q}״</button>}
+            {q && <button className="row muted" onClick={() => setCreating(true)}><Icon name="plus" />מזון חדש: ״{q}״</button>}
           </div>
           {!q && <button className="link start" onClick={() => setWriting(true)}>או כתבו מה אכלתם</button>}
         </>
@@ -196,7 +197,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
 // Which meal an entry goes to: four tabs, the chosen one pressed.
 const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => void }) => (
   <div className="seg" role="group" aria-label="ארוחה">
-    {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} aria-pressed={meal === m.key} onClick={() => onChange(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
+    {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} aria-pressed={meal === m.key} onClick={() => onChange(m.key)}><Icon name={m.icon} />{m.short}</button>)}
   </div>
 );
 
@@ -205,17 +206,14 @@ function Pick({ name, detail, kcal, on, saved, onClick }: { name: string; detail
   return (
     <button className={`row pick${on ? ' on' : ''}`} aria-pressed={on} onClick={onClick}>
       <div className="grow">
-        <div>{saved && <><Star /><span className="sr-only">ארוחה שמורה: </span></>}{name}</div>
+        <div>{saved && <><span className="star"><Icon name="star" /></span><span className="sr-only">ארוחה שמורה: </span></>}{name}</div>
         {detail && <small className="muted">{detail}</small>}
       </div>
       {kcal != null && <span className="kcal">{kcal}</span>}
-      <span className="mark" aria-hidden>{on ? <Check /> : <Plus />}</span>
+      <span className="mark"><Icon name={on ? 'check' : 'plus'} /></span>
     </button>
   );
 }
-const Plus = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>;
-const Check = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
-const Star = () => <svg className="star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>;
 
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
 function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[]) => void }) {

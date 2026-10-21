@@ -98,7 +98,7 @@ test('delete an entry, then undo', async () => {
 
 test('save a meal, then add it again in one tap', async () => {
   page.once('dialog', (d) => d.accept('ערב קבוע'));
-  await button('☆ שמור כארוחה', meal('ארוחת ערב')).tap();
+  await button('שמור כארוחה', meal('ארוחת ערב')).tap();
   await page.getByText('"ערב קבוע" נשמרה').waitFor();
   await openAdd();
   await mealTab('נשנושים').tap();

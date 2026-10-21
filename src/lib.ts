@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import { client, hasPending, listEntries, supabase, syncPending, type Food } from './db';
 import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
@@ -15,16 +16,16 @@ export type MicroKey = (typeof MICROS)[number]['key'];
 export type Nut = { kcal: number; carbs: number; fat: number; protein: number } & Partial<Record<MicroKey, number | null>>;
 export type Item = Nut & { foodId?: string | null; name: string; grams: number; qty?: number | null; unit?: string | null };
 
-export const MEALS: { key: MealKey; label: string; icon: string }[] = [
-  { key: 'breakfast', label: 'ארוחת בוקר', icon: '🌅' },
-  { key: 'lunch', label: 'ארוחת צהריים', icon: '☀️' },
-  { key: 'dinner', label: 'ארוחת ערב', icon: '🌙' },
-  { key: 'snack', label: 'נשנושים ואחר', icon: '🍎' },
+export const MEALS: { key: MealKey; label: string; short: string; icon: IconName }[] = [
+  { key: 'breakfast', label: 'ארוחת בוקר', short: 'בוקר', icon: 'sunrise' },
+  { key: 'lunch', label: 'ארוחת צהריים', short: 'צהריים', icon: 'sun' },
+  { key: 'dinner', label: 'ארוחת ערב', short: 'ערב', icon: 'moon' },
+  { key: 'snack', label: 'נשנושים ואחר', short: 'נשנושים', icon: 'apple' },
 ];
 export const MACROS = [
-  { key: 'carbs', label: 'פחמימות', color: '#3f95d4', kcalPerG: 4 },
-  { key: 'fat', label: 'שומן', color: '#b88a12', kcalPerG: 9 },
-  { key: 'protein', label: 'חלבון', color: '#e0607e', kcalPerG: 4 },
+  { key: 'carbs', label: 'פחמימות', color: 'var(--carbs)', kcalPerG: 4 },
+  { key: 'fat', label: 'שומן', color: 'var(--fat)', kcalPerG: 9 },
+  { key: 'protein', label: 'חלבון', color: 'var(--protein)', kcalPerG: 4 },
 ] as const;
 
 // ---------- dates (local timezone) ----------

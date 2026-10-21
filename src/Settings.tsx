@@ -15,7 +15,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   const save = async () => {
     const { data } = await client.models.Profile.update({ id: p!.id, ...Object.fromEntries(GOALS.map(([k]) => [k, Number(v[k]) || null])) });
     ctx.setProfile(data);
-    setMsg('נשמר ✓');
+    setMsg('נשמר');
   };
   const download = async () => {
     const a = document.createElement('a');
@@ -23,7 +23,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
     a.download = `food-tracker-backup-${today()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    setMsg('הגיבוי ירד ✓');
+    setMsg('הגיבוי ירד');
   };
   const restore = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

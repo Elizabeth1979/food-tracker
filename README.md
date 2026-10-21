@@ -54,7 +54,7 @@ The photo buttons call the `meal-photo` Edge Function ([`supabase/functions/meal
 | `src/Login.tsx`, `src/main.tsx` | Magic-link sign-in, and the gate that shows the app only with a session. |
 | `src/` components | `Day`, `AddDialog`, `Review` (the list a typed meal or photo becomes), `Reports`, `Foods`, `MealEditor`, `Settings` |
 | `public/sw.js` | A network-first service worker for the app shell and `moh.json`. The data's offline copy lives in `src/db.ts`. |
-| `vercel.json` | Security headers. The Content-Security-Policy allows only the app itself, the Supabase project and Google Fonts. |
+| `vercel.json` | Security headers. The Content-Security-Policy allows only the app itself and the Supabase project (the Rubik font is bundled with the app). |
 
 ## Where it runs
 | What | Where |

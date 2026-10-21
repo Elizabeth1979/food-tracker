@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
+import { Icon } from './icons';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -11,7 +12,7 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
     <dialog ref={ref} className="modal" aria-label={title}
       onCancel={(e) => { e.preventDefault(); if (!onBack?.()) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור">✕</button></header>
+      <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור"><Icon name="x" /></button></header>
       <div className="modal-body">{children}</div>
     </dialog>
   );
@@ -29,11 +30,11 @@ export function PhotoPick({ take, busy, busyText, onFile }: { take: string; busy
     <div className="grid2">
       <label className="btn">
         <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
-        📷 {take}
+        <Icon name="camera" />{take}
       </label>
       <label className="btn">
         <input type="file" accept="image/*" className="sr-only" onChange={pick} />
-        🖼️ בחר מהגלריה
+        <Icon name="image" />בחר מהגלריה
       </label>
     </div>
   );

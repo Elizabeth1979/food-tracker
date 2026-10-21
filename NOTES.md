@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: redesign step 1, the foundation (colors, font, icons)
+
+**Done:**
+- New design tokens in `styles.css` `:root`: warm neutrals, one indigo accent, macro colors sand/terracotta/slate (`--carbs`, `--fat`, `--protein`), red only for "over". Dark mode follows the phone (`prefers-color-scheme`) and redefines the same tokens. No hard-coded colors left outside the tokens (print aside).
+- Rubik, self-hosted via `@fontsource-variable/rubik` (works offline). Google Fonts are gone, so the CSP is `style-src 'self'; font-src 'self'`.
+- `src/icons.tsx`: one set of line icons replacing every emoji and symbol (meals, tabs, ✕, ✎, 🗑, ☆, ⇩, ＋, 📷, 🖼️, 💊). `MEALS` carries an icon name and a `short` label for the meal tabs.
+- Readable minimum 14px text, 44px touch targets (`--tap`) on buttons, icon buttons, inputs and meal tabs; disabled buttons are clearly grey instead of faded. Icon-only buttons in the foods tab now have names ("עריכה: …", "מחיקה: …").
+
+**Next:** step 2, the diary layout from the mockup (one summary card, meals as a list, floating ＋), then the add window (photo loader, "why it's disabled" line), then the other tabs.
+
 ## 2026-10-21: screen test covers the main flows, before the redesign
 
 **Done:**
