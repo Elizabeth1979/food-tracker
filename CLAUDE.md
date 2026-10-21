@@ -13,6 +13,8 @@ A personal Hebrew (RTL) calorie and macro diary: Vite + React + TypeScript, data
 ## Deploying
 Push to `main` and Vercel deploys production by itself, in about a minute. The home-screen app notices the new build through `/version.json` and reloads (`src/update.ts`). Commit and push only when the owner asks.
 
+**After merging to `main`, start the production deploy yourself; don't wait for Vercel's GitHub hook** (the owner's standing request: Vercel has picked up merges 15+ minutes late or not at all). With the Vercel tools: create a deployment with `target: "production"` and `gitSource` `{type: "github", org: "Elizabeth1979", repo: "food-tracker-elli", ref: "main", sha: <merge commit>}` in project `prj_GF3n2aiehutDd5I6h01bhCICGhJz`, team `team_IluAXBY7tqQpBwOf1hRuqt6a`. It builds in under a minute and takes over `food-tracker-nine-khaki.vercel.app`; check it reaches READY and tell the owner it's live. A second build from the late hook is harmless.
+
 ## Things to know
 - Calories always come from the food database (`moh.json` plus the user's own `foods` rows). A meal photo only names foods and guesses amounts. The one exception is label scanning (`mode: 'label'`, the new-food form's "צלם טבלת ערכים"): it fills a new food from a package's nutrition table, and the user checks it before saving.
 - MoH foods are never copied into the database. A `foods` row with the same id overrides one; that is how edits, added units and "hidden" work.
