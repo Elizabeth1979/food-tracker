@@ -169,10 +169,9 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
           <input className="search" type="search" aria-label="חיפוש" placeholder="חיפוש מזון…" value={q} onChange={(e) => setQ(e.target.value)} />
           {/* The two other ways in, big and up front: a photo (camera or gallery) or typing the meal */}
           {!q && (
-            <div className="grid2">
-              <PhotoPick take="צילום או תמונה" busyText="" className="btn big-choice" onFile={(f) => { setPhoto(f); setWriting(true); }} />
+            <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" onFile={(f) => { setPhoto(f); setWriting(true); }}>
               <button className="btn big-choice" onClick={() => setWriting(true)}><Icon name="pencil" />כתיבה</button>
-            </div>
+            </PhotoPick>
           )}
           <div className="usual">
             {(q ? meals.map((m) => ({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : usual).map((r) => {
@@ -241,7 +240,7 @@ function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; 
     );
   return (
     <div className="form">
-      <PhotoPick take="צילום או תמונה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={photo} />
+      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={photo} />
       {/* Locked while a photo is being read, so it's clear that something is going on */}
       <fieldset className="form" disabled={!!reading}>
         <label>

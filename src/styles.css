@@ -200,9 +200,16 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .nowrap { white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form p { margin: 0; }
+summary { min-height: var(--tap); display: flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 500; cursor: pointer; }
+details[open] > summary { margin-bottom: 10px; }
+summary .i { transition: transform .2s; }
+details:not([open]) > summary .i { transform: rotate(90deg); } /* closed: points along the reading direction (left in RTL) */
+summary::-webkit-details-marker { display: none; }
+summary { list-style: none; }
 .form label:not(.btn), .report label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); } /* field labels; a <label class=btn> is a button */
 .form label input { color: var(--text); font-size: 16px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid2, .grid3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { grid-template-columns: repeat(3, 1fr); }
 
 /* reports */
 .chart { width: 100%; max-width: 760px; height: auto; display: block; margin: 0 auto; }

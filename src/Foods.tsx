@@ -53,7 +53,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   );
   return (
     <div className="form">
-      <PhotoPick take="צילום טבלת ערכים" reading={reading} busyText="קורא את הטבלה…" onFile={photo} />
+      <PhotoPick camera="צילום טבלת ערכים" gallery="טבלה מהגלריה" reading={reading} busyText="קורא את הטבלה…" onFile={photo} />
       {(label === 'done' || label === 'serving') && (
         <p className="muted small" role="status">
           הערכים מולאו מהתמונה{label === 'serving' ? ' וחושבו ל־100 גרם לפי משקל המנה' : ''}. כדאי לבדוק אותם מול האריזה לפני השמירה.
@@ -85,7 +85,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const logged = (es: Entry[]) => setMsg(`״${es[0]?.name}״ נוסף ל${MEALS.find((m) => m.key === es[0]?.meal)?.label ?? 'יומן'}`);
   const [edit, setEdit] = useState<Partial<Food> | null>(null);
   const [mealEdit, setMealEdit] = useState<SavedMeal | 'new' | null>(null);
-  const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, ctx.recent) : ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden)), [ctx.foods, q, ctx.recent]);
+  const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, ctx.recent) : []), [ctx.foods, q, ctx.recent]);
   const saved = (f: Food) => { ctx.setFoods(edit?.id ? ctx.foods.map((x) => (x.id === f.id ? f : x)) : [...ctx.foods, f]); setEdit(null); };
   const hide = async (f: Food) => {
     if (!confirm(`להסיר את "${f.name}" מהרשימה?`)) return;
@@ -106,7 +106,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
           const items = json<Item[]>(m.items, []);
           return (
             <div key={m.id} className="row static">
-              <div className="grow"><div>{m.name}</div><small className="muted">{items.map((i) => i.name).join(' · ')}</small></div>
+              <div className="grow"><div>{m.name}</div><small className="muted">{items.length === 1 ? 'מזון אחד' : `${items.length} מזונות`}</small></div>
               <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" /></button>
             </div>
           );
@@ -114,7 +114,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
       </Group>
       <Group title={<>מאגר מזונות <small>({ctx.foods.filter((f) => !f.hidden).length})</small></>} action={<button className="btn small" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
         <input className="search" type="search" aria-label="חיפוש במאגר" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן. העיפרון עורך, הפח מסתיר מהחיפוש.' : 'המזונות שהוספת. חפש כדי לראות גם את מאגר משרד הבריאות.'}</div>
+        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן. העיפרון עורך, הפח מסתיר מהחיפוש.' : 'חפשו מזון כדי להוסיף אותו ליומן, לערוך או להסתיר.'}</div>
         {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
         <div className="list">
           {hits.map((f) => (
