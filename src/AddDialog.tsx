@@ -113,6 +113,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     return [...saved, ...foods].sort((a, b) => b.score - a.score || a.i - b.i);
   }, [ctx.foods, ctx.meals, order, month, meal]);
   const label = MEALS.find((m) => m.key === meal)!.label;
+  const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
   const added = Object.values(done).flat();
 
   const add = async (key: string, items: Item[]) => {
@@ -146,7 +147,10 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       </Modal>
     );
   return (
-    <Modal title={`${fromFoods ? 'הוספה ליומן' : `הוספה ל${label}`}${date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`}`} onClose={onClose}
+    <Modal title={`${fromFoods ? 'הוספה ליומן' : `הוספה ל${label}`}${day}`} onClose={onClose}
+      heading={fromFoods ? undefined : <>הוספה ל<select className="title-select" aria-label="ארוחה" value={meal} onChange={(e) => setMeal(e.target.value as MealKey)}>
+        {MEALS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+      </select>{day}</>}
       onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } return false; }}>
       {fromFoods && (
         <div className="seg">

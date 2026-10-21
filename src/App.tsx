@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { addDays, client, hasPending, loadEntries, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal } from './lib';
 import Day from './Day';
 import Reports from './Reports';
@@ -12,7 +12,7 @@ export type Ctx = {
   setMeals: (m: SavedMeal[]) => void;
   profile: Profile | null;
   setProfile: (p: Profile) => void;
-  // Recently logged food ids, newest first. Kept on the profile so every device shares them.
+  // Food ids you log, most often first (past 3 months), ties by most recent. Search and the ＋ list put them first.
   recent: string[];
   addRecent: (ids: string[]) => void;
 };
@@ -45,12 +45,18 @@ export default function App({ email }: { email: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState('');
   const [waiting, setWaiting] = useState(hasPending);
+  const [uses, setUses] = useState<Record<string, number>>({}); // food id → times logged in the past 3 months
 
   useEffect(() => {
     // Each piece shows as soon as it's ready; the 1.6 MB food file doesn't hold up goals or meals.
     const fail = (e: Error) => setStatus('שגיאה בטעינה: ' + e.message + ' · לחץ לטעינה מחדש');
     loadFoods().then(setFoods, fail);
     loadSavedMeals().then(setMeals, fail);
+    loadEntries(addDays(today(), -91), today()).then((es) => {
+      const n: Record<string, number> = {};
+      for (const e of es) if (e.foodId) n[e.foodId] = (n[e.foodId] ?? 0) + 1;
+      setUses(n);
+    }, () => {});
     client.models.Profile.list()
       .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create({ kcal: 2000, carbs: 250, fat: 65, protein: 100 })).data))
       .catch(fail);
@@ -84,10 +90,15 @@ export default function App({ email }: { email: string }) {
   }, []);
 
   // Before the profile had a `recent` column the list lived only in this browser; start from that copy.
-  const recent = profile?.recent ?? store.get<string[]>('recent', []);
+  const latest = profile?.recent ?? store.get<string[]>('recent', []);
+  const recent = useMemo(() => {
+    const at = (id: string) => { const i = latest.indexOf(id); return i < 0 ? latest.length : i; };
+    return [...new Set([...latest, ...Object.keys(uses)])].sort((a, b) => (uses[b] ?? 0) - (uses[a] ?? 0) || at(a) - at(b));
+  }, [latest, uses]);
   const addRecent = (ids: string[]) => {
     if (!profile || !ids.length) return;
-    const next = [...new Set([...ids, ...recent])].slice(0, 40);
+    setUses((n) => { const m = { ...n }; for (const id of ids) m[id] = (m[id] ?? 0) + 1; return m; });
+    const next = [...new Set([...ids, ...latest])].slice(0, 40);
     store.set('recent', next);
     setProfile({ ...profile, recent: next });
     // A convenience only: a failed save must not raise the error banner over the entry that did save.

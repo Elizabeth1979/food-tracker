@@ -76,6 +76,9 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         </div>
       </section>
 
+      {/* One way in: the meal is picked from the time of day, and can be changed in the window's title */}
+      <button className="btn primary add-all" onClick={() => setAdding(mealNow())}>＋ הוספה</button>
+
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
       {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
       {entries === null && <div className="muted center">טוען…</div>}
@@ -92,7 +95,6 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
                   <b>{sum(es).kcal}</b><small className="muted">קק״ל</small><span className="chev" aria-hidden="true">▾</span>
                 </button>
               </h3>
-              <button className="add" onClick={() => setAdding(m.key)} aria-label="הוסף">＋</button>
             </header>
             <div id={`meal-${m.key}`} hidden={!open}>
               {es.map((e) => (
