@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: Settings order
+
+**Done:**
+- At the owner's request "יעדים יומיים" is first (its save is the primary button); the weigh-in and calculator moved under "חישוב לפי משקל", folded in a "שקילה ועדכון היעדים" disclosure, closed by default. The hint text is shorter. The screen test opens the disclosure before weighing in.
+
 ## 2026-10-21: diary top, less crammed
 
 **Done:**

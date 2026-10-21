@@ -68,33 +68,38 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   return (
     <div className="stack">
       <h1 className="page-title">הגדרות</h1>
-      <Group title="משקל ויעדים" body="pad form">
-        <div className="grid2">
-          <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
-          <label><span>מותניים (ס״מ, לא חובה)</span><input type="number" inputMode="decimal" step="0.5" value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
-        </div>
-        {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג{last.waist ? `, מותניים ${last.waist} ס״מ` : ''}, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
-        <details open={!p?.body}>
-          <summary><Icon name="chevron-down" />פרטים לחישוב</summary>
-          <div className="form">
-            <div className="grid2">
-              <label><span>מין</span><select value={body.sex} onChange={(e) => setBody({ ...body, sex: e.target.value })}><option value="f">אישה</option><option value="m">גבר</option></select></label>
-              {BODY.map(([k, l]) => <label key={k}><span>{l}</span><input type="number" inputMode="decimal" value={body[k] ?? ''} onChange={(e) => setBody({ ...body, [k]: e.target.value })} /></label>)}
-            </div>
-            <label><span>פעילות</span><select value={body.activity} onChange={(e) => setBody({ ...body, activity: e.target.value })}>{ACTIVITY.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
-            <label><span>מטרה</span><select value={body.aim} onChange={(e) => setBody({ ...body, aim: e.target.value })}>{AIMS.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
-          </div>
-        </details>
-        <p className="muted small">פעם בשבוע מספיק: בבוקר, ואת המותניים בגובה הטבור. כשבונים שריר המשקל יכול לעמוד, והמותניים מראים את ירידת השומן. היעדים מחושבים מחדש מכל שקילה: חלבון 1.8 ג׳ לק״ג, שומן 30% מהקלוריות והשאר פחמימות. זו הערכה; אם אחרי 3–4 שבועות המשקל לא זז, כדאי לשנות.</p>
-        <button className="btn primary" onClick={weighIn} disabled={!ready} aria-describedby={ready ? undefined : why}>שמור משקל ועדכן יעדים</button>
-        {!ready && <Why id={why}>מלאו משקל, גיל וגובה כדי לשמור</Why>}
-      </Group>
       <Group title="יעדים יומיים" body="pad form">
         <div className="grid2">
           {GOALS.map(([k, l]) => <label key={k}><span>{l}</span><input type="number" inputMode="decimal" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></label>)}
         </div>
         <p className="muted small">המקרו־נוטריינטים שווים {Math.round(macroKcal)} קק״ל (פחמימות וחלבון 4 קק״ל/ג׳, שומן 9 קק״ל/ג׳).</p>
-        <button className="btn" onClick={save}>שמור יעדים</button>
+        <button className="btn primary" onClick={save}>שמור יעדים</button>
+      </Group>
+      <Group title="חישוב לפי משקל" body="pad form">
+        <details>
+          <summary><Icon name="chevron-down" />שקילה ועדכון היעדים</summary>
+          <div className="form">
+            <div className="grid2">
+              <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+              <label><span>מותניים (ס״מ, לא חובה)</span><input type="number" inputMode="decimal" step="0.5" value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
+            </div>
+            {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג{last.waist ? `, מותניים ${last.waist} ס״מ` : ''}, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
+            <details open={!p?.body}>
+              <summary><Icon name="chevron-down" />פרטים לחישוב</summary>
+              <div className="form">
+                <div className="grid2">
+                  <label><span>מין</span><select value={body.sex} onChange={(e) => setBody({ ...body, sex: e.target.value })}><option value="f">אישה</option><option value="m">גבר</option></select></label>
+                  {BODY.map(([k, l]) => <label key={k}><span>{l}</span><input type="number" inputMode="decimal" value={body[k] ?? ''} onChange={(e) => setBody({ ...body, [k]: e.target.value })} /></label>)}
+                </div>
+                <label><span>פעילות</span><select value={body.activity} onChange={(e) => setBody({ ...body, activity: e.target.value })}>{ACTIVITY.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
+                <label><span>מטרה</span><select value={body.aim} onChange={(e) => setBody({ ...body, aim: e.target.value })}>{AIMS.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
+              </div>
+            </details>
+            <p className="muted small">פעם בשבוע, בבוקר; מותניים בגובה הטבור. כל שקילה מחשבת מחדש את היעדים: חלבון 1.8 ג׳ לק״ג, שומן 30%, והשאר פחמימות. זו הערכה.</p>
+            <button className="btn primary" onClick={weighIn} disabled={!ready} aria-describedby={ready ? undefined : why}>שמור משקל ועדכן יעדים</button>
+            {!ready && <Why id={why}>מלאו משקל, גיל וגובה כדי לשמור</Why>}
+          </div>
+        </details>
       </Group>
       <Group title="גיבוי" body="pad form">
         <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>
