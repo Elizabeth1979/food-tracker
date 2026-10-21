@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
-import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut, type Weight } from './lib';
+import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut } from './lib';
 import { Group, Donut, MacroLegend, MicroLine } from './ui';
 import { Icon } from './icons';
 
@@ -20,6 +20,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
     : sum([]);
   const goal = ctx.profile?.kcal ?? 0;
   const weights = ctx.weights.filter((w) => w.date >= from && w.date <= to);
+  const waists = weights.flatMap((w) => (w.waist ? [{ id: w.id, date: w.date, v: w.waist }] : []));
   const title = from === to ? fmtDate(from) : `${fmtDate(from, { day: 'numeric', month: 'short' })} – ${fmtDate(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   const csv = () => {
@@ -51,7 +52,8 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
         <p className="muted small">PDF: בחלון ההדפסה בחר ״שמירה כ-PDF״.</p>
       </Group>
 
-      {weights.length > 1 && <WeightChart data={weights} />}
+      {weights.length > 1 && <TrendChart title="משקל" unit="ק״ג" data={weights.map((w) => ({ id: w.id, date: w.date, v: w.kg }))} />}
+      {waists.length > 1 && <TrendChart title="מותניים" unit="ס״מ" data={waists} />}
       <h2 className="print-title">דוח תזונה · {title}</h2>
       {entries === null ? <div className="muted center">טוען…</div> : !logged.length ? <div className="muted center">אין רישומים בטווח הזה</div> : (
         <>
@@ -120,23 +122,24 @@ function KcalChart({ data, goal }: { data: { d: string; v: number }[]; goal: num
   );
 }
 
-// Weigh-ins in the range as a line, oldest on the right (RTL); the label says the change in words.
-function WeightChart({ data }: { data: Weight[] }) {
+// A measurement over the range as a line, oldest on the right (RTL); the heading says the change in words.
+type Point = { id: string; date: string; v: number };
+function TrendChart({ title, unit, data }: { title: string; unit: string; data: Point[] }) {
   const W = 600, H = 160, P = 26;
-  const lo = Math.min(...data.map((w) => w.kg)) - 1, hi = Math.max(...data.map((w) => w.kg)) + 1;
+  const lo = Math.min(...data.map((p) => p.v)) - 1, hi = Math.max(...data.map((p) => p.v)) + 1;
   const t0 = Date.parse(data[0].date), span = Date.parse(data.at(-1)!.date) - t0 || 1;
-  const x = (w: Weight) => W - P - ((Date.parse(w.date) - t0) / span) * (W - 2 * P);
-  const y = (w: Weight) => H - P - ((w.kg - lo) / (hi - lo)) * (H - 2 * P);
-  const first = data[0], last = data.at(-1)!, diff = Math.round((last.kg - first.kg) * 10) / 10;
+  const x = (p: Point) => W - P - ((Date.parse(p.date) - t0) / span) * (W - 2 * P);
+  const y = (p: Point) => H - P - ((p.v - lo) / (hi - lo)) * (H - 2 * P);
+  const first = data[0], last = data.at(-1)!, diff = Math.round((last.v - first.v) * 10) / 10;
   const day = (d: string) => fmtDate(d, { day: 'numeric', month: 'numeric' });
   return (
     <section className="card pad no-print">
-      <h3>משקל <small className="muted">· {diff < 0 ? `ירידה של ${-diff} ק״ג` : diff > 0 ? `עלייה של ${diff} ק״ג` : 'ללא שינוי'}</small></h3>
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`משקל: מ־${first.kg} ק״ג ב־${day(first.date)} ל־${last.kg} ק״ג ב־${day(last.date)}`}>
-        <polyline points={data.map((w) => `${x(w)},${y(w)}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth={2.5} strokeLinejoin="round" />
-        {data.map((w) => <circle key={w.id} cx={x(w)} cy={y(w)} r={4} fill="var(--accent)"><title>{`${day(w.date)}: ${w.kg} ק״ג`}</title></circle>)}
-        {[first, last].map((w) => <text key={w.id} x={x(w)} y={H - 8} textAnchor="middle" className="axis">{day(w.date)}</text>)}
-        {[first, last].map((w) => <text key={w.id} x={x(w)} y={y(w) - 10} textAnchor="middle" className="axis">{w.kg}</text>)}
+      <h3>{title} <small className="muted">· {diff < 0 ? `ירידה של ${-diff} ${unit}` : diff > 0 ? `עלייה של ${diff} ${unit}` : 'ללא שינוי'}</small></h3>
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`${title}: מ־${first.v} ${unit} ב־${day(first.date)} ל־${last.v} ${unit} ב־${day(last.date)}`}>
+        <polyline points={data.map((p) => `${x(p)},${y(p)}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth={2.5} strokeLinejoin="round" />
+        {data.map((p) => <circle key={p.id} cx={x(p)} cy={y(p)} r={4} fill="var(--accent)"><title>{`${day(p.date)}: ${p.v} ${unit}`}</title></circle>)}
+        {[first, last].map((p) => <text key={p.id} x={x(p)} y={H - 8} textAnchor="middle" className="axis">{day(p.date)}</text>)}
+        {[first, last].map((p) => <text key={p.id} x={x(p)} y={y(p) - 10} textAnchor="middle" className="axis">{p.v}</text>)}
       </svg>
     </section>
   );

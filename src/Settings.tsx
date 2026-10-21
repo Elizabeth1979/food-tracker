@@ -22,6 +22,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   const [msg, setMsg] = useState('');
   const last = ctx.weights.at(-1);
   const [kg, setKg] = useState(() => (last?.date === today() ? String(last.kg) : ''));
+  const [waist, setWaist] = useState(() => (last?.date === today() ? String(last.waist ?? '') : ''));
   const [body, setBody] = useState(() => bodyForm(p?.body));
   const why = useId();
   const ready = Number(kg) > 0 && BODY.every(([k]) => Number(body[k]) > 0);
@@ -39,7 +40,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   // One weigh-in a day (a second one replaces it), then the goals follow the new weight.
   const weighIn = async () => {
     const info: BodyInfo = { sex: body.sex as BodyInfo['sex'], birthYear: year() - Number(body.age), heightCm: Number(body.heightCm), activity: Number(body.activity), aim: Number(body.aim) };
-    const row = { id: ctx.weights.find((w) => w.date === today())?.id, date: today(), kg: Number(kg) };
+    const row = { id: ctx.weights.find((w) => w.date === today())?.id, date: today(), kg: Number(kg), waist: Number(waist) || null };
     const { data } = row.id ? await client.models.Weight.update(row as Weight) : await client.models.Weight.create(row);
     ctx.setWeights([...ctx.weights.filter((w) => w.id !== data.id), data].sort((a, b) => a.date.localeCompare(b.date)));
     const g = suggestGoals({ ...info, age: Number(body.age), weightKg: row.kg });
@@ -68,8 +69,11 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
     <div className="stack">
       <h1 className="page-title">הגדרות</h1>
       <Group title="משקל ויעדים" body="pad form">
-        <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
-        {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
+        <div className="grid2">
+          <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+          <label><span>מותניים (ס״מ, לא חובה)</span><input type="number" inputMode="decimal" step="0.5" value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
+        </div>
+        {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג{last.waist ? `, מותניים ${last.waist} ס״מ` : ''}, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
         <details open={!p?.body}>
           <summary><Icon name="chevron-down" />פרטים לחישוב</summary>
           <div className="form">
@@ -81,7 +85,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
             <label><span>מטרה</span><select value={body.aim} onChange={(e) => setBody({ ...body, aim: e.target.value })}>{AIMS.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
           </div>
         </details>
-        <p className="muted small">שקילה פעם בשבוע מספיקה. היעדים מחושבים מחדש מכל שקילה: חלבון 1.8 ג׳ לק״ג, שומן 30% מהקלוריות והשאר פחמימות. זו הערכה; אם אחרי 3–4 שבועות המשקל לא זז, כדאי לשנות.</p>
+        <p className="muted small">פעם בשבוע מספיק: בבוקר, ואת המותניים בגובה הטבור. כשבונים שריר המשקל יכול לעמוד, והמותניים מראים את ירידת השומן. היעדים מחושבים מחדש מכל שקילה: חלבון 1.8 ג׳ לק״ג, שומן 30% מהקלוריות והשאר פחמימות. זו הערכה; אם אחרי 3–4 שבועות המשקל לא זז, כדאי לשנות.</p>
         <button className="btn primary" onClick={weighIn} disabled={!ready} aria-describedby={ready ? undefined : why}>שמור משקל ועדכן יעדים</button>
         {!ready && <Why id={why}>מלאו משקל, גיל וגובה כדי לשמור</Why>}
       </Group>

@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: waist measurement
+
+**Done:**
+- The owner builds muscle while losing fat, so the scale alone can stand still. Weigh-ins now take an optional waist (cm) next to the weight (migration `weights_waist`, approved).
+- Reports: one `TrendChart` draws both the weight and the waist over the range, each with the change in words.
+- The screen test enters a waist on both weigh-ins and finds the waist chart by name; dropping the waist on save made it fail.
+
+**Next:** body fat % only if the owner gets a scale that shows it (asked, no answer yet).
+
 ## 2026-10-21: weight log
 
 **Done:**
