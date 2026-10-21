@@ -145,16 +145,32 @@ test('the foods tab lists saved meals and the food database', async () => {
   await grapes.first().waitFor();
 });
 
-test('settings work out daily goals from height and weight', async () => {
+test('a weigh-in updates the goals, and reports show the weight over time', async () => {
+  const weighIn = async (kg) => {
+    await button(/הגדרות/).tap();
+    await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill(kg);
+    await button('שמור משקל ועדכן יעדים').tap();
+    await page.getByRole('status').filter({ hasText: 'היעדים עודכנו' }).waitFor();
+    await button(/יומן/).tap(); // leave, so the next visit starts fresh
+  };
+  // a week ago: the first weigh-in also needs age and height, once
+  await page.clock.setFixedTime(new Date('2026-10-14T09:00:00'));
   await button(/הגדרות/).tap();
-  const kcal = page.getByRole('spinbutton', { name: 'קלוריות' });
-  const before = await kcal.inputValue();
-  await page.getByText('חישוב לפי גובה ומשקל').tap();
-  assert.ok(await button('חשב יעדים').isDisabled());
+  await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill('76');
+  assert.ok(await button('שמור משקל ועדכן יעדים').isDisabled());
   await page.getByRole('spinbutton', { name: 'גיל' }).fill('45');
   await page.getByRole('spinbutton', { name: 'גובה (ס״מ)' }).fill('165');
-  await page.getByRole('spinbutton', { name: 'משקל (ק״ג)' }).fill('75');
-  await button('חשב יעדים').tap();
-  assert.notEqual(await kcal.inputValue(), before);
+  await button('שמור משקל ועדכן יעדים').tap();
+  await page.getByRole('status').filter({ hasText: 'היעדים עודכנו' }).waitFor();
+  const kcalBefore = await page.getByRole('spinbutton', { name: 'קלוריות' }).inputValue();
+  await button(/יומן/).tap();
+  // today: age and height are remembered, the goals follow the new weight
+  await page.clock.setFixedTime(new Date('2026-10-21T13:00:00'));
+  await weighIn('75');
+  await button(/הגדרות/).tap();
   assert.equal(await page.getByRole('spinbutton', { name: 'חלבון (ג׳)' }).inputValue(), '123');
+  assert.ok(Number(await page.getByRole('spinbutton', { name: 'קלוריות' }).inputValue()) < Number(kcalBefore));
+  await button(/דוחות/).tap();
+  await button('חודש').tap();
+  await page.getByRole('img', { name: /^משקל: מ־76 ק״ג .* ל־75 ק״ג/ }).waitFor();
 });

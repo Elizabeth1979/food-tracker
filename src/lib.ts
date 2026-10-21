@@ -4,7 +4,7 @@ import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
 export { client, hasPending, syncPending };
 export { GRAMS, json, unitsOf, searchFoods, matchFoods, parseLine, splitAnd, unitFor, isFFQ, type Unit, type Parsed } from './search';
-export type { Food, Entry, SavedMeal, Profile } from './db';
+export type { Food, Entry, SavedMeal, Profile, BodyInfo, Weight } from './db';
 export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export const MICROS = [
   { key: 'sodium', label: 'נתרן', unit: 'מ״ג', dp: 0 },

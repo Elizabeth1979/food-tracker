@@ -46,15 +46,27 @@ create index saved_meals_user on saved_meals (user_id);
 create table profiles (
   id uuid primary key default auth.uid() references auth.users on delete cascade,
   kcal real, carbs real, fat real, protein real,
-  recent text[] -- recently logged food ids, newest first (search favours them on every device)
+  recent text[], -- recently logged food ids, newest first (search favours them on every device)
+  body jsonb -- { sex, birthYear, heightCm, activity, aim }: what the goals are worked out from
 );
+
+-- Weigh-ins; the app keeps one per day. The latest one updates the goals.
+create table weights (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  date date not null,
+  kg real not null
+);
+create index weights_user_date on weights (user_id, date);
 
 alter table foods enable row level security;
 alter table entries enable row level security;
 alter table saved_meals enable row level security;
 alter table profiles enable row level security;
+alter table weights enable row level security;
 
 create policy own on foods for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy own on entries for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy own on saved_meals for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy own on profiles for all to authenticated using (id = (select auth.uid())) with check (id = (select auth.uid()));
+create policy own on weights for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));

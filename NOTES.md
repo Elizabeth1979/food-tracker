@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: weight log
+
+**Done:**
+- Database (migration `weight_log`, approved by the owner): a `weights` table (date, kg; RLS like the others) and `profiles.body` (sex, birth year, height, activity, aim). `Weight` is one more model in `db.ts` (offline queue, backup and restore included) and in test mode.
+- Settings: "משקל ויעדים" card. Type today's weight and tap "שמור משקל ועדכן יעדים": the weigh-in is saved (one per day; a second one that day replaces it), the body details are saved to the profile, and the 4 goals are recalculated and saved from the new weight. The details sit in a "פרטים לחישוב" disclosure, open until filled once. The calculator's old on-phone copy (localStorage `body`) seeds the form once. Manual "שמור יעדים" still works.
+- Reports: a weight line chart for the chosen range (2+ weigh-ins), with the change in words ("ירידה של 1.8 ק״ג"); a signed number flipped in RTL.
+- The screen test weighs in a week ago and today, checks the goals follow, and finds the chart by its accessible name; breaking the goal update or the saved details made it fail.
+
+**Next:** watch that the owner weighs in weekly; if the trend stalls 3–4 weeks, the aim or activity may need changing.
+
 ## 2026-10-21: camera button, quieter foods tab, goals calculator
 
 **Done:**
