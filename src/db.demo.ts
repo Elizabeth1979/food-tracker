@@ -24,7 +24,7 @@ function model<T>(t: TableName) {
     return { data: row as unknown as T };
   };
   return {
-    list: async () => ({ data: db[t] as unknown as T[] }),
+    list: async () => ({ data: [...db[t]] as unknown as T[] }), // a copy, like the real layer: callers add to their own list
     create,
     update: async (input: object) => {
       const r = clean(input), i = db[t].findIndex((x) => x.id === r.id);
