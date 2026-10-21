@@ -2,6 +2,14 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: a saved screen test
+
+**Done:**
+- `npm run test:screens` (`e2e/screens.mjs`, `playwright-core` + Node's test runner) clicks through the main flow in test mode at phone size: one ＋ opens on lunch at 13:00, search ענבים and add, switch to dinner, a photo opens the review list, "שכחתי משהו?" adds a regular pita, add all, and the diary has the entries under the right meals with a total. Breaking "שכחתי משהו?" on purpose made it fail, so it does catch things.
+- Shipping now requires it to pass (CLAUDE.md). Vercel can't run it (no browser), so it runs in the session before merging.
+
+**Not covered yet:** saving to Supabase and offline sync, the photo Edge Function, reports and CSV, settings and backup.
+
 ## 2026-10-21: "פיתה" finds a regular pita
 
 **Done** (branch `claude/pita-search`):

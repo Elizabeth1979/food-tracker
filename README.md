@@ -28,6 +28,7 @@ npm run dev            # http://localhost:5173
 npm run dev:test       # http://localhost:5174, test mode: no sign-in, data only in this browser, sample photo and label answers
 npm run build          # type-check + production build into dist/
 npm test               # search and meal-parser tests (Vercel runs them before every deploy)
+npm run test:screens   # screen test of the main logging flow in test mode (needs: npx playwright install chromium)
 npm run preview        # serve the production build locally
 ```
 
