@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: camera button, quieter foods tab, goals calculator
+
+**Done:**
+- Photos: "צילום" (opens the camera, `capture="environment"`) and "מהגלריה" are separate buttons again. Android's photo picker no longer offers the camera for a plain file input, so the single button only opened the gallery. `PhotoPick` renders both, plus an optional third choice (the add window's "כתיבה").
+- Foods tab: saved meals show the name and how many foods, not the full list; the food list appears only while searching.
+- Settings: "חישוב לפי גובה ומשקל" (a `<details>`) works out the 4 goals from sex, age, height, weight, activity and aim (`src/goals.ts`, tested in `goals.test.ts`): Mifflin-St Jeor × activity, −20% for losing weight while building muscle, never below resting needs; protein 1.8 g/kg up to a BMI-25 weight, fat 30%, carbs the rest. It only fills the fields; "שמור יעדים" saves. The body measurements stay in localStorage on the phone (no database change).
+
+**Next:** if the owner wants the measurements on every device or a weight log, that needs new columns: ask first.
+
 ## 2026-10-21: redesign step 4, the other tabs
 
 **Done:**

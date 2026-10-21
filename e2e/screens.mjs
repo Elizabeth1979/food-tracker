@@ -54,7 +54,8 @@ test('switch the meal, then a photo goes to the review list', async () => {
   await mealTab('ערב').tap();
   assert.equal(await mealTab('ערב').getAttribute('aria-pressed'), 'true');
   // any real image will do: test mode answers every photo with the same sample meal
-  await dialog().getByLabel(/צילום או תמונה/).setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  assert.ok(await dialog().getByLabel('צילום', { exact: true }).count()); // the camera has its own button
+  await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
   // while it's being read: a visible status, and the rest locked with the reason given
   await dialog().getByRole('status').filter({ hasText: 'מזהה מזונות בתמונה' }).waitFor();
   const next = button('המשך לבדיקה', dialog());
@@ -137,4 +138,23 @@ test('the foods tab lists saved meals and the food database', async () => {
   await page.getByRole('heading', { name: 'ארוחות שמורות' }).waitFor();
   assert.ok(await page.getByText('ערב קבוע').first().isVisible());
   await page.getByRole('heading', { name: /מאגר מזונות/ }).waitFor();
+  // the food list stays closed until a search
+  const grapes = page.getByRole('button', { name: /^הוסף ליומן: ענבים/ });
+  assert.equal(await grapes.count(), 0);
+  await page.getByRole('searchbox', { name: 'חיפוש במאגר' }).fill('ענבים');
+  await grapes.first().waitFor();
+});
+
+test('settings work out daily goals from height and weight', async () => {
+  await button(/הגדרות/).tap();
+  const kcal = page.getByRole('spinbutton', { name: 'קלוריות' });
+  const before = await kcal.inputValue();
+  await page.getByText('חישוב לפי גובה ומשקל').tap();
+  assert.ok(await button('חשב יעדים').isDisabled());
+  await page.getByRole('spinbutton', { name: 'גיל' }).fill('45');
+  await page.getByRole('spinbutton', { name: 'גובה (ס״מ)' }).fill('165');
+  await page.getByRole('spinbutton', { name: 'משקל (ק״ג)' }).fill('75');
+  await button('חשב יעדים').tap();
+  assert.notEqual(await kcal.inputValue(), before);
+  assert.equal(await page.getByRole('spinbutton', { name: 'חלבון (ג׳)' }).inputValue(), '123');
 });

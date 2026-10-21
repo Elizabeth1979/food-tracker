@@ -20,7 +20,9 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
 
 // One button for a photo: without `capture`, the phone offers both the camera and the gallery.
 // While `reading` (the photo being read) is set, it shows that photo dimmed under a spinner instead.
-export function PhotoPick({ take, reading, busyText, onFile, className = 'btn' }: { take: string; reading?: File | null; busyText: string; onFile: (f: File) => void; className?: string }) {
+// Two ways in: Android's file picker no longer offers the camera, so the camera gets its own button (capture).
+// `children` is one more choice in the same row (the add window's "כתיבה").
+export function PhotoPick({ camera, gallery, reading, busyText = '', onFile, className = 'btn', children }: { camera: string; gallery: string; reading?: File | null; busyText?: string; onFile: (f: File) => void; className?: string; children?: ReactNode }) {
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -28,10 +30,17 @@ export function PhotoPick({ take, reading, busyText, onFile, className = 'btn' }
   };
   if (reading) return <Reading file={reading} text={busyText} />;
   return (
-    <label className={className}>
-      <input type="file" accept="image/*" className="sr-only" onChange={pick} />
-      <Icon name="camera" />{take}
-    </label>
+    <div className={children ? 'grid3' : 'grid2'}>
+      <label className={className}>
+        <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
+        <Icon name="camera" />{camera}
+      </label>
+      <label className={className}>
+        <input type="file" accept="image/*" className="sr-only" onChange={pick} />
+        <Icon name="image" />{gallery}
+      </label>
+      {children}
+    </div>
   );
 }
 
