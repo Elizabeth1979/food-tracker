@@ -149,6 +149,7 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   const waist = () => page.getByRole('spinbutton', { name: /^מותניים/ });
   const weighIn = async (kg, cm) => {
     await button(/הגדרות/).tap();
+    await page.getByText('שקילה ועדכון היעדים').tap(); // folded away under the daily goals
     await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill(kg);
     await waist().fill(cm);
     await button('שמור משקל ועדכן יעדים').tap();
@@ -158,6 +159,7 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   // a week ago: the first weigh-in also needs age and height, once
   await page.clock.setFixedTime(new Date('2026-10-14T09:00:00'));
   await button(/הגדרות/).tap();
+  await page.getByText('שקילה ועדכון היעדים').tap();
   await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill('76');
   await waist().fill('90');
   assert.ok(await button('שמור משקל ועדכן יעדים').isDisabled());
