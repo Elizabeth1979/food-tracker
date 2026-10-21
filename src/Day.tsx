@@ -87,7 +87,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         const es = list.filter((e) => e.meal === m.key);
         const open = isOpen(m.key);
         return (
-          <section key={m.key} className="card meal">
+          <section key={m.key} className="card meal" aria-label={m.label}>
             <header>
               <h3 className="grow">
                 <button className="meal-toggle" aria-expanded={open} aria-controls={`meal-${m.key}`} onClick={() => setOpen(m.key, !open)}>
@@ -101,7 +101,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
                 <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
                   <div className="grow"><div>{e.name}</div><small className="accent">{amountLabel(e)}</small></div>
                   <b>{e.kcal}</b>
-                  <button className="icon del" aria-label="מחק" onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
+                  <button className="icon del" aria-label={`מחק: ${e.name}`} onClick={(ev) => { ev.stopPropagation(); remove(e); }}>✕</button>
                 </div>
               ))}
               {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}>☆ שמור כארוחה</button></footer>}

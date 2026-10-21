@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: screen test covers the main flows, before the redesign
+
+**Done:**
+- `e2e/screens.mjs` finds everything by role and name (no CSS classes), so the redesign can't break it by renaming styles. It now covers 11 flows: one ＋, search and add, meal switch, photo review, "שכחתי משהו?", diary totals, edit amount and meal, delete and undo, save a meal and re-add it, day navigation, back button, foods tab. Breaking undo on purpose made it fail.
+- Diary meal sections are named regions (`aria-label`), and delete buttons say what they delete ("מחק: ענבים…").
+- Fixed a test-mode bug the test found: saving a meal showed it twice, because the demo layer's `list` returned its own array. It returns a copy now, like the real layer.
+- CLAUDE.md "How we build": the owner's standards (W3C/WCAG, DRY, CSS tokens and the cascade, behavior-based tests).
+
+**Next:** the redesign (mockup approved: Rubik, warm neutrals, one indigo accent, line icons, follows the phone's light/dark), in small steps that each pass all tests.
+
 ## 2026-10-21: a saved screen test
 
 **Done:**

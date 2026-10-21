@@ -1,6 +1,8 @@
-// Screen test: the main logging flow, clicked through like on a phone, in test mode (no sign-in, sample photo answer).
+// Screen test: the main flows, clicked through like on a phone, in test mode (no sign-in, sample photo answer).
 // Run: npm run test:screens. Starts `vite --mode demo` itself. Needs a Chromium: Playwright's
 // (`npx playwright install chromium`) or one named by CHROMIUM_PATH.
+// Elements are found the way a person (or a screen reader) finds them: by role and visible or accessible name,
+// never by CSS class, so a redesign that keeps behavior keeps this test green.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -27,46 +29,107 @@ after(async () => {
   if (server) process.kill(-server.pid);
 });
 
-const dialog = () => page.locator('dialog[open]');
-const tab = (name) => dialog().locator('.seg button', { hasText: name });
+// ---- the vocabulary of the app, by role and name ----
+const button = (name, scope = page) => scope.getByRole('button', { name, exact: typeof name === 'string' });
+const dialog = () => page.getByRole('dialog');
+const mealTab = (name) => dialog().getByRole('group', { name: 'ארוחה' }).getByRole('button', { name: new RegExp(name) });
+const meal = (label) => page.getByRole('region', { name: label });
+const entries = (label) => meal(label).getByRole('button', { name: /^מחק: / }); // one delete button per entry
+const openAdd = async () => { await button(/הוספה$/).tap(); await dialog().waitFor(); };
+const sampleJpeg = () => page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; return c.toDataURL('image/jpeg').split(',')[1]; });
 
 test('one ＋ opens the add window on the meal of the time of day', async () => {
-  await page.locator('button.add-all').tap();
-  await assert.doesNotReject(dialog().waitFor());
-  assert.equal(await tab('צהריים').getAttribute('aria-pressed'), 'true');
+  await openAdd();
+  assert.equal(await mealTab('צהריים').getAttribute('aria-pressed'), 'true');
 });
 
 test('search, pick an amount, add', async () => {
-  await dialog().locator('input.search').fill('ענבים');
-  await dialog().locator('button.row').first().tap();
-  await dialog().getByRole('button', { name: 'הוסף לארוחת צהריים' }).tap();
-  await assert.doesNotReject(dialog().locator('button.done', { hasText: 'נוספו 1' }).waitFor());
+  await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('ענבים');
+  await button(/^ענבים/, dialog()).first().tap();
+  await button('הוסף לארוחת צהריים', dialog()).tap();
+  await button(/^סיום · נוספו 1/, dialog()).waitFor();
 });
 
 test('switch the meal, then a photo goes to the review list', async () => {
-  await tab('ערב').tap();
-  assert.equal(await tab('ערב').getAttribute('aria-pressed'), 'true');
+  await mealTab('ערב').tap();
+  assert.equal(await mealTab('ערב').getAttribute('aria-pressed'), 'true');
   // any real image will do: test mode answers every photo with the same sample meal
-  const jpeg = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; return c.toDataURL('image/jpeg').split(',')[1]; });
-  await dialog().locator('input[type=file][capture]').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpeg, 'base64') });
-  await assert.doesNotReject(dialog().locator('.review-row').first().waitFor());
+  await dialog().getByLabel(/צלם ארוחה/).setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await dialog().getByRole('combobox', { name: 'מזון' }).first().waitFor();
 });
 
 test('add what the photo missed, then add all to the chosen meal', async () => {
-  const rows = await dialog().locator('.review-row').count();
-  await dialog().getByLabel('הוספת מזון לרשימה').fill('פיתה');
-  await dialog().getByRole('button', { name: 'הוסף', exact: true }).tap();
-  assert.equal(await dialog().locator('.review-row').count(), rows + 1);
-  assert.match(await dialog().locator('.review-row select[aria-label="מזון"]').last().evaluate((s) => s.selectedOptions[0].text), /^פיתה, פיתה ביס/);
-  await dialog().getByRole('button', { name: `הוסף לארוחת ערב (${rows + 1})` }).tap();
-  await dialog().locator('button.done').tap();
-  await assert.doesNotReject(dialog().waitFor({ state: 'detached' }));
+  const foods = dialog().getByRole('combobox', { name: 'מזון' });
+  const rows = await foods.count();
+  await dialog().getByRole('textbox', { name: 'הוספת מזון לרשימה' }).fill('פיתה');
+  await button('הוסף', dialog()).tap();
+  assert.equal(await foods.count(), rows + 1);
+  assert.match(await foods.last().evaluate((s) => s.selectedOptions[0].text), /^פיתה, פיתה ביס/);
+  await button(`הוסף לארוחת ערב (${rows + 1})`, dialog()).tap();
+  await button(/^סיום/, dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
 });
 
 test('the diary shows them under the right meals, with a total', async () => {
-  const meal = (name) => page.locator('section.meal', { hasText: name });
-  assert.equal(await meal('ארוחת צהריים').locator('.row').count(), 1);
-  assert.ok((await meal('ארוחת ערב').locator('.row').count()) >= 2);
-  const eaten = Number(await page.locator('.kcal-line b').innerText());
-  assert.ok(eaten > 0, `total ${eaten}`);
+  assert.equal(await entries('ארוחת צהריים').count(), 1);
+  assert.equal(await entries('ארוחת ערב').count(), 5); // 4 from the sample photo + the pita
+  assert.ok(await page.getByText(/^נצרכו/).isVisible());
+  assert.doesNotMatch(await page.getByText(/^נצרכו/).locator('..').innerText(), /נצרכו\s*0\b/);
+});
+
+test('tap an entry to change its amount and meal', async () => {
+  await button(/^ענבים/, meal('ארוחת צהריים')).tap();
+  await dialog().waitFor();
+  await mealTab('ערב').tap();
+  await dialog().getByRole('spinbutton').first().fill('20');
+  await button('שמור', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.equal(await entries('ארוחת צהריים').count(), 0);
+  assert.equal(await entries('ארוחת ערב').count(), 6);
+  assert.equal(await button(/^ענבים/, meal('ארוחת ערב')).filter({ hasText: /\b20 / }).count(), 1); // the photo had grapes too
+});
+
+test('delete an entry, then undo', async () => {
+  await entries('ארוחת ערב').first().tap();
+  assert.equal(await entries('ארוחת ערב').count(), 5);
+  await button('בטל').tap();
+  await page.waitForFunction(() => document.querySelectorAll('[aria-label^="מחק: "]').length === 6);
+});
+
+test('save a meal, then add it again in one tap', async () => {
+  page.once('dialog', (d) => d.accept('ערב קבוע'));
+  await button('☆ שמור כארוחה', meal('ארוחת ערב')).tap();
+  await page.getByText('"ערב קבוע" נשמרה').waitFor();
+  await openAdd();
+  await mealTab('נשנושים').tap();
+  await button(/^ארוחה שמורה: ערב קבוע/, dialog()).tap(); // saved meals carry that prefix for screen readers
+  await button(/^סיום · נוספו 6/, dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.equal(await entries('נשנושים ואחר').count(), 6);
+});
+
+test('moving between days', async () => {
+  await button('יום קודם').tap();
+  await page.getByText('היום', { exact: true }).waitFor({ state: 'detached' });
+  assert.equal(await page.getByRole('button', { name: /^מחק: / }).count(), 0); // yesterday is empty
+  await button('יום הבא').tap();
+  await page.getByText('היום', { exact: true }).waitFor();
+  assert.equal(await entries('ארוחת ערב').count(), 6);
+});
+
+test('the phone back button closes a window, and returns from the reports tab to the diary', async () => {
+  await openAdd();
+  await page.keyboard.press('Escape'); // the same close request Android's back gesture sends
+  await dialog().waitFor({ state: 'detached' });
+  await button(/דוחות/).tap();
+  assert.ok(await button(/CSV/).isEnabled()); // reports opened, and today's entries are in range
+  await page.goBack();
+  await button(/הוספה$/).waitFor();
+});
+
+test('the foods tab lists saved meals and the food database', async () => {
+  await button(/מזונות/).tap();
+  await page.getByRole('heading', { name: 'ארוחות שמורות' }).waitFor();
+  assert.ok(await page.getByText('ערב קבוע').first().isVisible());
+  await page.getByRole('heading', { name: /מאגר מזונות/ }).waitFor();
 });
