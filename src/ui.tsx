@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
 
@@ -18,27 +18,36 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
   );
 }
 
-// Two ways to give a photo: open the camera now (`capture`, from the HTML Media Capture spec) or pick one already taken.
-export function PhotoPick({ take, busy, busyText, onFile }: { take: string; busy: boolean; busyText: string; onFile: (f: File) => void }) {
+// One button for a photo: without `capture`, the phone offers both the camera and the gallery.
+// While `reading` (the photo being read) is set, it shows that photo dimmed under a spinner instead.
+export function PhotoPick({ take, reading, busyText, onFile, className = 'btn' }: { take: string; reading?: File | null; busyText: string; onFile: (f: File) => void; className?: string }) {
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (file) onFile(file);
   };
-  if (busy) return <label className="btn disabled" role="status">{busyText}</label>;
+  if (reading) return <Reading file={reading} text={busyText} />;
   return (
-    <div className="grid2">
-      <label className="btn">
-        <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
-        <Icon name="camera" />{take}
-      </label>
-      <label className="btn">
-        <input type="file" accept="image/*" className="sr-only" onChange={pick} />
-        <Icon name="image" />בחר מהגלריה
-      </label>
-    </div>
+    <label className={className}>
+      <input type="file" accept="image/*" className="sr-only" onChange={pick} />
+      <Icon name="camera" />{take}
+    </label>
   );
 }
+
+function Reading({ file, text }: { file: File; text: string }) {
+  const [src, setSrc] = useState('');
+  useEffect(() => { const url = URL.createObjectURL(file); setSrc(url); return () => URL.revokeObjectURL(url); }, [file]);
+  return (
+    <figure className="reading" role="status">
+      {src && <img src={src} alt="" />}
+      <figcaption><span className="spinner" aria-hidden="true" /><b>{text}</b><span>זה לוקח כמה שניות</span></figcaption>
+    </figure>
+  );
+}
+
+// Why a button is disabled, in readable text next to it (the button points here with aria-describedby).
+export const Why = ({ id, children }: { id: string; children: ReactNode }) => <p className="why" id={id}><Icon name="info" />{children}</p>;
 
 // Macro split by energy share (carbs/protein 4 kcal/g, fat 9 kcal/g).
 export function macroShares(n: Nut) {

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type Nut, type Parsed, type Unit } from './lib';
 import { norm } from './search';
-import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, unitOf, type UnitDraft } from './ui';
+import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
@@ -33,6 +33,7 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
   const [qty, setQty] = useState(String(init?.qty ?? (unit.g === 1 ? food.servingG : 1)));
   const [newUnit, setNewUnit] = useState<UnitDraft | null>(null);
   const it = itemFor(food, Number(qty) || 0, unit);
+  const why = useId();
   const saveUnit = async () => {
     const u = unitOf(newUnit!);
     if (!u.n || !(u.g > 0)) return;
@@ -60,7 +61,8 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
         </div>
       )}
       <NutLine n={it} />
-      <button className="btn primary" disabled={!it.grams} onClick={() => onPick(it)}>{cta}</button>
+      <button className="btn primary" disabled={!it.grams} aria-describedby={it.grams ? undefined : why} onClick={() => onPick(it)}>{cta}</button>
+      {!it.grams && <Why id={why}>כתבו כמות גדולה מאפס כדי להוסיף</Why>}
     </div>
   );
 }
@@ -165,8 +167,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       ) : (
         <>
           <input className="search" type="search" aria-label="חיפוש" placeholder="חיפוש מזון…" value={q} onChange={(e) => setQ(e.target.value)} />
-          {/* The photo up front, where it's seen: it was only behind "או כתבו מה אכלתם, או צלמו" below the list */}
-          {!q && <PhotoPick take="צלם ארוחה" busy={false} busyText="" onFile={(f) => { setPhoto(f); setWriting(true); }} />}
+          {/* The two other ways in, big and up front: a photo (camera or gallery) or typing the meal */}
+          {!q && (
+            <div className="grid2">
+              <PhotoPick take="צילום או תמונה" busyText="" className="btn big-choice" onFile={(f) => { setPhoto(f); setWriting(true); }} />
+              <button className="btn big-choice" onClick={() => setWriting(true)}><Icon name="pencil" />כתיבה</button>
+            </div>
+          )}
           <div className="usual">
             {(q ? meals.map((m) => ({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : usual).map((r) => {
               if ('m' in r) return <Pick key={r.key} on={!!done[r.key]} name={r.m.name} saved detail={r.items.map((i) => i.name.split(',')[0]).join(' · ')}
@@ -183,7 +190,6 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
             {!q && !usual.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
             {q && <button className="row muted" onClick={() => setCreating(true)}><Icon name="plus" />מזון חדש: ״{q}״</button>}
           </div>
-          {!q && <button className="link start" onClick={() => setWriting(true)}>או כתבו מה אכלתם</button>}
         </>
       )}
       {/* Always there, so the sheet doesn't grow and shift the rows on the first tap. */}
@@ -219,11 +225,12 @@ function Pick({ name, detail, kcal, on, saved, onClick }: { name: string; detail
 function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[]) => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState<File | null>(null); // the photo being recognised
   const [err, setErr] = useState('');
+  const why = useId();
   const photo = async (file: File) => {
-    setErr(''); setBusy(true);
-    try { setParsed(await readPhoto(file, text)); } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
+    setErr(''); setReading(file);
+    try { setParsed(await readPhoto(file, text)); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
   };
   useEffect(() => { if (file) photo(file); }, [file]); // a photo taken on the list screen
   if (parsed)
@@ -234,13 +241,17 @@ function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; 
     );
   return (
     <div className="form">
-      <label>
-        <span>מה אכלת? אפשר עם כמויות, מופרד בפסיקים</span>
-        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!file} />
-      </label>
-      <button className="btn primary" disabled={!text.trim() || busy} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
-      <PhotoPick take="צלם ארוחה" busy={busy} busyText="מזהה מזונות בתמונה…" onFile={photo} />
-      <p className="muted small">בתמונה כדאי לכתוב גם הערה קצרה למעלה (״כף חמאת בוטנים בפנים״), כדי לדייק כמויות ודברים שלא רואים.</p>
+      <PhotoPick take="צילום או תמונה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={photo} />
+      {/* Locked while a photo is being read, so it's clear that something is going on */}
+      <fieldset className="form" disabled={!!reading}>
+        <label>
+          <span>מה אכלת? אפשר עם כמויות, מופרד בפסיקים</span>
+          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!file} />
+        </label>
+        <button className="btn primary" disabled={!text.trim()} aria-describedby={text.trim() && !reading ? undefined : why} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
+        {(reading || !text.trim()) && <Why id={why}>{reading ? 'אפשר להמשיך כשהזיהוי יסתיים' : 'כתבו מה אכלתם כדי להמשיך'}</Why>}
+        <p className="muted small">עם תמונה כדאי לכתוב גם הערה קצרה (״כף חמאת בוטנים בפנים״), כדי לדייק כמויות ודברים שלא רואים.</p>
+      </fieldset>
       {err && <p className="error">{err}</p>}
     </div>
   );
