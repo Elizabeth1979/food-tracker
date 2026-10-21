@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
-import { MacroLegend, MicroLine, Ring } from './ui';
+import { Group, MacroLegend, MicroLine, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -83,9 +83,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
       {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
       {entries === null && <div className="muted center">טוען…</div>}
 
-      <section className="meals" aria-labelledby="meals-title">
-      <h2 id="meals-title" className="eyebrow">ארוחות</h2>
-      <div className="card">
+      <Group title="ארוחות" body="">
       {MEALS.map((m) => {
         const es = list.filter((e) => e.meal === m.key);
         const open = isOpen(m.key);
@@ -112,8 +110,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
           </section>
         );
       })}
-      </div>
-      </section>
+      </Group>
 
       <div className="day-actions">
         <button className="btn" onClick={onExport}><Icon name="download" />ייצוא CSV / PDF</button>

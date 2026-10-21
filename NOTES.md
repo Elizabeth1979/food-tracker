@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: redesign step 4, the other tabs
+
+**Done:**
+- Foods, reports and settings each open with a page heading (`<h1>`), and their cards sit under small grey group titles, like the diary's meals. One `Group` component in `ui.tsx` (heading + optional action button + card) does this everywhere, the diary included.
+- Foods: "ארוחה חדשה" and "מזון חדש" moved next to their group titles; the search box has its own name ("חיפוש במאגר").
+- Reports: the CSV and PDF buttons are equal, side by side, with room around them.
+- Paragraphs inside forms have no extra margins (`.form p`); the form's gap spaces them, so cards no longer start with an empty strip.
+
+**Next:** nothing planned for the redesign; watch for anything that looks off on the phone.
+
 ## 2026-10-21: redesign step 3, the add window
 
 **Done:**
