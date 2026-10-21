@@ -81,6 +81,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const [meal, setMeal] = useState(meal0);
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null); // taken from the list screen: goes straight to recognition
   const [sel, setSel] = useState<Food | null>(initial ?? null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -112,6 +113,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     return [...saved, ...foods].sort((a, b) => b.score - a.score || a.i - b.i);
   }, [ctx.foods, ctx.meals, order, month, meal]);
   const label = MEALS.find((m) => m.key === meal)!.label;
+  const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
   const added = Object.values(done).flat();
 
   const add = async (key: string, items: Item[]) => {
@@ -123,7 +125,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       setDone((d) => ({ ...d, [key]: [...(d[key] ?? []), ...es] }));
     } finally { setBusy(false); }
     if (initial) onClose(); // opened on one food from the מזונות tab
-    setSel(null); setWriting(false); setQ('');
+    setSel(null); setWriting(false); setPhoto(null); setQ('');
   };
   const takeBack = async (key: string) => {
     const es = done[key];
@@ -145,8 +147,11 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       </Modal>
     );
   return (
-    <Modal title={`${fromFoods ? 'הוספה ליומן' : `הוספה ל${label}`}${date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`}`} onClose={onClose}
-      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); return true; } return false; }}>
+    <Modal title={`${fromFoods ? 'הוספה ליומן' : `הוספה ל${label}`}${day}`} onClose={onClose}
+      heading={fromFoods ? undefined : <>הוספה ל<select className="title-select" aria-label="ארוחה" value={meal} onChange={(e) => setMeal(e.target.value as MealKey)}>
+        {MEALS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+      </select>{day}</>}
+      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } return false; }}>
       {fromFoods && (
         <div className="seg">
           {MEALS.map((m) => <button key={m.key} className={meal === m.key ? 'on' : ''} onClick={() => setMeal(m.key)}>{m.icon} {m.label.replace('ארוחת ', '')}</button>)}
@@ -160,11 +165,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
         </div>
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} onAdd={(items) => add(`w:${Date.now()}`, items)} />
+          <TextOrPhoto ctx={ctx} file={photo} onAdd={(items) => add(`w:${Date.now()}`, items)} />
         </>
       ) : (
         <>
           <input className="search" type="search" aria-label="חיפוש" placeholder="חיפוש מזון…" value={q} onChange={(e) => setQ(e.target.value)} />
+          {/* The photo up front, where it's seen: it was only behind "או כתבו מה אכלתם, או צלמו" below the list */}
+          {!q && <PhotoPick take="צלם ארוחה" busy={false} busyText="" onFile={(f) => { setPhoto(f); setWriting(true); }} />}
           <div className="usual">
             {(q ? meals.map((m) => ({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : usual).map((r) => {
               if ('m' in r) return <Pick key={r.key} on={!!done[r.key]} name={r.m.name} saved detail={r.items.map((i) => i.name.split(',')[0]).join(' · ')}
@@ -181,7 +188,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
             {!q && !usual.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
             {q && <button className="row muted" onClick={() => setCreating(true)}>＋ מזון חדש: ״{q}״</button>}
           </div>
-          {!q && <button className="link start" onClick={() => setWriting(true)}>או כתבו מה אכלתם, או צלמו</button>}
+          {!q && <button className="link start" onClick={() => setWriting(true)}>או כתבו מה אכלתם</button>}
         </>
       )}
       {/* Always there, so the sheet doesn't grow and shift the rows on the first tap. */}
@@ -210,7 +217,7 @@ const Check = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 const Star = () => <svg className="star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>;
 
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
-function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void }) {
+function TextOrPhoto({ ctx, file, onAdd }: { ctx: Ctx; file?: File | null; onAdd: (items: Item[]) => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -219,6 +226,7 @@ function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void 
     setErr(''); setBusy(true);
     try { setParsed(await readPhoto(file, text)); } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   };
+  useEffect(() => { if (file) photo(file); }, [file]); // a photo taken on the list screen
   if (parsed)
     return (
       <>
@@ -229,7 +237,7 @@ function TextOrPhoto({ ctx, onAdd }: { ctx: Ctx; onAdd: (items: Item[]) => void 
     <div className="form">
       <label>
         <span>מה אכלת? אפשר עם כמויות, מופרד בפסיקים</span>
-        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus />
+        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!file} />
       </label>
       <button className="btn primary" disabled={!text.trim() || busy} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
       <PhotoPick take="צלם ארוחה" busy={busy} busyText="מזהה מזונות בתמונה…" onFile={photo} />
