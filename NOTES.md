@@ -2,6 +2,17 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: redesign step 2, the diary
+
+**Done:**
+- Date header without a card, a bigger "היום".
+- Summary card: a progress ring (`Ring` in `ui.tsx`: calories toward the goal, red when over) beside the macro bars, "נצרכו X מתוך Y קק״ל". The separate calorie bar is gone (the ring shows it).
+- Meals are one card under a "ארוחות" heading, a named section per meal, entries indented under the meal name with the amount in grey, and "עוד לא נרשם כלום" for an empty open meal.
+- "＋ הוספה" floats at the bottom center above the tabs (`.fab`); the undo toast sits above it.
+- Reports: the macro donut is the same 96px size; the meal icon in the daily breakdown has space before its name.
+
+**Next:** step 3, the add window (photo loader over the dimmed photo, a readable "why it's disabled" line, bigger photo/type buttons), then the foods, reports and settings tabs.
+
 ## 2026-10-21: redesign step 1, the foundation (colors, font, icons)
 
 **Done:**

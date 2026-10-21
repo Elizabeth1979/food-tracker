@@ -28,6 +28,7 @@ input, select { background: var(--card); border: 1px solid var(--line); border-r
 input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 h1, h2, h3, h4 { margin: 0; }
 h3 { font-size: 17px; font-weight: 600; } h4 { font-size: 14px; font-weight: 500; margin-top: 12px; color: var(--muted); }
+h4 .i { margin-inline-end: 6px; }
 /* line icons (icons.tsx): sized by the text around them, colored by it */
 .i { width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .star .i path { fill: currentColor; }
@@ -39,7 +40,7 @@ h3 { font-size: 17px; font-weight: 600; } h4 { font-size: 14px; font-weight: 500
 /* layout */
 .update-bar { display: block; width: 100%; background: var(--accent); color: var(--accent-ink); font-weight: 700; text-align: center; padding: 10px 12px; position: sticky; top: 0; z-index: 20; }
 .test-mode { background: var(--warn-soft); color: var(--warn); text-align: center; font-size: 14px; padding: 4px 8px; }
-.app { max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
+.app { max-width: 1100px; margin: 0 auto; padding-bottom: 160px; } /* room for the tabs and the floating ＋ */
 main { padding: 12px 16px; }
 .tabs { position: fixed; bottom: 0; inset-inline: 0; z-index: 5; display: flex; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
 .tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; font-size: 14px; color: var(--muted); }
@@ -53,8 +54,9 @@ main { padding: 12px 16px; }
   .tabs button { flex: 0; flex-direction: row; gap: 6px; padding: 14px 14px; font-size: 15px; white-space: nowrap; border-bottom: 2px solid transparent; }
   .tabs button.on { border-color: var(--accent); }
   .day { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-  .day > .datebar, .day > .summary, .day > .banner, .day > .day-actions { grid-column: 1 / -1; }
+  .day > .datebar, .day > .banner, .day > .day-actions { grid-column: 1 / -1; }
   .day > .card { margin: 0; }
+  .fab { bottom: 24px; }
 }
 .stack > * + * { margin-top: 12px; }
 
@@ -80,19 +82,19 @@ main button.banner { width: 100%; }
 .icon:hover, .row:hover { background: var(--card2); }
 
 /* day */
-.datebar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.datebar { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; }
+.datebar b { font-size: 22px; font-weight: 600; }
 .datebar .icon { font-size: 22px; }
 .date-pick { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 .date-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .date-pick input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
-.summary { display: flex; gap: 18px; align-items: center; padding: 16px; flex-wrap: wrap; }
-.summary .grow { min-width: 220px; }
+.summary { display: flex; gap: 14px; align-items: center; padding: 16px; }
+
 .donut { position: relative; flex: none; }
 .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .donut-center b { font-size: 28px; font-weight: 600; line-height: 1; } .donut-center small { color: var(--muted); font-size: 14px; }
-.kcal-line { display: flex; gap: 6px; align-items: baseline; } .kcal-line b { font-size: 22px; }
+.kcal-line { display: flex; gap: 6px; align-items: baseline; margin-bottom: 8px; } .kcal-line b { font-size: 22px; font-weight: 600; }
 .bar { height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; grid-column: 1 / -1; }
-.bar.big { height: 8px; margin: 6px 0 10px; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
 .bar i.over { background: var(--danger); }
 .legend { display: grid; gap: 6px; }
@@ -101,24 +103,36 @@ main button.banner { width: 100%; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .micro { font-size: 14px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .micro span { white-space: nowrap; }
-.meal header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--card2); }
-.meal-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--card); color: var(--muted); }
+/* ring: calories toward the goal */
+.ring-track, .ring-fill { fill: none; stroke-width: 10; }
+.ring-track { stroke: var(--card2); }
+.ring-fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .3s; }
+.ring-fill.over { stroke: var(--danger); }
+/* meals: one card, a section per meal */
+.eyebrow { font-size: 14px; font-weight: 500; color: var(--muted); margin: 8px 4px; }
+.meal + .meal { border-top: 1px solid var(--line); }
+.meal header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
+.meal .row { border: 0; padding-block: 6px; padding-inline-start: 58px; }
+.meal .empty { margin: 0; padding: 0 14px 12px; padding-inline-start: 58px; font-size: 14px; color: var(--faint); }
+.meal-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--card2); color: var(--muted); }
 .meal-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; }
 .meal-toggle small { font-weight: 400; }
 .chev { color: var(--muted); transition: transform .2s; }
 .meal-toggle[aria-expanded=false] .chev { transform: rotate(90deg); }
-.add-all { grid-column: 1 / -1; width: 100%; font-size: 18px; padding: 14px; }
+.fab { position: fixed; z-index: 6; inset-inline: 0; bottom: calc(76px + env(safe-area-inset-bottom)); width: max-content; margin-inline: auto;
+  display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 26px; border-radius: 28px;
+  background: var(--accent); color: var(--accent-ink); font-size: 17px; font-weight: 500; box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); }
 .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .row.static:hover { background: none; }
 .row small { display: block; }
 .row[role=button] { cursor: pointer; }
 .icon.del { font-size: 16px; margin-inline-end: -10px; }
 .icon.del:hover { color: var(--danger); }
-.toast { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); inset-inline: 16px; max-width: 520px; margin: 0 auto; z-index: 8;
+.toast { position: fixed; bottom: calc(144px + env(safe-area-inset-bottom)); inset-inline: 16px; max-width: 520px; margin: 0 auto; z-index: 8;
   display: flex; justify-content: space-between; align-items: center; background: var(--text); color: var(--bg); border-radius: var(--r-sm); padding: 12px 16px; box-shadow: var(--shadow); }
 .toast button { color: var(--accent-soft); font-weight: 600; min-height: var(--tap); padding-inline: 8px; }
-@media (min-width: 800px) { .toast { bottom: 24px; } }
-.meal footer { display: flex; gap: 16px; padding: 0 14px; font-size: 14px; }
+@media (min-width: 800px) { .toast { bottom: 96px; } }
+.meal footer { display: flex; gap: 16px; padding: 0 14px 4px; padding-inline-start: 58px; font-size: 14px; }
 .meal footer button { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); color: var(--accent); }
 .day-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 

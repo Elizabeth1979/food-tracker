@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
-import { Donut, MacroLegend, MicroLine } from './ui';
+import { MacroLegend, MicroLine, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -56,7 +56,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
 
   return (
     <div className="day">
-      <div className="datebar card">
+      <header className="datebar">
         <button className="icon" onClick={() => setDate(addDays(date, -1))} aria-label="יום קודם"><Icon name="chevron-right" /></button>
         <label className="date-pick">
           <b>{date === today() ? 'היום' : fmtDate(date, { weekday: 'long' })}</b>
@@ -65,30 +65,32 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         </label>
         <button className="icon" onClick={() => setDate(addDays(date, 1))} aria-label="יום הבא"><Icon name="chevron-left" /></button>
         {date !== today() && <button className="btn small" onClick={() => setDate(today())}>להיום</button>}
-      </div>
+      </header>
 
-      <section className="card summary">
-        <Donut n={tot} center={<><b>{goal ? Math.round(goal - tot.kcal) : tot.kcal}</b><small>{goal ? (goal - tot.kcal >= 0 ? 'נותרו' : 'חריגה') : 'קלוריות'}</small></>} />
+      <section className="card summary" aria-label="סיכום היום">
+        <Ring value={tot.kcal} goal={goal} center={<><b>{goal ? Math.abs(Math.round(goal - tot.kcal)) : tot.kcal}</b><small>{goal ? (goal - tot.kcal >= 0 ? 'נותרו' : 'חריגה') : 'קלוריות'}</small></>} />
         <div className="grow">
-          <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">/ {goal} קק״ל</span></div>
-          <div className="bar big"><i style={{ width: `${goal ? Math.min(100, (tot.kcal / goal) * 100) : 0}%` }} className={tot.kcal > goal ? 'over' : ''} /></div>
+          <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
           <MacroLegend n={tot} goals={ctx.profile ?? undefined} />
           <MicroLine n={tot} rda />
         </div>
       </section>
 
-      {/* One way in: the meal is picked from the time of day, and can be changed in the window's title */}
-      <button className="btn primary add-all" onClick={() => setAdding(mealNow())}><Icon name="plus" />הוספה</button>
+      {/* One way in, always in reach: the meal starts at the time of day's and is one tap to change in the window */}
+      <button className="fab" onClick={() => setAdding(mealNow())}><Icon name="plus" />הוספה</button>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
       {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
       {entries === null && <div className="muted center">טוען…</div>}
 
+      <section className="meals" aria-labelledby="meals-title">
+      <h2 id="meals-title" className="eyebrow">ארוחות</h2>
+      <div className="card">
       {MEALS.map((m) => {
         const es = list.filter((e) => e.meal === m.key);
         const open = isOpen(m.key);
         return (
-          <section key={m.key} className="card meal" aria-label={m.label}>
+          <section key={m.key} className="meal" aria-label={m.label}>
             <header>
               <h3 className="grow">
                 <button className="meal-toggle" aria-expanded={open} aria-controls={`meal-${m.key}`} onClick={() => setOpen(m.key, !open)}>
@@ -100,16 +102,18 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
             <div id={`meal-${m.key}`} hidden={!open}>
               {es.map((e) => (
                 <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
-                  <div className="grow"><div>{e.name}</div><small className="accent">{amountLabel(e)}</small></div>
+                  <div className="grow"><div>{e.name}</div><small className="muted">{amountLabel(e)}</small></div>
                   <b>{e.kcal}</b>
                   <button className="icon del" aria-label={`מחק: ${e.name}`} onClick={(ev) => { ev.stopPropagation(); remove(e); }}><Icon name="x" /></button>
                 </div>
               ))}
-              {es.length > 0 && <footer><button onClick={() => saveMeal(m.key)}><Icon name="star" />שמור כארוחה</button></footer>}
+              {es.length ? <footer><button onClick={() => saveMeal(m.key)}><Icon name="star" />שמור כארוחה</button></footer> : <p className="empty">עוד לא נרשם כלום</p>}
             </div>
           </section>
         );
       })}
+      </div>
+      </section>
 
       <div className="day-actions">
         <button className="btn" onClick={onExport}><Icon name="download" />ייצוא CSV / PDF</button>

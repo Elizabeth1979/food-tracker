@@ -47,7 +47,7 @@ export function macroShares(n: Nut) {
   return MACROS.map((m, i) => ({ ...m, g: n[m.key], pct: Math.round((k[i] / t) * 100), frac: k[i] / t }));
 }
 
-export function Donut({ n, size = 132, center }: { n: Nut; size?: number; center?: ReactNode }) {
+export function Donut({ n, size = 96, center }: { n: Nut; size?: number; center?: ReactNode }) {
   const shares = macroShares(n);
   const R = 42, C = 2 * Math.PI * R, gap = n.kcal ? 1.5 : 0;
   let off = 0;
@@ -66,6 +66,20 @@ export function Donut({ n, size = 132, center }: { n: Nut; size?: number; center
           off += s.frac * C;
           return el;
         })}
+      </svg>
+      {center && <div className="donut-center">{center}</div>}
+    </div>
+  );
+}
+
+// Progress toward a goal: one accent arc, red once it's over.
+export function Ring({ value, goal, size = 96, center }: { value: number; goal: number; size?: number; center?: ReactNode }) {
+  const R = 44, C = 2 * Math.PI * R, f = goal ? Math.min(1, value / goal) : 0;
+  return (
+    <div className="donut" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+        <circle className="ring-track" cx="50" cy="50" r={R} />
+        {f > 0 && <circle className={value > goal ? 'ring-fill over' : 'ring-fill'} cx="50" cy="50" r={R} strokeDasharray={`${f * C} ${C}`} transform="rotate(-90 50 50)" />}
       </svg>
       {center && <div className="donut-center">{center}</div>}
     </div>
