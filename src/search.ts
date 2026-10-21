@@ -20,6 +20,8 @@ const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות'
   'לב', 'לבבות', 'כבד', 'טחול', 'קורקבן', 'קורקבנים', 'כליות', 'לשון', 'מוח', 'קיבה', 'גב', 'צוואר', 'עצמות', 'רגליים',
   'מקדונלדס', 'גלוטן', 'הצומח']; // gluten-free and plant-based ("מן הצומח") versions only when typed
 const FRESH = ['טרי', 'טריה', 'טריים', 'טריות', 'רגיל'];
+// Everyday staples whose plain entry loses on name length alone: "פיתה" means a regular pita, not a toasted one.
+const STAPLES: Record<string, string> = { פיתה: 'moh-1946' };
 // "ביצים" should find "ביצה", "עגבניות" "עגבניה": also accept a rough singular of Hebrew plurals.
 const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, w.slice(0, -2)] : w.endsWith('ות') ? [w, w.slice(0, -2) + 'ה', w.slice(0, -2)] : [w]);
 const sameWord = (a: string, w: string) => forms(w).some((x) => a === x || (x !== w && a.startsWith(x) && a.length <= x.length + 1));
@@ -50,6 +52,7 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     if ((has(first, 'עם') || has(first, 'או')) && !words.includes('עם')) s += 10; // mixed dishes: "אורז עם בצל"
     // fresh produce: exactly what was typed ("גזר, טרי") before a longer name that starts with it ("גזר לבן", parsnip)
     if (FRESH.some((w) => has(name, w))) s -= forms(query).includes(first) ? 4 : 3;
+    if (forms(query).some((w) => STAPLES[w] === f.id)) s -= 15;
     return s + f.name.length / 100;
   };
   // With nothing typed the list is "recent": newest first, nothing else counts.

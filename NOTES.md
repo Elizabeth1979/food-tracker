@@ -2,14 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-21: "פיתה" finds a regular pita
+
+**Done** (branch `claude/pita-search`):
+- "פיתה" (and "פיתות") now finds the regular pita (`moh-1946`, 227 kcal) instead of toasted pita. `STAPLES` in `search.ts` maps an everyday word to its plain entry, for staples whose plain entry loses only on name length. Across all 1,667 one- and two-word names, only "פיתה" changed. Add other staples there the same way when one shows up.
+
 ## 2026-10-21: meal tabs back in the add window; add what the photo missed
 
 **Done** (branch `claude/review-add-and-meal`, draft PR, not live yet):
 - The owner couldn't change the meal: the menu in the add window's title didn't work for them. It is replaced by the four meal tabs at the top of the window (`MealSeg`, shared with the entry editor), with the time of day's meal already pressed. They stay visible on every step, and the review list's button names the meal ("הוסף לארוחת צהריים"). The title menu, its CSS and the ✕-first header order are removed.
 - The photo/typed review list has "שכחתי משהו?" at the bottom: typed like a meal line ("פיתה, 2 כפות טחינה"), parsed and matched like the rest, added as more rows.
-
-**Next:**
-1. "פיתה" matches "פיתה, קלויה" (toasted) first. The row's menu has the others; worth a look at search.
 
 ## 2026-10-21: one ＋ button, meal photo up front, most-used foods first
 
