@@ -135,16 +135,16 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
       <input className="search" type="search" aria-label="חיפוש במאגר" placeholder={`חיפוש בכל ${ctx.foods.filter((f) => !f.hidden).length} המזונות…`} value={q} onChange={(e) => setQ(e.target.value)} />
       {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
       {q ? (
-        <Group title={`תוצאות (${hits.length})`} action={<button className="btn small" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
+        <Group title={`תוצאות (${hits.length})`} action={<button className="btn small primary" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
           <div className="muted small">הקשה מוסיפה ליומן. העיפרון עורך, הפח מסתיר מהחיפוש. ״שלי״: מזון שהוספת או ערכת.</div>
           <div className="list">{hits.map(foodRow)}</div>
         </Group>
       ) : <>
         <p className="muted small">הקשה על מזון בוחרת כמות ומוסיפה ליומן; הקשה על ארוחה שמורה מוסיפה אותה מיד ל{now}.</p>
-        <Group title={`המזונות שלי (${mine.length})`} action={<button className="btn small" onClick={() => setEdit({ name: '' })}><Icon name="plus" />מזון חדש</button>}>
+        <Group title={`המזונות שלי (${mine.length})`} action={<button className="btn small primary" onClick={() => setEdit({ name: '' })}><Icon name="plus" />מזון חדש</button>}>
           {mine.length ? <Fold items={mine} row={foodRow} /> : <p className="muted">מזונות שתוסיפו או תערכו יופיעו כאן.</p>}
         </Group>
-        <Group title={`ארוחות שמורות (${ctx.meals.length})`} action={<button className="btn small" onClick={() => setMealEdit('new')}><Icon name="plus" />ארוחה חדשה</button>}>
+        <Group title={`ארוחות שמורות (${ctx.meals.length})`} action={<button className="btn small primary" onClick={() => setMealEdit('new')}><Icon name="plus" />ארוחה חדשה</button>}>
           {ctx.meals.length ? <Fold items={ctx.meals} row={mealRow} /> : <p className="muted">צרו ארוחה כאן, או שמרו ארוחה מהיומן עם ״שמור כארוחה״.</p>}
         </Group>
         <p className="muted small">שאר המזונות, ממאגר משרד הבריאות, נמצאים בחיפוש.</p>

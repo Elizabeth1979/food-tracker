@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: foods tab buttons
+
+**Done:**
+- "מזון חדש" and "ארוחה חדשה" are primary (blue) buttons, as on the other screens; they were white and hard to see.
+
 ## 2026-10-22: foods tab in order
 
 **Done:**
