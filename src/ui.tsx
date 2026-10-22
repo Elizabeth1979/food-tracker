@@ -45,9 +45,15 @@ export function PhotoPick({ camera, gallery, reading, busyText = '', onFile, cla
   );
 }
 
-function Reading({ file, text }: { file: File; text: string }) {
+// A picked photo as an <img> src, released when the photo changes or goes.
+export function usePhotoUrl(file: File) {
   const [src, setSrc] = useState('');
   useEffect(() => { const url = URL.createObjectURL(file); setSrc(url); return () => URL.revokeObjectURL(url); }, [file]);
+  return src;
+}
+
+function Reading({ file, text }: { file: File; text: string }) {
+  const src = usePhotoUrl(file);
   return (
     <figure className="reading" role="status">
       {src && <img src={src} alt="" />}

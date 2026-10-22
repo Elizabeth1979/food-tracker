@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: a note with every photo
+
+**Done:**
+- A picked or taken meal photo isn't read straight away: it shows with "הערה (לא חובה)" and "זהה מזונות" / "תמונה אחרת" (`PhotoNote` in `AddDialog.tsx`). The note goes to the model, which already trusts it over the photo. `usePhotoUrl` in `ui.tsx` is shared with the reading spinner.
+
 ## 2026-10-22: review list can search any food
 
 **Done:**

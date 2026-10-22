@@ -56,6 +56,9 @@ test('switch the meal, then a photo goes to the review list', async () => {
   // any real image will do: test mode answers every photo with the same sample meal
   assert.ok(await dialog().getByLabel('צילום', { exact: true }).count()); // the camera has its own button
   await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  // the photo waits for an optional note (what a photo can't tell), then it's read
+  await dialog().getByRole('textbox', { name: /^הערה/ }).fill('גבינה בולגרית מגורדת');
+  await button('זהה מזונות', dialog()).tap();
   // while it's being read: a visible status, and the rest locked with the reason given
   await dialog().getByRole('status').filter({ hasText: 'מזהה מזונות בתמונה' }).waitFor();
   const next = button('המשך לבדיקה', dialog());

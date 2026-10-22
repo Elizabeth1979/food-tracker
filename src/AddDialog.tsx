@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
-import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, type UnitDraft } from './ui';
+import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
@@ -244,6 +244,24 @@ function Pick({ name, detail, kcal, on, onClick }: { name: string; detail?: stri
   );
 }
 
+// The picked photo with a note for what a photo can't tell (the cheese, the pasta, what's inside), then read.
+function PhotoNote({ file, note, setNote, onRead, onCancel }: { file: File; note: string; setNote: (s: string) => void; onRead: () => void; onCancel: () => void }) {
+  const src = usePhotoUrl(file);
+  return (
+    <div className="form">
+      <figure className="reading">{src && <img src={src} alt="התמונה שנבחרה" />}</figure>
+      <label>
+        <span>הערה (לא חובה): מה לא רואים או קשה לזהות</span>
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="גבינה בולגרית מגורדת, פסטה רגילה, כף שמן" />
+      </label>
+      <div className="grid2">
+        <button className="btn" onClick={onCancel}>תמונה אחרת</button>
+        <button className="btn primary" onClick={onRead}>זהה מזונות</button>
+      </div>
+    </div>
+  );
+}
+
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
 function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[]) => void }) {
   const [text, setText] = useState('');
@@ -251,20 +269,24 @@ function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; 
   const [reading, setReading] = useState<File | null>(null); // the photo being recognised
   const [err, setErr] = useState('');
   const why = useId();
+  const [picked, setPicked] = useState<File | null>(null); // a photo waiting for its note before it's read
+  const [note, setNote] = useState('');
   const photo = async (file: File) => {
-    setErr(''); setReading(file);
-    try { setParsed(await readPhoto(file, text)); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
+    setErr(''); setPicked(null); setReading(file);
+    try { setParsed(await readPhoto(file, note || text)); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
   };
-  useEffect(() => { if (file) photo(file); }, [file]); // a photo taken on the list screen
+  useEffect(() => { if (file) setPicked(file); }, [file]); // a photo taken on the list screen
   if (parsed)
     return (
       <>
         <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={onAdd} />
       </>
     );
+  if (picked)
+    return <PhotoNote file={picked} note={note} setNote={setNote} onRead={() => photo(picked)} onCancel={() => setPicked(null)} />;
   return (
     <div className="form">
-      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={photo} />
+      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={setPicked} />
       {/* Locked while a photo is being read, so it's clear that something is going on */}
       <fieldset className="form" disabled={!!reading}>
         <label>
@@ -273,7 +295,6 @@ function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; 
         </label>
         <button className="btn primary" disabled={!text.trim()} aria-describedby={text.trim() && !reading ? undefined : why} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
         {(reading || !text.trim()) && <Why id={why}>{reading ? 'אפשר להמשיך כשהזיהוי יסתיים' : 'כתבו מה אכלתם כדי להמשיך'}</Why>}
-        <p className="muted small">עם תמונה כדאי לכתוב גם הערה קצרה (״כף חמאת בוטנים בפנים״), כדי לדייק כמויות ודברים שלא רואים.</p>
       </fieldset>
       {err && <p className="error">{err}</p>}
     </div>
