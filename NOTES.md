@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: Settings, one clear place to start
+
+**Done:**
+- Settings opens with "היעדים שלך": the current goals in one line, whether they're general or tailored, the primary "התאמה אישית" button and a small "עריכה ידנית" link. Manual editing warns when carbs+fat+protein don't add up to the calories (within 10%).
+- Tailoring is a 4-step window (`Tailor.tsx`): body (incl. weight, prefilled from the last weigh-in), activity and aim, carb plan (radios), summary with the arithmetic → "השתמש ביעדים האלה". A changed weight is saved as today's weigh-in.
+- The weigh-in moved to Reports, above the weight chart; it never changes goals. Shared `saveWeight` in `lib.ts`.
+
 ## 2026-10-22: clearer ＋ list, gum is a יחידה
 
 **Done:**

@@ -1,5 +1,5 @@
 import type { IconName } from './icons';
-import { client, hasPending, listEntries, supabase, syncPending, type Food } from './db';
+import { client, hasPending, listEntries, supabase, syncPending, type Food, type Weight } from './db';
 import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
 export { client, hasPending, syncPending };
@@ -121,4 +121,11 @@ export async function readLabel(file: File): Promise<Label> {
   const { data, error } = await supabase.functions.invoke<{ label?: Label; error?: string }>('meal-photo', { body: { image: await shrink(file, 1568), mode: 'label' } });
   if (error || !data?.label) throw new Error(data?.error ?? 'קריאת הטבלה לא זמינה כרגע. אפשר למלא את הערכים ידנית.');
   return data.label;
+}
+
+// One weigh-in a day: a second one that day replaces it. Returns the new list, oldest first.
+export async function saveWeight(weights: Weight[], kg: number, waist: number | null): Promise<Weight[]> {
+  const row = { id: weights.find((w) => w.date === today())?.id, date: today(), kg, waist };
+  const { data } = row.id ? await client.models.Weight.update(row as Weight) : await client.models.Weight.create(row);
+  return [...weights.filter((w) => w.id !== data.id), data].sort((a, b) => a.date.localeCompare(b.date));
 }
