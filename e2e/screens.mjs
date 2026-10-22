@@ -160,43 +160,56 @@ test('the foods tab lists saved meals and the food database', async () => {
   await grapes.first().waitFor();
 });
 
-test('a weigh-in only logs; tailoring shows its reasoning and changes the goals on request', async () => {
-  const waist = () => page.getByRole('spinbutton', { name: /^מותניים/ });
-  const spin = (name) => page.getByRole('spinbutton', { name });
+test('settings show the goals first; tailoring is a few steps; a weigh-in in reports only logs', async () => {
+  const spin = (name, scope = page) => scope.getByRole('spinbutton', { name });
+  const goals = page.getByRole('region', { name: 'היעדים שלך' });
   const weighIn = async (kg, cm) => {
+    await button(/דוחות/).tap();
     await spin('משקל היום (ק״ג)').fill(kg);
-    await waist().fill(cm);
+    await spin(/^מותניים/).fill(cm);
     await button('שמור שקילה').tap();
     await page.getByRole('status').filter({ hasText: 'השקילה נשמרה' }).waitFor();
   };
-  const use = button('השתמש ביעדים האלה');
-  // a week ago: from the diary's hint to Settings, tailoring unfolded; it names what it still needs
+  const next = () => button('הבא', dialog());
+  // a week ago: a weigh-in in Reports, then from the diary's hint to Settings
   await page.clock.setFixedTime(new Date('2026-10-14T09:00:00'));
+  await weighIn('76', '90');
   await button('יומן').tap();
   await button('התאמה אישית').tap();
-  assert.ok(await use.isDisabled());
-  assert.ok(await page.getByText(/^חסר לחישוב: משקל/).isVisible());
-  await weighIn('76', '90');
-  assert.equal(await spin('חלבון (ג׳)').inputValue(), '50'); // logging a weight left the goals alone
-  await spin('גיל').fill('45');
-  await spin('גובה (ס״מ)').fill('165');
-  await page.getByRole('combobox', { name: 'פחמימות' }).selectOption('130');
-  assert.ok(await page.getByText(/^1.8 ג׳ × 68.1 ק״ג \(לא 76/).isVisible()); // the protein arithmetic, in her numbers
-  await use.tap();
+  assert.match(await goals.innerText(), /2000 קק״ל · חלבון 50 ג׳[\s\S]*כלליים/);
+  // manual editing warns when the macros don't add up to the calories
+  await button('עריכה ידנית', goals).tap();
+  await spin('שומן (ג׳)', goals).fill('10');
+  assert.ok(await goals.getByText(/^הפחמימות, השומן והחלבון שווים יחד \d+ קק״ל, לא 2000/).isVisible());
+  await button('ביטול', goals).tap();
+  // tailoring, step by step: what's missing is named; the weight comes from the last weigh-in
+  await button('התאמה אישית', goals).tap();
+  assert.equal(await spin('משקל (ק״ג)', dialog()).inputValue(), '76');
+  assert.ok(await next().isDisabled());
+  await spin('גיל', dialog()).fill('45');
+  await spin('גובה (ס״מ)', dialog()).fill('165');
+  await next().tap();
+  await next().tap();
+  await dialog().getByRole('radio', { name: 'דל פחמימות: עד 130 ג׳' }).check();
+  await next().tap();
+  assert.ok(await dialog().getByText(/^1.8 ג׳ × 68.1 ק״ג \(לא 76/).isVisible()); // the protein arithmetic, in her numbers
+  await button('השתמש ביעדים האלה', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
   await page.getByRole('status').filter({ hasText: 'היעדים עודכנו' }).waitFor();
-  assert.equal(await spin('חלבון (ג׳)').inputValue(), '123');
-  assert.equal(await spin('פחמימות (ג׳)').inputValue(), '130');
-  const kcalBefore = await spin('קלוריות').inputValue();
-  await button('יומן').tap();
-  // today: a new weigh-in alone keeps the goals; using the plan again follows the new weight
+  assert.match(await goals.innerText(), /חלבון 123 ג׳ · פחמימות 130 ג׳[\s\S]*מותאמים/);
+  const kcal = async () => Number((await goals.innerText()).match(/(\d+) קק״ל/)[1]);
+  const kcalBefore = await kcal();
+  // today: a new weigh-in alone keeps the goals; tailoring again follows the new weight
   await page.clock.setFixedTime(new Date('2026-10-21T13:00:00'));
-  await button(/הגדרות/).tap();
   await weighIn('75', '88');
-  assert.equal(await spin('קלוריות').inputValue(), kcalBefore);
-  await page.getByText('חישוב לפי הגוף והמטרה שלך').tap(); // folded once tailored
-  await use.tap();
-  await page.getByRole('status').filter({ hasText: 'היעדים עודכנו' }).waitFor();
-  assert.ok(Number(await spin('קלוריות').inputValue()) < Number(kcalBefore));
+  await button(/הגדרות/).tap();
+  assert.equal(await kcal(), kcalBefore);
+  await button('עדכון ההתאמה האישית', goals).tap();
+  assert.equal(await spin('משקל (ק״ג)', dialog()).inputValue(), '75');
+  for (let i = 0; i < 3; i++) await next().tap();
+  await button('השתמש ביעדים האלה', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.ok(await kcal() < kcalBefore);
   await button(/דוחות/).tap();
   await button('חודש').tap();
   await page.getByRole('img', { name: /^משקל: מ־76 ק״ג .* ל־75 ק״ג/ }).waitFor();
@@ -206,4 +219,5 @@ test('a weigh-in only logs; tailoring shows its reasoning and changes the goals 
   assert.match(await summary.innerText(), /\/ לפחות 123 ג׳[\s\S]*\/ עד 130 ג׳/);
   assert.equal(await summary.getByText(/^יעדים כלליים/).count(), 0);
 });
+
 

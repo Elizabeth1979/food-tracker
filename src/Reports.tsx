@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
-import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut } from './lib';
+import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, saveWeight, sum, today, type Entry, type Nut } from './lib';
 import { Group, Donut, MacroLegend, MicroLine } from './ui';
 import { Icon } from './icons';
 
@@ -53,6 +53,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
         <p className="muted small">PDF: בחלון ההדפסה בחר ״שמירה כ-PDF״.</p>
       </Group>
 
+      <WeighIn ctx={ctx} />
       {weights.length > 1 && <TrendChart title="משקל" unit="ק״ג" data={weights.map((w) => ({ id: w.id, date: w.date, v: w.kg }))} />}
       {waists.length > 1 && <TrendChart title="מותניים" unit="ס״מ" data={waists} />}
       <h2 className="print-title">דוח תזונה · {title}</h2>
@@ -93,6 +94,30 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
         </>
       )}
     </div>
+  );
+}
+
+// Logging weight and waist, next to their charts. It never changes the goals; tailoring (Settings) does.
+function WeighIn({ ctx }: { ctx: Ctx }) {
+  const mine = ctx.weights.find((w) => w.date === today()), last = ctx.weights.at(-1);
+  const [kg, setKg] = useState(mine ? String(mine.kg) : '');
+  const [waist, setWaist] = useState(mine?.waist ? String(mine.waist) : '');
+  const [msg, setMsg] = useState('');
+  const save = async () => {
+    ctx.setWeights(await saveWeight(ctx.weights, Number(kg), Number(waist) || null));
+    setMsg('השקילה נשמרה');
+  };
+  return (
+    <Group title="שקילה" body="pad form" className="no-print">
+      <div className="grid2">
+        <label><span>משקל היום (ק״ג)</span><input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+        <label><span>מותניים (ס״מ, לא חובה)</span><input type="number" inputMode="decimal" step="0.5" value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
+      </div>
+      {last && <p className="muted small">שקילה אחרונה: {last.kg} ק״ג{last.waist ? `, מותניים ${last.waist} ס״מ` : ''}, {fmtDate(last.date, { day: 'numeric', month: 'long' })}</p>}
+      <p className="muted small">פעם בשבוע, בבוקר; מותניים בגובה הטבור. השקילה לא משנה את היעדים; לעדכון: הגדרות ← התאמה אישית.</p>
+      <button className="btn primary" onClick={save} disabled={!(Number(kg) > 0)}>שמור שקילה</button>
+      <div role="status">{msg && <p className="muted small">{msg}</p>}</div>
+    </Group>
   );
 }
 
