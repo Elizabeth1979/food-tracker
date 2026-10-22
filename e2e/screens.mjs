@@ -118,7 +118,12 @@ test('save a meal, then add it again in one tap', async () => {
   await page.getByText('"ערב קבוע" נשמרה').waitFor();
   await openAdd();
   await mealTab('נשנושים').tap();
-  await button(/^ארוחה שמורה: ערב קבוע/, dialog()).tap(); // saved meals carry that prefix for screen readers
+  // saved meals have their own titled group; the usual foods show up to 5, the rest behind "עוד"
+  await button(/^ערב קבוע/, dialog().getByRole('region', { name: 'ארוחות שמורות' })).tap();
+  const usual = dialog().getByRole('region', { name: 'הרגילים שלך בנשנושים' });
+  const picks = usual.getByRole('button', { name: /^(?!עוד)/ });
+  assert.equal(await picks.count(), 5); // the 5 foods logged so far: all shown, so no "עוד"
+  assert.equal(await button(/^עוד \d/, usual).count(), 0);
   await button(/^סיום · נוספו 6/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('נשנושים ואחר').count(), 6);

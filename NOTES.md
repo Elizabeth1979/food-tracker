@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: clearer ＋ list, gum is a יחידה
+
+**Done:**
+- The ＋ screen's list has titles: "הרגילים שלך ב<meal>" (5 foods, "עוד N" for the rest, with "לחיצה מוסיפה בכמות של הפעם הקודמת") and "ארוחות שמורות" as its own group, instead of one mixed list with an unexplained star.
+- Label scanning names the serving "יחידה" when the label says it is one piece (a gum, a bar), otherwise still "מנה" (`servingIsPiece`). `meal-photo` redeployed (version 5).
+
 ## 2026-10-22: fat back on the diary
 
 **Done:**
