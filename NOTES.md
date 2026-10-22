@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: foods tab in order
+
+**Done:**
+- The foods tab starts with the search box, so typing shows results right under it; while searching only the results show (with "מזון חדש"). Without a search: "המזונות שלי (N)" (foods the user added or edited, `source !== 'moh'`) and "ארוחות שמורות (N)", each showing 5 with "הצג הכל". The MoH database is only reached by search.
+- Next, maybe: tap to expand a saved meal or food and add it to today straight from here.
+
 ## 2026-10-22: Settings, one clear place to start
 
 **Done:**
