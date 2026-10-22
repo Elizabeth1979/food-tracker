@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: smaller add button, carbs goal 130
+
+**Done:**
+- The ＋ button sizes to its label (48px tall, lighter shadow) instead of filling the row, so the ring is the one focal point.
+- At the owner's request, set their stored carbs goal to 130 (`profiles.carbs`). Their protein goal is empty (null), so the diary shows no protein target until a weigh-in or a value in Settings.
+
 ## 2026-10-22: "איך נקבעו היעדים?"
 
 **Done:**
