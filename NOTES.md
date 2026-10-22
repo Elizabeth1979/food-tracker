@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: fat back on the diary
+
+**Done:**
+- At the owner's request fat is back as the diary's third row, "X / 78 ג׳", for reference only (no green/amber: too little fat is as bad as too much). `DAY_GOALS` has `kind: 'min' | 'max' | 'ref'`.
+
 ## 2026-10-22: general defaults, tailoring on request
 
 **Done:**
