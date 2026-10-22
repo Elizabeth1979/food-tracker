@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
-import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { MEALS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
 import { Group, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
@@ -98,6 +98,20 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
     ctx.setMeals(ctx.meals.filter((m) => m.id !== id));
   };
   const mine = ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden);
+  // One tap adds a saved meal to the diary's day, at the meal of the time of day; "בטל" takes it back.
+  const now = MEALS.find((m) => m.key === mealNow())!.label + (date === today() ? '' : ` · ${fmtDate(date, { day: 'numeric', month: 'short' })}`);
+  const [added, setAdded] = useState<{ name: string; es: Entry[] } | null>(null);
+  const addMeal = async (m: SavedMeal, items: Item[]) => {
+    ctx.addRecent(items.flatMap((i) => (i.foodId ? [i.foodId] : [])));
+    const es = await addEntries(date, mealNow(), items);
+    setAdded({ name: m.name, es });
+    setTimeout(() => setAdded((a) => (a?.es === es ? null : a)), 6000);
+  };
+  const undoAdd = async () => {
+    const es = added!.es;
+    setAdded(null);
+    await Promise.all(es.map((e) => client.models.Entry.delete({ id: e.id })));
+  };
   const foodRow = (f: Food) => (
     <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
       <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
@@ -108,9 +122,9 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const mealRow = (m: SavedMeal) => {
     const items = json<Item[]>(m.items, []);
     return (
-      <div key={m.id} className="row static">
+      <div key={m.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${m.name}`} onClick={() => addMeal(m, items)} onKeyDown={(e) => e.key === 'Enter' && addMeal(m, items)}>
         <div className="grow"><div>{m.name}</div><small className="muted">{items.length === 1 ? 'מזון אחד' : `${items.length} מזונות`}</small></div>
-        <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" /></button>
+        <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={(e) => { e.stopPropagation(); setMealEdit(m); }}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={(e) => { e.stopPropagation(); delMeal(m.id); }}><Icon name="trash" /></button>
       </div>
     );
   };
@@ -126,6 +140,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
           <div className="list">{hits.map(foodRow)}</div>
         </Group>
       ) : <>
+        <p className="muted small">הקשה על מזון בוחרת כמות ומוסיפה ליומן; הקשה על ארוחה שמורה מוסיפה אותה מיד ל{now}.</p>
         <Group title={`המזונות שלי (${mine.length})`} action={<button className="btn small" onClick={() => setEdit({ name: '' })}><Icon name="plus" />מזון חדש</button>}>
           {mine.length ? <Fold items={mine} row={foodRow} /> : <p className="muted">מזונות שתוסיפו או תערכו יופיעו כאן.</p>}
         </Group>
@@ -134,6 +149,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
         </Group>
         <p className="muted small">שאר המזונות, ממאגר משרד הבריאות, נמצאים בחיפוש.</p>
       </>}
+      {added && <div className="toast" role="status">״{added.name}״ נוסף ל{now} <button onClick={undoAdd}>בטל</button></div>}
       {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} fromFoods initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
       {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
