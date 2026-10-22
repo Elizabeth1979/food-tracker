@@ -95,7 +95,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
                 <label><span>מטרה</span><select value={body.aim} onChange={(e) => setBody({ ...body, aim: e.target.value })}>{AIMS.map(([l, x]) => <option key={x} value={x}>{l}</option>)}</select></label>
               </div>
             </details>
-            <p className="muted small">פעם בשבוע, בבוקר; מותניים בגובה הטבור. כל שקילה מחשבת מחדש את היעדים: חלבון 1.8 ג׳ לק״ג, שומן 30%, והשאר פחמימות. זו הערכה.</p>
+            <p className="muted small">פעם בשבוע, בבוקר; מותניים בגובה הטבור. כל שקילה מחשבת מחדש את היעדים: חלבון 1.8 ג׳ לק״ג, פחמימות עד 130 ג׳, והשאר שומן. זו הערכה.</p>
             <button className="btn primary" onClick={weighIn} disabled={!ready} aria-describedby={ready ? undefined : why}>שמור משקל ועדכן יעדים</button>
             {!ready && <Why id={why}>מלאו משקל, גיל וגובה כדי לשמור</Why>}
           </div>

@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: "איך נקבעו היעדים?"
+
+**Done:**
+- Under the diary's two goals, a disclosure explains them: protein by body weight (1.8 g/kg, counted up to a BMI-25 weight, with the owner's own numbers after a weigh-in), carbs as a soft limit, why fat has no goal, and two guidance tables with sources (`GoalsInfo` in `ui.tsx`). The formula's numbers come from `goals.ts` (`PROTEIN_PER_KG`, `CARBS_MAX`, `proteinKg`), so the text can't drift from the math.
+
 ## 2026-10-22: diary shows protein and carbs only
 
 **Done:**

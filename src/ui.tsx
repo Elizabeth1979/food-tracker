@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
+import { CARBS_MAX, PROTEIN_PER_KG, proteinKg } from './goals';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -155,6 +156,43 @@ export function DayGoals({ n, goals }: { n: Nut; goals?: Partial<Record<'carbs' 
         );
       })}
     </div>
+  );
+}
+
+// Where the diary's goals come from, with the general guidance to change them by.
+export function GoalsInfo({ protein, carbs, weightKg, heightCm }: { protein?: number | null; carbs?: number | null; weightKg?: number; heightCm?: number }) {
+  const counted = weightKg && heightCm ? proteinKg(weightKg, heightCm) : 0;
+  return (
+    <details>
+      <summary><Icon name="chevron-down" />איך נקבעו היעדים?</summary>
+      <div className="form small">
+        <h4>חלבון{protein ? `: לפחות ${protein} ג׳` : ''}</h4>
+        <p>החלבון נמדד לפי משקל הגוף. האפליקציה מציעה {PROTEIN_PER_KG} ג׳ לכל ק״ג, כדי לשמור על שריר ולבנות אותו. נספר המשקל שלך, אבל לא יותר מהמשקל שבו BMI הוא 25 לגובה שלך, כדי שמשקל עודף לא ינפח את היעד.</p>
+        {counted ? <p>אצלך: {PROTEIN_PER_KG} × {counted} ק״ג{counted < weightKg! ? ` (מתוך ${weightKg})` : ''} = {Math.round(PROTEIN_PER_KG * counted)} ג׳. מתעדכן בכל שקילה.</p> : <p>אחרי שקילה בהגדרות יופיע כאן החישוב שלך.</p>}
+        <table className="tbl">
+          <thead><tr><th scope="col">מצב</th><th scope="col">ג׳ לכל ק״ג</th></tr></thead>
+          <tbody>
+            <tr><td>מינימום לאדם לא פעיל</td><td>0.8</td></tr>
+            <tr><td>ירידה במשקל ושמירה על שריר</td><td><span dir="ltr">1.2–1.6</span></td></tr>
+            <tr><td>אימוני כוח ובניית שריר</td><td><span dir="ltr">1.6–2.2</span></td></tr>
+          </tbody>
+        </table>
+        <h4>פחמימות{carbs ? `: עד ${carbs} ג׳` : ''}</h4>
+        <p>גבול רך: הפס ירוק מתחת ליעד וכתום מעליו. האפליקציה מציעה עד {CARBS_MAX} ג׳, תחילת הטווח של תזונה דלת פחמימות.</p>
+        <table className="tbl">
+          <thead><tr><th scope="col">גישה</th><th scope="col">ג׳ ליום</th></tr></thead>
+          <tbody>
+            <tr><td>המלצה כללית (45–65% מ־2000 קק״ל)</td><td><span dir="ltr">225–325</span></td></tr>
+            <tr><td>דל פחמימות</td><td>עד 130</td></tr>
+            <tr><td>דל פחמימות מתון</td><td><span dir="ltr">50–100</span></td></tr>
+            <tr><td>קטו (כדאי בליווי רופא)</td><td><span dir="ltr">20–50</span></td></tr>
+          </tbody>
+        </table>
+        <h4>שומן</h4>
+        <p>אין לו יעד ביומן: הוא כבר בתוך הקלוריות. כדאי שלא ירד מתחת ל־20% מהקלוריות (הורמונים, ספיגת ויטמינים A, D, E, K). רואים אותו בדוחות.</p>
+        <p className="muted">מקורות: ההמלצות התזונתיות של האקדמיה הלאומית לרפואה בארה״ב (RDA) וההנחיות התזונתיות לאמריקאים; עמדת ISSN על חלבון (2017). מידע כללי, לא ייעוץ רפואי. לשינוי היעדים: הגדרות ← יעדים יומיים.</p>
+      </div>
+    </details>
   );
 }
 

@@ -85,6 +85,10 @@ test('the diary shows them under the right meals, with a total', async () => {
   const summary = page.getByRole('region', { name: 'סיכום היום' });
   assert.match(await summary.innerText(), /חלבון[\s\S]*\/ לפחות \d+ ג׳[\s\S]*פחמימות[\s\S]*\/ עד \d+ ג׳/);
   assert.doesNotMatch(await summary.innerText(), /שומן/);
+  // where the goals come from, with the guidance tables
+  await page.getByText('איך נקבעו היעדים?').tap();
+  assert.equal(await summary.getByRole('table').count(), 2);
+  await page.getByText('איך נקבעו היעדים?').tap();
 });
 
 test('tap an entry to change its amount and meal', async () => {
