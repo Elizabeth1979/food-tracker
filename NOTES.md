@@ -6,7 +6,7 @@ What was done in each work session and what's next. Newest first.
 
 **Done:**
 - The foods tab starts with the search box, so typing shows results right under it; while searching only the results show (with "מזון חדש"). Without a search: "המזונות שלי (N)" (foods the user added or edited, `source !== 'moh'`) and "ארוחות שמורות (N)", each showing 5 with "הצג הכל". The MoH database is only reached by search.
-- Next, maybe: tap to expand a saved meal or food and add it to today straight from here.
+- Then: one tap on a saved meal in the foods tab adds it to the diary's day at the meal of the time of day, with a 6-second "בטל" toast; a food tap opens the amount picker as before.
 
 ## 2026-10-22: Settings, one clear place to start
 

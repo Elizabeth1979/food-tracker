@@ -169,6 +169,14 @@ test('the foods tab: search first, then my foods and saved meals; the database o
   await search.fill('מסטיק בדיקה');
   assert.ok(await page.getByRole('button', { name: 'הוסף ליומן: מסטיק בדיקה' }).getByText('שלי', { exact: true }).isVisible());
   await search.fill('');
+  // one tap on a saved meal adds it to today, at the meal of the time of day (lunch); "בטל" takes it back
+  const regular = page.getByRole('button', { name: 'הוסף ליומן: ערב קבוע' });
+  await regular.tap();
+  await page.getByRole('status').filter({ hasText: '״ערב קבוע״ נוסף לארוחת צהריים' }).waitFor();
+  await regular.tap();
+  await button('בטל', page.getByRole('status').filter({ hasText: 'ערב קבוע' })).tap();
+  await button('יומן').tap();
+  assert.equal(await entries('ארוחת צהריים').count(), 6); // added once, the second add undone
 });
 
 
