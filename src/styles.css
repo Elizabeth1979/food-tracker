@@ -123,8 +123,9 @@ main button.banner { width: 100%; }
 .chev { color: var(--muted); transition: transform .2s; }
 .meal-toggle[aria-expanded=false] .chev { transform: rotate(90deg); }
 .summary-top { display: flex; align-items: center; gap: 16px; }
-.summary-top .btn { flex: 1; min-height: 64px; border-radius: 32px; font-size: 18px; box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); }
+.summary-top .btn { flex: 1; min-height: 56px; border-radius: 28px; font-size: 18px; box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); }
 .summary-top .btn .i { font-size: 22px; }
+.summary-top .donut-center b { font-size: 32px; } .summary-top .donut-center small { font-size: 15px; }
 .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .row.static:hover { background: none; }
 .row small { display: block; }
