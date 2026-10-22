@@ -148,17 +148,29 @@ test('the phone back button closes a window, and returns from the reports tab to
   await button(/הוספה$/).waitFor();
 });
 
-test('the foods tab lists saved meals and the food database', async () => {
+test('the foods tab: search first, then my foods and saved meals; the database only through search', async () => {
   await button(/מזונות/).tap();
-  await page.getByRole('heading', { name: 'ארוחות שמורות' }).waitFor();
-  assert.ok(await page.getByText('ערב קבוע').first().isVisible());
-  await page.getByRole('heading', { name: /מאגר מזונות/ }).waitFor();
-  // the food list stays closed until a search
+  const mine = page.getByRole('region', { name: /^המזונות שלי/ });
+  assert.ok(await mine.getByText('מזונות שתוסיפו או תערכו יופיעו כאן.').isVisible());
+  assert.ok(await page.getByRole('region', { name: /^ארוחות שמורות/ }).getByText('ערב קבוע').isVisible());
+  // a food of my own shows under "המזונות שלי", and is marked "שלי" in search
+  await button('מזון חדש', mine).tap();
+  await dialog().getByRole('textbox', { name: 'שם' }).fill('מסטיק בדיקה');
+  await button(/מלא אפסים/, dialog()).tap();
+  await button('שמור', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  await mine.getByRole('button', { name: 'הוסף ליומן: מסטיק בדיקה' }).waitFor();
   const grapes = page.getByRole('button', { name: /^הוסף ליומן: ענבים/ });
-  assert.equal(await grapes.count(), 0);
-  await page.getByRole('searchbox', { name: 'חיפוש במאגר' }).fill('ענבים');
+  assert.equal(await grapes.count(), 0); // the database stays closed until a search
+  const search = page.getByRole('searchbox', { name: 'חיפוש במאגר' });
+  await search.fill('ענבים');
   await grapes.first().waitFor();
+  assert.equal(await page.getByRole('region', { name: /^המזונות שלי/ }).count(), 0); // while searching, only results
+  await search.fill('מסטיק בדיקה');
+  assert.ok(await page.getByRole('button', { name: 'הוסף ליומן: מסטיק בדיקה' }).getByText('שלי', { exact: true }).isVisible());
+  await search.fill('');
 });
+
 
 test('settings show the goals first; tailoring is a few steps; a weigh-in in reports only logs', async () => {
   const spin = (name, scope = page) => scope.getByRole('spinbutton', { name });

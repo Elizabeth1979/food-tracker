@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
 import { MEALS, client, json, mealNow, readLabel, searchFoods, sum, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
 import { Group, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
@@ -97,38 +97,55 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
     await client.models.SavedMeal.delete({ id });
     ctx.setMeals(ctx.meals.filter((m) => m.id !== id));
   };
+  const mine = ctx.foods.filter((f) => f.source !== 'moh' && !f.hidden);
+  const foodRow = (f: Food) => (
+    <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
+      <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
+      <button className="icon" aria-label={`עריכה: ${f.name}`} onClick={(e) => { e.stopPropagation(); setEdit(f); }}><Icon name="pencil" /></button>
+      <button className="icon" aria-label={`הסתרה: ${f.name}`} onClick={(e) => { e.stopPropagation(); hide(f); }}><Icon name="trash" /></button>
+    </div>
+  );
+  const mealRow = (m: SavedMeal) => {
+    const items = json<Item[]>(m.items, []);
+    return (
+      <div key={m.id} className="row static">
+        <div className="grow"><div>{m.name}</div><small className="muted">{items.length === 1 ? 'מזון אחד' : `${items.length} מזונות`}</small></div>
+        <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" /></button>
+      </div>
+    );
+  };
   return (
     <div className="stack">
       <h1 className="page-title">מזונות</h1>
-      <Group title="ארוחות שמורות" action={<button className="btn small" onClick={() => setMealEdit('new')}><Icon name="plus" />ארוחה חדשה</button>}>
-        {!ctx.meals.length && <p className="muted">צור ארוחה כאן, או שמור ארוחה מהיומן עם ״שמור כארוחה״.</p>}
-        {ctx.meals.map((m) => {
-          const items = json<Item[]>(m.items, []);
-          return (
-            <div key={m.id} className="row static">
-              <div className="grow"><div>{m.name}</div><small className="muted">{items.length === 1 ? 'מזון אחד' : `${items.length} מזונות`}</small></div>
-              <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" /></button>
-            </div>
-          );
-        })}
-      </Group>
-      <Group title={<>מאגר מזונות <small>({ctx.foods.filter((f) => !f.hidden).length})</small></>} action={<button className="btn small" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
-        <input className="search" type="search" aria-label="חיפוש במאגר" placeholder="חיפוש…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="muted small">{q ? 'הקש על מזון כדי להוסיף אותו ליומן. העיפרון עורך, הפח מסתיר מהחיפוש.' : 'חפשו מזון כדי להוסיף אותו ליומן, לערוך או להסתיר.'}</div>
-        {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
-        <div className="list">
-          {hits.map((f) => (
-            <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
-              <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
-              <button className="icon" aria-label={`עריכה: ${f.name}`} onClick={(e) => { e.stopPropagation(); setEdit(f); }}><Icon name="pencil" /></button>
-              <button className="icon" aria-label={`הסתרה: ${f.name}`} onClick={(e) => { e.stopPropagation(); hide(f); }}><Icon name="trash" /></button>
-            </div>
-          ))}
-        </div>
-      </Group>
+      {/* Search first, so typing shows its results right under the box; while searching, only results show */}
+      <input className="search" type="search" aria-label="חיפוש במאגר" placeholder={`חיפוש בכל ${ctx.foods.filter((f) => !f.hidden).length} המזונות…`} value={q} onChange={(e) => setQ(e.target.value)} />
+      {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
+      {q ? (
+        <Group title={`תוצאות (${hits.length})`} action={<button className="btn small" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
+          <div className="muted small">הקשה מוסיפה ליומן. העיפרון עורך, הפח מסתיר מהחיפוש. ״שלי״: מזון שהוספת או ערכת.</div>
+          <div className="list">{hits.map(foodRow)}</div>
+        </Group>
+      ) : <>
+        <Group title={`המזונות שלי (${mine.length})`} action={<button className="btn small" onClick={() => setEdit({ name: '' })}><Icon name="plus" />מזון חדש</button>}>
+          {mine.length ? <Fold items={mine} row={foodRow} /> : <p className="muted">מזונות שתוסיפו או תערכו יופיעו כאן.</p>}
+        </Group>
+        <Group title={`ארוחות שמורות (${ctx.meals.length})`} action={<button className="btn small" onClick={() => setMealEdit('new')}><Icon name="plus" />ארוחה חדשה</button>}>
+          {ctx.meals.length ? <Fold items={ctx.meals} row={mealRow} /> : <p className="muted">צרו ארוחה כאן, או שמרו ארוחה מהיומן עם ״שמור כארוחה״.</p>}
+        </Group>
+        <p className="muted small">שאר המזונות, ממאגר משרד הבריאות, נמצאים בחיפוש.</p>
+      </>}
       {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} fromFoods initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
       {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
     </div>
   );
+}
+
+// A list that shows its first few and folds the rest behind "הצג הכל".
+function Fold<T>({ items, row, shown = 5 }: { items: T[]; row: (x: T) => ReactNode; shown?: number }) {
+  const [all, setAll] = useState(false);
+  return <>
+    {(all ? items : items.slice(0, shown)).map(row)}
+    {items.length > shown && <button className="link" aria-expanded={all} onClick={() => setAll(!all)}>{all ? 'הצג פחות' : `הצג הכל (${items.length})`}</button>}
+  </>;
 }
