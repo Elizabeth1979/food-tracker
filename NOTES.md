@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: foods tab rows show just the name
+
+**Done:**
+- Each food and saved meal is one line: its name (a `<details>`; tapping it shows the values or the meal's foods, with עריכה / הסתרה or מחיקה) and a ＋ that adds to the diary. Lists, search results included, show 5 at a time ("הצג עוד", then "הצג פחות"). `ItemRow` and `Fold` in `Foods.tsx`.
+
 ## 2026-10-22: foods tab buttons
 
 **Done:**

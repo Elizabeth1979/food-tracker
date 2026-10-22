@@ -204,10 +204,10 @@ export function MicroLine({ n, rda }: { n: Nut; rda?: boolean }) {
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.
 // Micronutrients show once a food is picked (NutLine). Own foods and FFQ group averages get a tag.
-export function FoodSummary({ f }: { f: Nut & { name: string; servingG: number; source?: string | null } }) {
+export function FoodSummary({ f, tags = true }: { f: Nut & { name: string; servingG: number; source?: string | null }; tags?: boolean }) {
   return (
     <small className="muted food-sum">
-      {f.source !== 'moh' && <span className="tag">שלי</span>}
+      {tags && f.source !== 'moh' && <span className="tag">שלי</span>}
       {isFFQ(f) && <span className="tag warn" title="ממוצע של כמה מזונות משאלון תזונה, לא מזון מסוים">ממוצע כללי</span>}
       <span>ל־{f.servingG} ג׳: <b className="kcal">{f.kcal} קק״ל</b> · פחמימות {f.carbs} · שומן {f.fat} · חלבון {f.protein}</span>
     </small>

@@ -113,19 +113,24 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
     await Promise.all(es.map((e) => client.models.Entry.delete({ id: e.id })));
   };
   const foodRow = (f: Food) => (
-    <div key={f.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${f.name}`} onClick={() => setLogging(f)} onKeyDown={(e) => e.key === 'Enter' && setLogging(f)}>
-      <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
-      <button className="icon" aria-label={`עריכה: ${f.name}`} onClick={(e) => { e.stopPropagation(); setEdit(f); }}><Icon name="pencil" /></button>
-      <button className="icon" aria-label={`הסתרה: ${f.name}`} onClick={(e) => { e.stopPropagation(); hide(f); }}><Icon name="trash" /></button>
-    </div>
+    <ItemRow key={f.id} name={f.name} mine={f.source !== 'moh'} onAdd={() => setLogging(f)}>
+      <FoodSummary f={f} tags={false} />
+      <div className="grid2">
+        <button className="btn small" aria-label={`עריכה: ${f.name}`} onClick={() => setEdit(f)}><Icon name="pencil" />עריכה</button>
+        <button className="btn small" aria-label={`הסתרה: ${f.name}`} onClick={() => hide(f)}><Icon name="trash" />הסתרה</button>
+      </div>
+    </ItemRow>
   );
   const mealRow = (m: SavedMeal) => {
     const items = json<Item[]>(m.items, []);
     return (
-      <div key={m.id} className="row" role="button" tabIndex={0} aria-label={`הוסף ליומן: ${m.name}`} onClick={() => addMeal(m, items)} onKeyDown={(e) => e.key === 'Enter' && addMeal(m, items)}>
-        <div className="grow"><div>{m.name}</div><small className="muted">{items.length === 1 ? 'מזון אחד' : `${items.length} מזונות`}</small></div>
-        <b>{sum(items).kcal}</b><button className="icon" aria-label={`עריכה: ${m.name}`} onClick={(e) => { e.stopPropagation(); setMealEdit(m); }}><Icon name="pencil" /></button><button className="icon" aria-label={`מחיקה: ${m.name}`} onClick={(e) => { e.stopPropagation(); delMeal(m.id); }}><Icon name="trash" /></button>
-      </div>
+      <ItemRow key={m.id} name={m.name} onAdd={() => addMeal(m, items)}>
+        <small className="muted">{items.map((i) => i.name.split(',')[0]).join(' · ')} · <b>{sum(items).kcal} קק״ל</b></small>
+        <div className="grid2">
+          <button className="btn small" aria-label={`עריכה: ${m.name}`} onClick={() => setMealEdit(m)}><Icon name="pencil" />עריכה</button>
+          <button className="btn small" aria-label={`מחיקה: ${m.name}`} onClick={() => delMeal(m.id)}><Icon name="trash" />מחיקה</button>
+        </div>
+      </ItemRow>
     );
   };
   return (
@@ -136,11 +141,11 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
       {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
       {q ? (
         <Group title={`תוצאות (${hits.length})`} action={<button className="btn small primary" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
-          <div className="muted small">הקשה מוסיפה ליומן. העיפרון עורך, הפח מסתיר מהחיפוש. ״שלי״: מזון שהוספת או ערכת.</div>
-          <div className="list">{hits.map(foodRow)}</div>
+          <p className="muted small">הקשה על שם מציגה את הערכים; ＋ מוסיף ליומן. ״שלי״: מזון שהוספת או ערכת.</p>
+          <Fold key={q} items={hits} row={foodRow} />
         </Group>
       ) : <>
-        <p className="muted small">הקשה על מזון בוחרת כמות ומוסיפה ליומן; הקשה על ארוחה שמורה מוסיפה אותה מיד ל{now}.</p>
+        <p className="muted small">הקשה על שם מציגה את הפרטים. ＋ ליד מזון בוחר כמות ומוסיף ליומן; ליד ארוחה שמורה מוסיף אותה מיד ל{now}.</p>
         <Group title={`המזונות שלי (${mine.length})`} action={<button className="btn small primary" onClick={() => setEdit({ name: '' })}><Icon name="plus" />מזון חדש</button>}>
           {mine.length ? <Fold items={mine} row={foodRow} /> : <p className="muted">מזונות שתוסיפו או תערכו יופיעו כאן.</p>}
         </Group>
@@ -157,11 +162,25 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   );
 }
 
-// A list that shows its first few and folds the rest behind "הצג הכל".
-function Fold<T>({ items, row, shown = 5 }: { items: T[]; row: (x: T) => ReactNode; shown?: number }) {
-  const [all, setAll] = useState(false);
+// A list that shows five at a time: "הצג עוד" adds five more, "הצג פחות" folds back.
+function Fold<T>({ items, row, step = 5 }: { items: T[]; row: (x: T) => ReactNode; step?: number }) {
+  const [n, setN] = useState(step);
   return <>
-    {(all ? items : items.slice(0, shown)).map(row)}
-    {items.length > shown && <button className="link" aria-expanded={all} onClick={() => setAll(!all)}>{all ? 'הצג פחות' : `הצג הכל (${items.length})`}</button>}
+    {items.slice(0, n).map(row)}
+    {n < items.length ? <button className="link" onClick={() => setN(n + step)}>הצג עוד ({items.length - n})</button>
+      : items.length > step && <button className="link" onClick={() => setN(step)}>הצג פחות</button>}
   </>;
+}
+
+// A row that shows just the name: tapping it opens the details; ＋ adds to the diary.
+function ItemRow({ name, mine, onAdd, children }: { name: string; mine?: boolean; onAdd: () => void; children: ReactNode }) {
+  return (
+    <div className="row static">
+      <details className="grow">
+        <summary><Icon name="chevron-down" /><span>{name}</span>{mine && <span className="tag">שלי</span>}</summary>
+        <div className="form">{children}</div>
+      </details>
+      <button className="icon" aria-label={`הוסף ליומן: ${name}`} onClick={onAdd}><span className="mark"><Icon name="plus" /></span></button>
+    </div>
+  );
 }
