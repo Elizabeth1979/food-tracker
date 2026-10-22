@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: summary card, more air
+
+**Done:**
+- The calorie ring is bigger (108px) with a thinner line and a smaller number, so "2000" no longer touches the ring. More space between the macro rows, under "נצרכו", and above the micros (`styles.css`).
+
 ## 2026-10-21: Settings order
 
 **Done:**

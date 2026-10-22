@@ -92,19 +92,19 @@ main button.banner { width: 100%; }
 
 .donut { position: relative; flex: none; }
 .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.donut-center b { font-size: 28px; font-weight: 600; line-height: 1; } .donut-center small { color: var(--muted); font-size: 14px; }
-.kcal-line { display: flex; gap: 6px; align-items: baseline; margin-bottom: 8px; } .kcal-line b { font-size: 22px; font-weight: 600; }
+.donut-center b { font-size: 24px; font-weight: 600; line-height: 1; } .donut-center small { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.kcal-line { display: flex; gap: 6px; align-items: baseline; margin-bottom: 14px; } .kcal-line b { font-size: 22px; font-weight: 600; }
 .bar { height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; grid-column: 1 / -1; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
 .bar i.over { background: var(--danger); }
-.legend { display: grid; gap: 6px; }
+.legend { display: grid; gap: 14px; }
 .legend-row { font-size: 14px; }
-.legend-line { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; white-space: nowrap; }
+.legend-line { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; white-space: nowrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
-.micro { font-size: 14px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.micro { font-size: 14px; margin-top: 14px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .micro span { white-space: nowrap; }
 /* ring: calories toward the goal */
-.ring-track, .ring-fill { fill: none; stroke-width: 10; }
+.ring-track, .ring-fill { fill: none; stroke-width: 8; }
 .ring-track { stroke: var(--card2); }
 .ring-fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .3s; }
 .ring-fill.over { stroke: var(--danger); }
