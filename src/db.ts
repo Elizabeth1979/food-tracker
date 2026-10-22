@@ -16,7 +16,7 @@ export type Entry = Nutrients & { id: string; date: string; meal: MealKey; foodI
 export type SavedMeal = { id: string; name: string; items: unknown };
 // One row per user; id is the user's id.
 // body: what the goals are worked out from (weight comes from the weight log).
-export type BodyInfo = { sex: 'f' | 'm'; birthYear: number; heightCm: number; activity: number; aim: number };
+export type BodyInfo = { sex: 'f' | 'm'; birthYear: number; heightCm: number; activity: number; aim: number; carbsMax?: number };
 export type Profile = { id: string; kcal?: number | null; carbs?: number | null; fat?: number | null; protein?: number | null; recent?: string[] | null; body?: BodyInfo | null };
 // One weigh-in; one per day (a second one that day replaces it). date: YYYY-MM-DD local; waist in cm, optional
 export type Weight = { id: string; date: string; kg: number; waist?: number | null };

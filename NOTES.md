@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: general defaults, tailoring on request
+
+**Done:**
+- Defaults for everyone are the nutrition-label Daily Values (2000 kcal, protein 50, carbs 275, fat 78; `DEFAULT_GOALS`, and `goalsOf` fills any empty goal with them). Without body details the diary says "יעדים כלליים, לא מותאמים לגוף שלך" with a link to tailor.
+- Settings: "שקילה" only logs weight (never changes goals). "התאמת היעדים" takes sex, age, height, activity, aim and a carb plan (standard / 130 / 100 / 50, stored in `body.carbsMax`), uses the latest weigh-in, names what's missing, shows each suggested goal with its arithmetic in the user's numbers, and applies them only on "השתמש ביעדים האלה".
+- Replaces the weigh-in prompt from earlier today.
+
 ## 2026-10-22: no made-up protein goal
 
 **Done:**

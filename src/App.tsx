@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DEFAULT_GOALS } from './goals';
 import { addDays, client, hasPending, loadEntries, syncPending, loadFoods, loadSavedMeals, store, today, type Food, type Profile, type SavedMeal, type Weight } from './lib';
 import Day from './Day';
 import Reports from './Reports';
@@ -63,7 +64,7 @@ export default function App({ email }: { email: string }) {
       setUses(n);
     }, () => {});
     client.models.Profile.list()
-      .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create({ kcal: 2000, carbs: 130, fat: 65 })).data))
+      .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create(DEFAULT_GOALS)).data))
       .catch(fail);
     // Changes made offline go out on start, when the connection is back, and when the app comes back to the front.
     // A refused one rejects, so it shows in the banner below.
@@ -121,7 +122,7 @@ export default function App({ email }: { email: string }) {
       {waiting && <div role="status" className="banner pending">⏳ יש שינויים שממתינים לשליחה · יישלחו כשיחזור החיבור</div>}
       {status && <div role="alert"><button className="banner" onClick={() => location.reload()}>{status}</button></div>}
       <main>
-        {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} onWeighIn={() => setTab('settings')} />}
+        {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} onTailor={() => setTab('settings')} />}
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
         {tab === 'foods' && <Foods ctx={ctx} date={date} />}
         {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} />}

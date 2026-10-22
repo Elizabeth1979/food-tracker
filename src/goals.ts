@@ -1,23 +1,33 @@
-// Daily goals from body measurements. No data-layer imports, so tests can run it directly.
-export type Body = { sex: 'f' | 'm'; age: number; heightCm: number; weightKg: number; activity: number; aim: number };
+// Daily goals: general defaults for anyone, or worked out from body measurements. No data-layer imports, so tests can run it directly.
+export type Body = { sex: 'f' | 'm'; age: number; heightCm: number; weightKg: number; activity: number; aim: number; carbsMax: number };
 export type Goals = { kcal: number; carbs: number; fat: number; protein: number };
+
+// The nutrition-label Daily Values, set for an average adult on 2000 kcal. Used until goals are tailored.
+export const DEFAULT_GOALS: Goals = { kcal: 2000, protein: 50, carbs: 275, fat: 78 };
+// A goal left empty falls back to its default.
+export const goalsOf = (g?: Partial<Record<keyof Goals, number | null>> | null): Goals =>
+  ({ kcal: g?.kcal || DEFAULT_GOALS.kcal, protein: g?.protein || DEFAULT_GOALS.protein, carbs: g?.carbs || DEFAULT_GOALS.carbs, fat: g?.fat || DEFAULT_GOALS.fat });
 
 export const ACTIVITY: [string, number][] = [['בלי אימונים', 1.2], ['1–3 אימונים בשבוע', 1.375], ['4–5 אימונים בשבוע', 1.55], ['אימון כמעט כל יום', 1.725]];
 export const AIMS: [string, number][] = [['לרדת במשקל ולבנות שריר', -0.2], ['לשמור על המשקל ולבנות שריר', 0], ['לעלות במסת שריר', 0.1]];
+// 0: no cap, carbs are what's left after protein and 30% fat.
+export const CARB_PLANS: [string, number][] = [['רגיל: מה שנשאר אחרי חלבון ושומן', 0], ['דל פחמימות: עד 130 ג׳', 130], ['דל פחמימות מתון: עד 100 ג׳', 100], ['קטו: עד 50 ג׳ (בליווי רופא)', 50]];
 
-export const PROTEIN_PER_KG = 1.8, CARBS_MAX = 130;
+export const PROTEIN_PER_KG = 1.8;
 // The weight protein is counted on: up to a BMI-25 weight, so extra body fat doesn't inflate it.
 export const proteinKg = (weightKg: number, heightCm: number) => Math.min(weightKg, Math.round(250 * (heightCm / 100) ** 2) / 10);
+// Mifflin-St Jeor resting energy.
+export const restKcal = ({ sex, age, heightCm, weightKg }: Pick<Body, 'sex' | 'age' | 'heightCm' | 'weightKg'>) =>
+  Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'm' ? 5 : -161));
 
-export function suggestGoals({ sex, age, heightCm, weightKg, activity, aim }: Body): Goals {
-  // Mifflin-St Jeor resting energy, times activity, then the aim's deficit or surplus.
-  const rest = 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'm' ? 5 : -161);
-  // Never below resting needs: too deep a deficit costs muscle.
-  const kcal = Math.round(Math.max(rest * activity * (1 + aim), rest) / 10) * 10;
-  // Protein for building muscle.
-  const protein = Math.round(PROTEIN_PER_KG * proteinKg(weightKg, heightCm));
-  // Carbs: what's left after protein and 30% fat, but low-carb (130 g at most); fat takes the rest.
-  const carbs = Math.max(0, Math.min(CARBS_MAX, Math.round((kcal * 0.7 - protein * 4) / 4)));
+export function suggestGoals(b: Body): Goals {
+  const rest = restKcal(b);
+  // Activity, then the aim's deficit or surplus; never below resting needs: too deep a deficit costs muscle.
+  const kcal = Math.round(Math.max(rest * b.activity * (1 + b.aim), rest) / 10) * 10;
+  const protein = Math.round(PROTEIN_PER_KG * proteinKg(b.weightKg, b.heightCm));
+  // Carbs: what's left after protein and 30% fat, capped by the carb plan; fat takes the rest.
+  const room = Math.max(0, Math.round((kcal * 0.7 - protein * 4) / 4));
+  const carbs = b.carbsMax ? Math.min(b.carbsMax, room) : room;
   const fat = Math.round((kcal - protein * 4 - carbs * 4) / 9);
   return { kcal, carbs, fat, protein };
 }

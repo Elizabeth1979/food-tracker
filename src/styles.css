@@ -202,6 +202,7 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .nowrap { white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form p { margin: 0; }
+.plan { margin: 0; font-size: 14px; } .plan dt { font-weight: 500; } .plan dd { margin: 0 0 8px; color: var(--muted); }
 summary { min-height: var(--tap); display: flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 500; cursor: pointer; }
 details[open] > summary { margin-bottom: 10px; }
 summary .i { transition: transform .2s; }

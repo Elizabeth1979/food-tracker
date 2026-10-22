@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
 import { DayGoals, GoalsInfo, Group, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
-export default function Day({ ctx, date, setDate, onExport, onWeighIn }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void; onWeighIn: () => void }) {
+export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void; onTailor: () => void }) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   // Home-screen shortcuts open straight into the add dialog: /?add=breakfast|lunch|dinner|snack|saved
   const [shortcut] = useState(() => {
@@ -26,7 +27,7 @@ export default function Day({ ctx, date, setDate, onExport, onWeighIn }: { ctx: 
 
   const list = entries ?? [];
   const tot = sum(list);
-  const goal = ctx.profile?.kcal ?? 0;
+  const goals = goalsOf(ctx.profile), goal = goals.kcal;
 
   // Today, meals before the current one start collapsed; a tap on the header overrides.
   const isOpen = (meal: MealKey) => toggled[`${date}:${meal}`] ?? !(date === today() && MEALS.findIndex((m) => m.key === meal) < MEALS.findIndex((m) => m.key === mealNow()));
@@ -75,9 +76,10 @@ export default function Day({ ctx, date, setDate, onExport, onWeighIn }: { ctx: 
         </div>
         <div>
           <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
-          <DayGoals n={tot} goals={ctx.profile ?? undefined} onWeighIn={onWeighIn} />
+          <DayGoals n={tot} goals={goals} />
         </div>
-        <GoalsInfo protein={ctx.profile?.protein} carbs={ctx.profile?.carbs} weightKg={ctx.weights.at(-1)?.kg} heightCm={ctx.profile?.body?.heightCm} />
+        {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
+        <GoalsInfo goals={goals} />
       </section>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
