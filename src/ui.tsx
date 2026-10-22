@@ -139,7 +139,8 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
 // The diary's two goals: protein is a minimum to reach, carbs a soft limit to stay under.
 // Fat and micros are in Reports.
 const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות', floor: true }, { key: 'carbs', label: 'פחמימות', word: 'עד', floor: false }] as const;
-export function DayGoals({ n, goals }: { n: Nut; goals?: Partial<Record<'carbs' | 'protein', number | null>> }) {
+// Without a protein goal (it needs body weight, never a guess) the protein row asks for a weigh-in.
+export function DayGoals({ n, goals, onWeighIn }: { n: Nut; goals?: Partial<Record<'carbs' | 'protein', number | null>>; onWeighIn: () => void }) {
   return (
     <div className="legend">
       {DAY_GOALS.map((d) => {
@@ -151,6 +152,7 @@ export function DayGoals({ n, goals }: { n: Nut; goals?: Partial<Record<'carbs' 
               <span className="grow">{d.label}{state === 'done' && d.floor && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
               <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word} ${goal}` : ''} ג׳</span></span>
             </div>
+            {!goal && d.floor && <button className="btn small" onClick={onWeighIn}>הזינו משקל כדי לקבוע יעד חלבון</button>}
             {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (g / goal) * 100)}%`, background: state ? undefined : `var(--${d.key})` }} /></div> : null}
           </div>
         );

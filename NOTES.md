@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: no made-up protein goal
+
+**Done:**
+- Protein needs body weight, so it's never guessed: new profiles start without a protein goal (and carbs 130), and while there is none the diary's protein row shows "הזינו משקל כדי לקבוע יעד חלבון", which opens Settings with the weigh-in unfolded (`open={!p?.protein}`). The screen test starts from that state and checks the goal appears after the weigh-in.
+
 ## 2026-10-22: smaller add button, carbs goal 130
 
 **Done:**

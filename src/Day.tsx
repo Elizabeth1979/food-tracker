@@ -5,7 +5,7 @@ import { DayGoals, GoalsInfo, Group, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
-export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void }) {
+export default function Day({ ctx, date, setDate, onExport, onWeighIn }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void; onWeighIn: () => void }) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   // Home-screen shortcuts open straight into the add dialog: /?add=breakfast|lunch|dinner|snack|saved
   const [shortcut] = useState(() => {
@@ -75,7 +75,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
         </div>
         <div>
           <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
-          <DayGoals n={tot} goals={ctx.profile ?? undefined} />
+          <DayGoals n={tot} goals={ctx.profile ?? undefined} onWeighIn={onWeighIn} />
         </div>
         <GoalsInfo protein={ctx.profile?.protein} carbs={ctx.profile?.carbs} weightKg={ctx.weights.at(-1)?.kg} heightCm={ctx.profile?.body?.heightCm} />
       </section>
