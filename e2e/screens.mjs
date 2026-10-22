@@ -67,6 +67,11 @@ test('switch the meal, then a photo goes to the review list', async () => {
 test('add what the photo missed, then add all to the chosen meal', async () => {
   const foods = dialog().getByRole('combobox', { name: 'מזון' });
   const rows = await foods.count();
+  // the photo got a food wrong and the matches don't have it: search the whole database instead
+  await foods.first().selectOption('?');
+  await dialog().getByRole('searchbox', { name: 'חיפוש מזון אחר' }).fill('גבינה בולגרית');
+  await dialog().getByRole('button', { name: /^גבינה בולגרית/ }).first().tap();
+  assert.match(await foods.first().evaluate((s) => s.selectedOptions[0].text), /^גבינה בולגרית/);
   await dialog().getByRole('textbox', { name: 'הוספת מזון לרשימה' }).fill('פיתה');
   await button('הוסף', dialog()).tap();
   assert.equal(await foods.count(), rows + 1);

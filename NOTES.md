@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: review list can search any food
+
+**Done:**
+- In the photo/typed review list, each food's picker has "חיפוש מזון אחר…": it turns the row into a search over the whole database (5 results), and picking one replaces the food with its amount re-suggested. Rows with no match get a "חיפוש" button too. (The owner's photo showed grated Bulgarian cheese as yellow cheese, and the picker only offered yellow cheeses.)
+
 ## 2026-10-22: foods tab rows show just the name
 
 **Done:**
