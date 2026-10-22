@@ -135,6 +135,29 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
   );
 }
 
+// The diary's two goals: protein is a minimum to reach, carbs a soft limit to stay under.
+// Fat and micros are in Reports.
+const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות', floor: true }, { key: 'carbs', label: 'פחמימות', word: 'עד', floor: false }] as const;
+export function DayGoals({ n, goals }: { n: Nut; goals?: Partial<Record<'carbs' | 'protein', number | null>> }) {
+  return (
+    <div className="legend">
+      {DAY_GOALS.map((d) => {
+        const g = n[d.key], goal = goals?.[d.key];
+        const state = !goal ? '' : d.floor ? (g >= goal ? 'done' : '') : (g > goal ? 'high' : 'done');
+        return (
+          <div key={d.key} className="legend-row">
+            <div className="legend-line">
+              <span className="grow">{d.label}{state === 'done' && d.floor && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
+              <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word} ${goal}` : ''} ג׳</span></span>
+            </div>
+            {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (g / goal) * 100)}%`, background: state ? undefined : `var(--${d.key})` }} /></div> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Micronutrients; values the food doesn't have are omitted, and so are zeros except in the day summary
 // (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need.
 export function MicroLine({ n, rda }: { n: Nut; rda?: boolean }) {
