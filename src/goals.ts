@@ -13,7 +13,8 @@ export function suggestGoals({ sex, age, heightCm, weightKg, activity, aim }: Bo
   // Protein for building muscle: 1.8 g per kg, counted up to a BMI-25 weight so extra body fat doesn't inflate it.
   const m = heightCm / 100;
   const protein = Math.round(1.8 * Math.min(weightKg, 25 * m * m));
-  const fat = Math.round((kcal * 0.3) / 9);
-  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  // Carbs: what's left after protein and 30% fat, but low-carb (130 g at most); fat takes the rest.
+  const carbs = Math.max(0, Math.min(130, Math.round((kcal * 0.7 - protein * 4) / 4)));
+  const fat = Math.round((kcal - protein * 4 - carbs * 4) / 9);
   return { kcal, carbs, fat, protein };
 }

@@ -13,6 +13,12 @@ test('losing weight while building muscle: a modest deficit, high protein, macro
   assert.ok(Math.abs(g.carbs * 4 + g.fat * 9 + g.protein * 4 - g.kcal) < 15);
 });
 
+test('low-carb: carbs stay at 130 g or under, fat takes up the rest', () => {
+  const big = suggestGoals({ ...her, weightKg: 95, activity: 1.725, aim: 0 });
+  assert.equal(big.carbs, 130);
+  assert.ok(Math.abs(big.carbs * 4 + big.fat * 9 + big.protein * 4 - big.kcal) < 15);
+});
+
 test('never below resting needs, and more weight or training means more food', () => {
   const sitting = suggestGoals({ ...her, activity: 1.2 });
   assert.ok(sitting.kcal >= 10 * 75 + 6.25 * 165 - 5 * 45 - 161 - 5);

@@ -81,6 +81,10 @@ test('the diary shows them under the right meals, with a total', async () => {
   assert.equal(await entries('ארוחת ערב').count(), 5); // 4 from the sample photo + the pita
   assert.ok(await page.getByText(/^נצרכו/).isVisible());
   assert.doesNotMatch(await page.getByText(/^נצרכו/).locator('..').innerText(), /נצרכו\s*0\b/);
+  // the two daily goals: protein a minimum to reach, carbs a limit to stay under; fat is left to Reports
+  const summary = page.getByRole('region', { name: 'סיכום היום' });
+  assert.match(await summary.innerText(), /חלבון[\s\S]*\/ לפחות \d+ ג׳[\s\S]*פחמימות[\s\S]*\/ עד \d+ ג׳/);
+  assert.doesNotMatch(await summary.innerText(), /שומן/);
 });
 
 test('tap an entry to change its amount and meal', async () => {

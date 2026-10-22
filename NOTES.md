@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-22: diary shows protein and carbs only
+
+**Done:**
+- At the owner's request the diary summary shows two goals: protein first, a minimum ("לפחות", green ✓ once reached), and carbs, a soft limit ("עד", green under it, amber "מעל היעד" over). Fat and micros left the diary; Reports still shows them (`DayGoals` in `ui.tsx`).
+- `suggestGoals` is low-carb now: carbs at most 130 g, fat takes the rest of the calories. The owner's stored carbs goal (250) still needs changing to 130 in Settings or by a weigh-in.
+
 ## 2026-10-22: summary card, more air
 
 **Done:**
