@@ -63,7 +63,7 @@ export default function App({ email }: { email: string }) {
       setUses(n);
     }, () => {});
     client.models.Profile.list()
-      .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create({ kcal: 2000, carbs: 250, fat: 65, protein: 100 })).data))
+      .then(async (p) => setProfile(p.data[0] ?? (await client.models.Profile.create({ kcal: 2000, carbs: 130, fat: 65 })).data))
       .catch(fail);
     // Changes made offline go out on start, when the connection is back, and when the app comes back to the front.
     // A refused one rejects, so it shows in the banner below.
@@ -121,7 +121,7 @@ export default function App({ email }: { email: string }) {
       {waiting && <div role="status" className="banner pending">⏳ יש שינויים שממתינים לשליחה · יישלחו כשיחזור החיבור</div>}
       {status && <div role="alert"><button className="banner" onClick={() => location.reload()}>{status}</button></div>}
       <main>
-        {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} />}
+        {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} onWeighIn={() => setTab('settings')} />}
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
         {tab === 'foods' && <Foods ctx={ctx} date={date} />}
         {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} />}

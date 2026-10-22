@@ -83,7 +83,9 @@ test('the diary shows them under the right meals, with a total', async () => {
   assert.doesNotMatch(await page.getByText(/^נצרכו/).locator('..').innerText(), /נצרכו\s*0\b/);
   // the two daily goals: protein a minimum to reach, carbs a limit to stay under; fat is left to Reports
   const summary = page.getByRole('region', { name: 'סיכום היום' });
-  assert.match(await summary.innerText(), /חלבון[\s\S]*\/ לפחות \d+ ג׳[\s\S]*פחמימות[\s\S]*\/ עד \d+ ג׳/);
+  // no weigh-in yet: no made-up protein goal, a way to set one instead
+  assert.ok(await button('הזינו משקל כדי לקבוע יעד חלבון', summary).isVisible());
+  assert.match(await summary.innerText(), /חלבון[\s\S]*פחמימות[\s\S]*\/ עד 130 ג׳/);
   assert.doesNotMatch(await summary.innerText(), /שומן/);
   // where the goals come from, with the guidance tables
   await page.getByText('איך נקבעו היעדים?').tap();
@@ -166,8 +168,8 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   };
   // a week ago: the first weigh-in also needs age and height, once
   await page.clock.setFixedTime(new Date('2026-10-14T09:00:00'));
-  await button(/הגדרות/).tap();
-  await page.getByText('שקילה ועדכון היעדים').tap();
+  await button('יומן').tap();
+  await button('הזינו משקל כדי לקבוע יעד חלבון').tap(); // opens Settings with the weigh-in unfolded
   await page.getByRole('spinbutton', { name: 'משקל היום (ק״ג)' }).fill('76');
   await waist().fill('90');
   assert.ok(await button('שמור משקל ועדכן יעדים').isDisabled());
@@ -187,4 +189,6 @@ test('a weigh-in updates the goals, and reports show the weight over time', asyn
   await button('חודש').tap();
   await page.getByRole('img', { name: /^משקל: מ־76 ק״ג .* ל־75 ק״ג/ }).waitFor();
   await page.getByRole('img', { name: /^מותניים: מ־90 ס״מ .* ל־88 ס״מ/ }).waitFor();
+  await button(/יומן/).tap();
+  assert.match(await page.getByRole('region', { name: 'סיכום היום' }).innerText(), /\/ לפחות 123 ג׳/);
 });

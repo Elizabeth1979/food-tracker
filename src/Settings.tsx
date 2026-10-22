@@ -76,7 +76,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
         <button className="btn primary" onClick={save}>שמור יעדים</button>
       </Group>
       <Group title="חישוב לפי משקל" body="pad form">
-        <details>
+        <details open={!p?.protein}>
           <summary><Icon name="chevron-down" />שקילה ועדכון היעדים</summary>
           <div className="form">
             <div className="grid2">
