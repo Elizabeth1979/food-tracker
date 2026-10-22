@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, sum, type Entry, type Nut } from './lib';
 import { Group, Donut, MacroLegend, MicroLine } from './ui';
@@ -18,7 +19,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
   const avg: Nut = logged.length ? (() => { const t = sum(logged.map((x) => x.t)); const k = logged.length, r = (v: number) => Math.round((v / k) * 10) / 10;
     return { kcal: Math.round(t.kcal / k), carbs: r(t.carbs), fat: r(t.fat), protein: r(t.protein), ...Object.fromEntries(MICROS.map((m) => [m.key, Math.round((t[m.key]! / k) * 10 ** m.dp) / 10 ** m.dp])) }; })()
     : sum([]);
-  const goal = ctx.profile?.kcal ?? 0;
+  const goals = goalsOf(ctx.profile), goal = goals.kcal;
   const weights = ctx.weights.filter((w) => w.date >= from && w.date <= to);
   const waists = weights.flatMap((w) => (w.waist ? [{ id: w.id, date: w.date, v: w.waist }] : []));
   const title = from === to ? fmtDate(from) : `${fmtDate(from, { day: 'numeric', month: 'short' })} – ${fmtDate(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
@@ -61,7 +62,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
             <Donut n={avg} center={<><b>{avg.kcal}</b><small>{days.length > 1 ? 'ממוצע ליום' : 'קק״ל'}</small></>} />
             <div className="grow">
               <div className="kcal-line"><span>{days.length > 1 ? `ממוצע ל-${logged.length} ימים מתועדים` : 'סה״כ'}</span><b>{avg.kcal}</b><span className="muted">/ {goal} קק״ל</span></div>
-              <MacroLegend n={avg} goals={ctx.profile ?? undefined} />
+              <MacroLegend n={avg} goals={goals} />
               <MicroLine n={avg} rda />
             </div>
           </section>

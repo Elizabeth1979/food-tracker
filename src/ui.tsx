@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
-import { CARBS_MAX, PROTEIN_PER_KG, proteinKg } from './goals';
+import { DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -139,12 +139,11 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
 // The diary's two goals: protein is a minimum to reach, carbs a soft limit to stay under.
 // Fat and micros are in Reports.
 const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות', floor: true }, { key: 'carbs', label: 'פחמימות', word: 'עד', floor: false }] as const;
-// Without a protein goal (it needs body weight, never a guess) the protein row asks for a weigh-in.
-export function DayGoals({ n, goals, onWeighIn }: { n: Nut; goals?: Partial<Record<'carbs' | 'protein', number | null>>; onWeighIn: () => void }) {
+export function DayGoals({ n, goals }: { n: Nut; goals: Goals }) {
   return (
     <div className="legend">
       {DAY_GOALS.map((d) => {
-        const g = n[d.key], goal = goals?.[d.key];
+        const g = n[d.key], goal = goals[d.key];
         const state = !goal ? '' : d.floor ? (g >= goal ? 'done' : '') : (g > goal ? 'high' : 'done');
         return (
           <div key={d.key} className="legend-row">
@@ -152,7 +151,6 @@ export function DayGoals({ n, goals, onWeighIn }: { n: Nut; goals?: Partial<Reco
               <span className="grow">{d.label}{state === 'done' && d.floor && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
               <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word} ${goal}` : ''} ג׳</span></span>
             </div>
-            {!goal && d.floor && <button className="btn small" onClick={onWeighIn}>הזינו משקל כדי לקבוע יעד חלבון</button>}
             {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (g / goal) * 100)}%`, background: state ? undefined : `var(--${d.key})` }} /></div> : null}
           </div>
         );
@@ -162,15 +160,14 @@ export function DayGoals({ n, goals, onWeighIn }: { n: Nut; goals?: Partial<Reco
 }
 
 // Where the diary's goals come from, with the general guidance to change them by.
-export function GoalsInfo({ protein, carbs, weightKg, heightCm }: { protein?: number | null; carbs?: number | null; weightKg?: number; heightCm?: number }) {
-  const counted = weightKg && heightCm ? proteinKg(weightKg, heightCm) : 0;
+export function GoalsInfo({ goals }: { goals: Goals }) {
   return (
     <details>
       <summary><Icon name="chevron-down" />איך נקבעו היעדים?</summary>
       <div className="form small">
-        <h4>חלבון{protein ? `: לפחות ${protein} ג׳` : ''}</h4>
-        <p>החלבון נמדד לפי משקל הגוף. האפליקציה מציעה {PROTEIN_PER_KG} ג׳ לכל ק״ג, כדי לשמור על שריר ולבנות אותו. נספר המשקל שלך, אבל לא יותר מהמשקל שבו BMI הוא 25 לגובה שלך, כדי שמשקל עודף לא ינפח את היעד.</p>
-        {counted ? <p>אצלך: {PROTEIN_PER_KG} × {counted} ק״ג{counted < weightKg! ? ` (מתוך ${weightKg})` : ''} = {Math.round(PROTEIN_PER_KG * counted)} ג׳. מתעדכן בכל שקילה.</p> : <p>אחרי שקילה בהגדרות יופיע כאן החישוב שלך.</p>}
+        <p>ברירת המחדל היא הערכים שבתוויות המזון, לאדם ממוצע שאוכל {DEFAULT_GOALS.kcal} קק״ל. כל אחד שונה, אז אפשר להתאים אותם לגוף ולמטרה שלך בהגדרות.</p>
+        <h4>חלבון: לפחות {goals.protein} ג׳</h4>
+        <p>החלבון תלוי במשקל הגוף. בהתאמה האישית האפליקציה מחשבת {PROTEIN_PER_KG} ג׳ לכל ק״ג, כדי לשמור על שריר ולבנות אותו, ולא סופרת משקל מעל BMI 25 כדי שמשקל עודף לא ינפח את היעד.</p>
         <table className="tbl">
           <thead><tr><th scope="col">מצב</th><th scope="col">ג׳ לכל ק״ג</th></tr></thead>
           <tbody>
@@ -179,8 +176,8 @@ export function GoalsInfo({ protein, carbs, weightKg, heightCm }: { protein?: nu
             <tr><td>אימוני כוח ובניית שריר</td><td><span dir="ltr">1.6–2.2</span></td></tr>
           </tbody>
         </table>
-        <h4>פחמימות{carbs ? `: עד ${carbs} ג׳` : ''}</h4>
-        <p>גבול רך: הפס ירוק מתחת ליעד וכתום מעליו. האפליקציה מציעה עד {CARBS_MAX} ג׳, תחילת הטווח של תזונה דלת פחמימות.</p>
+        <h4>פחמימות: עד {goals.carbs} ג׳</h4>
+        <p>גבול רך: הפס ירוק מתחת ליעד וכתום מעליו. בהתאמה האישית בוחרים תוכנית מהטבלה.</p>
         <table className="tbl">
           <thead><tr><th scope="col">גישה</th><th scope="col">ג׳ ליום</th></tr></thead>
           <tbody>
@@ -192,7 +189,7 @@ export function GoalsInfo({ protein, carbs, weightKg, heightCm }: { protein?: nu
         </table>
         <h4>שומן</h4>
         <p>אין לו יעד ביומן: הוא כבר בתוך הקלוריות. כדאי שלא ירד מתחת ל־20% מהקלוריות (הורמונים, ספיגת ויטמינים A, D, E, K). רואים אותו בדוחות.</p>
-        <p className="muted">מקורות: ההמלצות התזונתיות של האקדמיה הלאומית לרפואה בארה״ב (RDA) וההנחיות התזונתיות לאמריקאים; עמדת ISSN על חלבון (2017). מידע כללי, לא ייעוץ רפואי. לשינוי היעדים: הגדרות ← יעדים יומיים.</p>
+        <p className="muted">מקורות: ההמלצות התזונתיות של האקדמיה הלאומית לרפואה בארה״ב (RDA) וההנחיות התזונתיות לאמריקאים; עמדת ISSN על חלבון (2017). מידע כללי, לא ייעוץ רפואי. לשינוי: הגדרות ← התאמת היעדים, או הקלדה ביעדים יומיים.</p>
       </div>
     </details>
   );
