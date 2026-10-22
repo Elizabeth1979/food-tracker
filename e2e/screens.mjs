@@ -167,7 +167,12 @@ test('the foods tab: search first, then my foods and saved meals; the database o
   await grapes.first().waitFor();
   assert.equal(await page.getByRole('region', { name: /^המזונות שלי/ }).count(), 0); // while searching, only results
   await search.fill('מסטיק בדיקה');
-  assert.ok(await page.getByRole('button', { name: 'הוסף ליומן: מסטיק בדיקה' }).getByText('שלי', { exact: true }).isVisible());
+  assert.ok(await page.getByText('שלי', { exact: true }).first().isVisible());
+  // rows show just the name; tapping it opens the values and the edit buttons
+  const edit = button('עריכה: מסטיק בדיקה');
+  assert.ok(!(await edit.isVisible()));
+  await page.getByText('מסטיק בדיקה', { exact: true }).tap();
+  await edit.waitFor();
   await search.fill('');
   // one tap on a saved meal adds it to today, at the meal of the time of day (lunch); "בטל" takes it back
   const regular = page.getByRole('button', { name: 'הוסף ליומן: ערב קבוע' });
