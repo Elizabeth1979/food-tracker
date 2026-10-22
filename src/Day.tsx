@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Ctx } from './App';
 import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
-import { DayGoals, Group, Ring } from './ui';
+import { DayGoals, GoalsInfo, Group, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -77,6 +77,7 @@ export default function Day({ ctx, date, setDate, onExport }: { ctx: Ctx; date: 
           <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
           <DayGoals n={tot} goals={ctx.profile ?? undefined} />
         </div>
+        <GoalsInfo protein={ctx.profile?.protein} carbs={ctx.profile?.carbs} weightKg={ctx.weights.at(-1)?.kg} heightCm={ctx.profile?.body?.heightCm} />
       </section>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
