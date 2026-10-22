@@ -136,20 +136,20 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
   );
 }
 
-// The diary's two goals: protein is a minimum to reach, carbs a soft limit to stay under.
-// Fat and micros are in Reports.
-const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות', floor: true }, { key: 'carbs', label: 'פחמימות', word: 'עד', floor: false }] as const;
+// The diary's goals: protein is a minimum to reach, carbs a soft limit to stay under. Micros are in Reports.
+// Fat is shown for reference only: no green or amber, since too little is as unhealthy as too much.
+const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות ', kind: 'min' }, { key: 'carbs', label: 'פחמימות', word: 'עד ', kind: 'max' }, { key: 'fat', label: 'שומן', word: '', kind: 'ref' }] as const;
 export function DayGoals({ n, goals }: { n: Nut; goals: Goals }) {
   return (
     <div className="legend">
       {DAY_GOALS.map((d) => {
         const g = n[d.key], goal = goals[d.key];
-        const state = !goal ? '' : d.floor ? (g >= goal ? 'done' : '') : (g > goal ? 'high' : 'done');
+        const state = d.kind === 'min' ? (g >= goal ? 'done' : '') : d.kind === 'max' ? (g > goal ? 'high' : 'done') : '';
         return (
           <div key={d.key} className="legend-row">
             <div className="legend-line">
-              <span className="grow">{d.label}{state === 'done' && d.floor && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
-              <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word} ${goal}` : ''} ג׳</span></span>
+              <span className="grow">{d.label}{state === 'done' && d.kind === 'min' && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
+              <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word}${goal}` : ''} ג׳</span></span>
             </div>
             {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (g / goal) * 100)}%`, background: state ? undefined : `var(--${d.key})` }} /></div> : null}
           </div>
@@ -187,8 +187,8 @@ export function GoalsInfo({ goals }: { goals: Goals }) {
             <tr><td>קטו (כדאי בליווי רופא)</td><td><span dir="ltr">20–50</span></td></tr>
           </tbody>
         </table>
-        <h4>שומן</h4>
-        <p>אין לו יעד ביומן: הוא כבר בתוך הקלוריות. כדאי שלא ירד מתחת ל־20% מהקלוריות (הורמונים, ספיגת ויטמינים A, D, E, K). רואים אותו בדוחות.</p>
+        <h4>שומן: {goals.fat} ג׳</h4>
+        <p>מוצג לעיון, בלי ירוק או כתום: הוא כבר בתוך הקלוריות. כדאי שלא ירד מתחת ל־20% מהקלוריות (הורמונים, ספיגת ויטמינים A, D, E, K).</p>
         <p className="muted">מקורות: ההמלצות התזונתיות של האקדמיה הלאומית לרפואה בארה״ב (RDA) וההנחיות התזונתיות לאמריקאים; עמדת ISSN על חלבון (2017). מידע כללי, לא ייעוץ רפואי. לשינוי: הגדרות ← התאמת היעדים, או הקלדה ביעדים יומיים.</p>
       </div>
     </details>

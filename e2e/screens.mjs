@@ -86,7 +86,7 @@ test('the diary shows them under the right meals, with a total', async () => {
   // not tailored yet: the nutrition-label defaults, marked as general, with a way to tailor them
   assert.match(await summary.innerText(), /חלבון[\s\S]*\/ לפחות 50 ג׳[\s\S]*פחמימות[\s\S]*\/ עד 275 ג׳/);
   assert.ok(await summary.getByText(/^יעדים כלליים/).isVisible());
-  assert.doesNotMatch(await summary.innerText(), /שומן/);
+  assert.match(await summary.innerText(), /פחמימות[\s\S]*שומן[\s\S]*\/ 78 ג׳/); // fat last, for reference
   // where the goals come from, with the guidance tables
   await page.getByText('איך נקבעו היעדים?').tap();
   assert.equal(await summary.getByRole('table').count(), 2);
