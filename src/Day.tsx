@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
-import { MEALS, pickItem, addDays, addEntries, amountLabel, client, fmtDate, loadEntries, mealNow, sum, today, type Entry, type MealKey } from './lib';
-import { DayGoals, GoalsInfo, Group, Ring } from './ui';
+import { MEALS, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
+import { DayGoals, GoalsInfo, Group, Modal, Ring } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -20,9 +20,16 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
   const [undo, setUndo] = useState<Entry | null>(null);
   const [toggled, setToggled] = useState<Record<string, boolean>>({}); // `${date}:${meal}` → open
 
+  const [photos, setPhotos] = useState<MealPhoto[]>([]);
+  const [viewing, setViewing] = useState<MealPhoto | null>(null);
+
   useEffect(() => {
     setEntries(null);
     loadEntries(date, date).then(setEntries);
+    let current = true; // a slow answer for a day already left mustn't show its photos here
+    setPhotos([]);
+    listPhotos(date).then((ps) => current && setPhotos(ps));
+    return () => { current = false; };
   }, [date]);
 
   const list = entries ?? [];
@@ -45,6 +52,12 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
   const restore = async (e: Entry) => {
     setUndo(null);
     added(await addEntries(e.date, e.meal as MealKey, [pickItem(e)]));
+  };
+  const removePhoto = async (p: MealPhoto) => {
+    if (!confirm('למחוק את התמונה?')) return;
+    await deletePhoto(p);
+    setPhotos((cur) => cur.filter((x) => x.path !== p.path));
+    setViewing(null);
   };
   const saveMeal = async (meal: MealKey) => {
     const items = list.filter((e) => e.meal === meal).map(pickItem);
@@ -89,6 +102,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
       <Group title="ארוחות" body="">
       {MEALS.map((m) => {
         const es = list.filter((e) => e.meal === m.key);
+        const ps = photos.filter((p) => p.meal === m.key);
         const open = isOpen(m.key);
         return (
           <section key={m.key} className="meal" aria-label={m.label}>
@@ -101,6 +115,11 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
               </h3>
             </header>
             <div id={`meal-${m.key}`} hidden={!open}>
+              {ps.length > 0 && (
+                <div className="meal-photos">
+                  {ps.map((p, i) => <button key={p.path} aria-label={`תמונה ${i + 1}: ${m.label}`} onClick={() => setViewing(p)}><img src={p.url} alt="" /></button>)}
+                </div>
+              )}
               {es.map((e) => (
                 <div key={e.id} className="row" role="button" tabIndex={0} onClick={() => setEditing(e)}>
                   <div className="grow"><div>{e.name}</div><small className="muted">{amountLabel(e)}</small></div>
@@ -120,7 +139,14 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
       </div>
 
       {adding && <AddDialog ctx={ctx} meal={adding} date={date} onClose={() => setAdding(null)} onAdded={added}
-        onRemoved={(es) => setEntries((cur) => cur!.filter((x) => !es.some((e) => e.id === x.id)))} />}
+        onRemoved={(es) => setEntries((cur) => cur!.filter((x) => !es.some((e) => e.id === x.id)))}
+        onPhoto={(p) => { setPhotos((cur) => [...cur, p]); setOpen(p.meal, true); }} />}
+      {viewing && (
+        <Modal title={`תמונה: ${MEALS.find((m) => m.key === viewing.meal)!.label}`} onClose={() => setViewing(null)}>
+          <img src={viewing.url} alt="הארוחה שצולמה" />
+          <button className="btn danger" onClick={() => removePhoto(viewing)}>מחק תמונה</button>
+        </Modal>
+      )}
       {editing && (
         <EntryDialog ctx={ctx} entry={editing} onClose={() => setEditing(null)} onDelete={() => { remove(editing); setEditing(null); }}
           onSaved={(e) => { setEntries((cur) => cur!.map((x) => (x.id === e.id ? e : x))); setEditing(null); }} />

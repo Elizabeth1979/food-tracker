@@ -51,7 +51,16 @@ export const hasPending = () => false;
 // A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
 // a meal, or for `mode: 'label'` a granola bar's nutrition table (per 100 g, with a 30 g bar as the serving).
 const session = { user: { id: 'test-user', email: 'מצב בדיקה' } };
+// Meal photos stay in memory for this page only: path → blob URL.
+const files = new Map<string, string>();
+const bucket = {
+  upload: async (path: string, blob: Blob) => { files.set(path, URL.createObjectURL(blob)); return { error: null }; },
+  list: async (dir: string) => ({ data: [...files.keys()].filter((p) => p.startsWith(dir + '/')).map((p) => ({ name: p.slice(dir.length + 1) })), error: null }),
+  createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: files.get(path) ?? null })), error: null }),
+  remove: async (paths: string[]) => { paths.forEach((p) => files.delete(p)); return { error: null }; },
+};
 export const supabase = {
+  storage: { from: (_bucket: string) => bucket },
   auth: {
     getSession: async () => ({ data: { session } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),

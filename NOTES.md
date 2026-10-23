@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: meal photos kept in the diary
+
+**Done:**
+- A photo whose foods are added is saved with the meal (`savePhoto` in `lib.ts`, after "הוסף ל…" in the review list) and shown in the diary as a square above that meal's foods; tap opens it with "מחק תמונה". Storage bucket `meal-photos` (private, JPEG, 2 MB max), path `<user>/<date>/<meal>.<id>.jpg`, so no table; migration `meal_photos_bucket`. CSP `img-src` now allows the Supabase origin for the signed URLs. Test mode keeps photos in memory.
+
+**Next / limits:** offline, a photo isn't saved (the error banner says so) and the diary shows none. Photos aren't in the JSON backup. Moving a meal's entries to another meal leaves the photo where it was.
+
 ## 2026-10-23: usual foods at another amount
 
 **Done:**

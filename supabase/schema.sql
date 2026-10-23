@@ -71,3 +71,11 @@ create policy own on entries for all to authenticated using (user_id = (select a
 create policy own on saved_meals for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy own on profiles for all to authenticated using (id = (select auth.uid())) with check (id = (select auth.uid()));
 create policy own on weights for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+-- Meal photos: a private Storage bucket, one folder per user (<user>/<date>/<meal>.<id>.jpg); the path says where a
+-- photo belongs, so there is no table. A user reaches only their own folder.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('meal-photos', 'meal-photos', false, 2097152, array['image/jpeg']);
+create policy own_meal_photos on storage.objects for all to authenticated
+  using (bucket_id = 'meal-photos' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'meal-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
