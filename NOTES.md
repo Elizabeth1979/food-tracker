@@ -9,6 +9,13 @@ What was done in each work session and what's next. Newest first.
 - A saved meal now counts the meals that had all its foods (it used to average its foods' counts, so a meal with tea in it ranked as high as tea). It's marked with the utensils icon (and "ארוחה שמורה" for screen readers); the hint line explains the icon.
 - Screen test: six typed foods + the saved meal, one list, 10 shown, the rest behind "עוד", no separate saved-meals group. Fails with the old two lists.
 
+## 2026-10-23: quicker logging: no meal buttons, a label button, foods page tucked away
+
+**Done:**
+- The owner doesn't care about breakfast/lunch/dinner and wants logging quick. The ＋ window has no meal buttons now: everything goes to the meal of the time of day; buttons say "הוסף" / "סיום · נוספו N · K קק״ל". The diary still groups by meal, and the entry editor keeps its meal buttons for moving one.
+- "תווית": a 4th big button beside צילום / מהגלריה / כתיבה (`FileButton` in `ui.tsx`, shared with `PhotoPick`; `.choices` lays out any number in a row). It opens the camera, reads the label, and `LabelCheck` shows the name and values; "המשך" saves the food and opens the amount, "עריכה" opens `FoodForm` filled in (`labelFood` in `Foods.tsx`, shared with the form's own label reading). The old "מוצר ארוז או תוסף?" link is gone.
+- The מזונות tab is out of the bottom bar; Settings → "המזונות והארוחות שלי" opens the same page (editing and hiding foods, saved meals). Screen test reworked: it picks meals with the clock (`at()`), and opens the foods page through Settings.
+
 ## 2026-10-23: the photo guesses hidden oil and sauce
 
 **Done:**

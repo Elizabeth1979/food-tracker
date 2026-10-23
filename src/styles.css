@@ -220,8 +220,8 @@ summary::-webkit-details-marker { display: none; }
 summary { list-style: none; }
 .form label:not(.btn), .report label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); } /* field labels; a <label class=btn> is a button */
 .form label input { color: var(--text); font-size: 16px; }
-.grid2, .grid3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.grid3 { grid-template-columns: repeat(3, 1fr); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choices { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; }
 
 /* reports */
 .chart { width: 100%; max-width: 760px; height: auto; display: block; margin: 0 auto; }
