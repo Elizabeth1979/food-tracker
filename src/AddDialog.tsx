@@ -104,20 +104,25 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const meals = q ? ctx.meals.filter((m) => norm(m.name).includes(norm(q))) : ctx.meals;
   // Order fixed when the dialog opens: adding moves a food up in "recent", and rows mustn't jump under your finger.
   const [order] = useState(ctx.recent);
-  // Saved meals and single foods, each list ordered by how often you've had them this past month, at any meal
-  // (a saved meal by how often its foods were), then by the most recent. The same list whatever the meal:
-  // the owner wants it to stay put, with what she logs most at the top.
-  const [usualMeals, usualFoods] = useMemo(() => {
+  // Saved meals and single foods in one list, by how often you've had them this past month, at any meal, then by
+  // the most recent. A food counts each time it was logged; a saved meal each meal that had all of its foods.
+  // The same list whatever the meal: the owner wants it to stay put, with what she logs most at the top.
+  const usual = useMemo(() => {
     const n: Record<string, number> = {};
-    for (const e of month) if (e.foodId) n[e.foodId] = (n[e.foodId] ?? 0) + 1;
-    const byScore = <T extends { score: number; i: number }>(xs: T[]) => xs.sort((a, b) => b.score - a.score || a.i - b.i);
-    const saved = ctx.meals.map((m, i) => {
+    const had: Record<string, Set<string>> = {}; // the foods of each meal eaten: "<date>|<meal>"
+    for (const e of month) if (e.foodId) {
+      n[e.foodId] = (n[e.foodId] ?? 0) + 1;
+      (had[`${e.date}|${e.meal}`] ??= new Set()).add(e.foodId);
+    }
+    const byScore = <T extends { score: number }>(xs: T[]) => xs.sort((a, b) => b.score - a.score); // stable: ties stay most recent first
+    const foods = byScore(searchFoods(ctx.foods, '', order).map((f) => ({ key: `f:${f.id}`, f, score: n[f.id] ?? 0 }))).slice(0, USUAL_MAX);
+    const saved = ctx.meals.map((m) => {
       const items = json<Item[]>(m.items, []);
-      const score = items.reduce((t, it) => t + (n[it.foodId ?? ''] ?? 0), 0) / (items.length || 1);
-      return { key: `m:${m.id}`, m, items, score, i };
+      const ids = items.flatMap((it) => (it.foodId ? [it.foodId] : []));
+      const score = ids.length ? Object.values(had).filter((s) => ids.every((id) => s.has(id))).length : 0;
+      return { key: `m:${m.id}`, m, items, score };
     });
-    const foods = searchFoods(ctx.foods, '', order).map((f, i) => ({ key: `f:${f.id}`, f, score: n[f.id] ?? 0, i }));
-    return [byScore(saved), byScore(foods).slice(0, 12)];
+    return byScore([...foods, ...saved]);
   }, [ctx.foods, ctx.meals, order, month]);
   const [more, setMore] = useState(false);
   const label = MEALS.find((m) => m.key === meal)!.label;
@@ -147,7 +152,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     return it ? add(key, it) : setSel(food!); // no amount on record yet: ask once
   };
 
-  const mealPick = (r: { key: string; m: SavedMeal; items: Item[] }) => <Pick key={r.key} on={!!done[r.key]} name={r.m.name} detail={r.items.map((i) => i.name.split(',')[0]).join(' · ')}
+  const mealPick = (r: { key: string; m: SavedMeal; items: Item[] }) => <Pick key={r.key} saved on={!!done[r.key]} name={r.m.name} detail={r.items.map((i) => i.name.split(',')[0]).join(' · ')}
     kcal={sum(r.items).kcal} onClick={() => toggle(r.key, () => r.items)} />;
   const foodPick = (r: { key: string; f: Food }) => {
     const e = last[r.f.id];
@@ -193,18 +198,12 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
           <div className="usual">
             {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : <>
               {/* Your usual things, one tap each with last time's amount; ignore them and search, photograph or type instead */}
-              {usualFoods.length > 0 && (
+              {usual.length > 0 && (
                 <section aria-labelledby={`${uid}-u`}>
                   <h3 id={`${uid}-u`}>הרגילים שלך</h3>
-                  <p className="muted small">לחיצה על ＋ מוסיפה בכמות של הפעם הקודמת. לכמות אחרת, לחצו על השם.</p>
-                  {(more ? usualFoods : usualFoods.slice(0, USUAL_SHOWN)).map(foodPick)}
-                  {!more && usualFoods.length > USUAL_SHOWN && <button className="link" onClick={() => setMore(true)}>עוד {usualFoods.length - USUAL_SHOWN}</button>}
-                </section>
-              )}
-              {usualMeals.length > 0 && (
-                <section aria-labelledby={`${uid}-m`}>
-                  <h3 id={`${uid}-m`}>ארוחות שמורות</h3>
-                  {usualMeals.map(mealPick)}
+                  <p className="muted small">לחיצה על ＋ מוסיפה בכמות של הפעם הקודמת. לכמות אחרת, לחצו על השם. <Icon name="utensils" /> ארוחה שמורה.</p>
+                  {(more ? usual : usual.slice(0, USUAL_SHOWN)).map((r) => ('m' in r ? mealPick(r) : foodPick(r)))}
+                  {!more && usual.length > USUAL_SHOWN && <button className="link" onClick={() => setMore(true)}>עוד {usual.length - USUAL_SHOWN}</button>}
                 </section>
               )}
             </>}
@@ -213,7 +212,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
                 <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
               </button>
             ))}
-            {!q && !usualFoods.length && !usualMeals.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
+            {!q && !usual.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
             {q && <button className="row muted" onClick={() => setCreating(true)}><Icon name="plus" />מזון חדש: ״{q}״</button>}
           </div>
         </>
@@ -226,7 +225,8 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   );
 }
 
-const USUAL_SHOWN = 5;
+const USUAL_SHOWN = 10;
+const USUAL_MAX = 30; // single foods behind "עוד"; saved meals are all there
 
 // Which meal an entry goes to: four tabs, the chosen one pressed.
 const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => void }) => (
@@ -236,10 +236,11 @@ const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => 
 );
 
 // A usual thing: tap adds it, tap again takes it out. With onOpen, only ＋ does that, and the name opens the amount picker.
-function Pick({ name, detail, kcal, on, onClick, onOpen }: { name: string; detail?: string; kcal?: number; on: boolean; onClick: () => void; onOpen?: () => void }) {
+// A saved meal is marked with the utensils icon, named for screen readers too.
+function Pick({ name, detail, kcal, on, saved, onClick, onOpen }: { name: string; detail?: string; kcal?: number; on: boolean; saved?: boolean; onClick: () => void; onOpen?: () => void }) {
   const body = <>
     <div className="grow">
-      <div>{name}</div>
+      <div>{saved && <Icon name="utensils" />}{name}{saved && <span className="sr-only"> (ארוחה שמורה)</span>}</div>
       {detail && <small className="muted">{detail}</small>}
     </div>
     {kcal != null && <span className="kcal">{kcal}</span>}

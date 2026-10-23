@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: the add window: foods and saved meals in one list
+
+**Done:**
+- The owner wanted one list, not "הרגילים שלך" and "ארוחות שמורות" apart. Now one list, most logged this past month first (at any meal), then most recent. 10 shown (was 5), up to 30 foods plus every saved meal behind "עוד".
+- A saved meal now counts the meals that had all its foods (it used to average its foods' counts, so a meal with tea in it ranked as high as tea). It's marked with the utensils icon (and "ארוחה שמורה" for screen readers); the hint line explains the icon.
+- Screen test: six typed foods + the saved meal, one list, 10 shown, the rest behind "עוד", no separate saved-meals group. Fails with the old two lists.
+
 ## 2026-10-23: the photo guesses hidden oil and sauce
 
 **Done:**
