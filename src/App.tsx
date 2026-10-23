@@ -5,6 +5,7 @@ import Day from './Day';
 import Reports from './Reports';
 import Foods from './Foods';
 import Settings from './Settings';
+import Guide from './Guide';
 import { Icon, type IconName } from './icons';
 import { AskHost } from './ui';
 
@@ -21,11 +22,11 @@ export type Ctx = {
   recent: string[];
   addRecent: (ids: string[]) => void;
 };
-type Tab = 'day' | 'reports' | 'foods' | 'settings';
-const TABS: [Tab, string, IconName][] = [['day', 'יומן', 'book'], ['reports', 'דוחות', 'chart'], ['foods', 'מזונות', 'utensils'], ['settings', 'הגדרות', 'sliders']];
+type Tab = 'day' | 'reports' | 'foods' | 'guide' | 'settings';
+const TABS: [Tab, string, IconName][] = [['day', 'יומן', 'book'], ['reports', 'דוחות', 'chart'], ['foods', 'מזונות', 'utensils'], ['guide', 'מדריך', 'book'], ['settings', 'הגדרות', 'sliders']];
 
-// The foods page isn't in the bar (logging is all in the ＋ window); it opens from Settings.
-const NAV = TABS.filter(([k]) => k !== 'foods');
+// The foods page and the guide aren't in the bar (logging is all in the ＋ window); they open from Settings.
+const NAV = TABS.filter(([k]) => k !== 'foods' && k !== 'guide');
 
 const hashTab = (): Tab => TABS.find(([k]) => `#${k}` === location.hash)?.[0] ?? 'day';
 
@@ -129,7 +130,8 @@ export default function App({ email }: { email: string }) {
         {tab === 'day' && <Day ctx={ctx} date={date} setDate={setDate} onExport={() => setTab('reports')} onTailor={() => setTab('settings')} />}
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
         {tab === 'foods' && <Foods ctx={ctx} date={date} />}
-        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} onFoods={() => setTab('foods')} />}
+        {tab === 'guide' && <Guide />}
+        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} onFoods={() => setTab('foods')} onGuide={() => setTab('guide')} />}
       </main>
       <AskHost />
     </div>
