@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
@@ -17,7 +17,9 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
   const [adding, setAdding] = useState<MealKey | null>(() => (shortcut ? (MEALS.some((m) => m.key === shortcut) ? (shortcut as MealKey) : mealNow()) : null));
   const [editing, setEditing] = useState<Entry | null>(null);
   const [msg, setMsg] = useState('');
-  const [undo, setUndo] = useState<Entry | null>(null);
+  // The deleted entry, with its meal's photos when it was the meal's last food (they go with it unless undone).
+  const [undo, setUndo] = useState<{ e: Entry; photos: MealPhoto[] } | null>(null);
+  const undone = useRef(new Set<string>());
   const [toggled, setToggled] = useState<Record<string, boolean>>({}); // `${date}:${meal}` → open
 
   const [photos, setPhotos] = useState<MealPhoto[]>([]);
@@ -52,11 +54,19 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
   const remove = async (e: Entry) => {
     await client.models.Entry.delete({ id: e.id });
     setEntries((cur) => cur!.filter((x) => x.id !== e.id));
-    setUndo(e);
-    setTimeout(() => setUndo((u) => (u?.id === e.id ? null : u)), 6000);
+    const last = !isWater(e) && !food.some((x) => x.meal === e.meal && x.id !== e.id);
+    const ps = last ? photos.filter((p) => p.meal === e.meal) : [];
+    setPhotos((cur) => cur.filter((p) => !ps.includes(p)));
+    setUndo({ e, photos: ps });
+    setTimeout(() => {
+      setUndo((u) => (u?.e.id === e.id ? null : u));
+      if (!undone.current.delete(e.id)) ps.forEach((p) => void deletePhoto(p));
+    }, 6000);
   };
-  const restore = async (e: Entry) => {
+  const restore = async ({ e, photos: ps }: { e: Entry; photos: MealPhoto[] }) => {
+    undone.current.add(e.id);
     setUndo(null);
+    setPhotos((cur) => [...cur, ...ps]);
     added(await addEntries(e.date, e.meal as MealKey, [pickItem(e)]));
   };
   const removePhoto = async (p: MealPhoto) => {
@@ -105,7 +115,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
       </section>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
-      {undo && <div className="toast">״{undo.name}״ נמחק <button onClick={() => restore(undo)}>בטל</button></div>}
+      {undo && <div className="toast" role="status">״{undo.e.name}״ נמחק{undo.photos.length ? ' עם תמונת הארוחה' : ''} <button onClick={() => restore(undo)}>בטל</button></div>}
       {entries === null && <div className="muted center">טוען…</div>}
 
       <Group title="ארוחות" body="">

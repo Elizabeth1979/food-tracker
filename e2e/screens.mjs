@@ -218,6 +218,33 @@ test('moving between days', async () => {
   assert.equal(await entries('ארוחת ערב').count(), 6);
 });
 
+test('deleting a meal\'s last food takes its photo too, and undo brings both back', async () => {
+  await button('יום קודם').tap();
+  await openAdd();
+  await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await button('זהה מזונות', dialog()).tap();
+  await button(/^הוסף לארוחת צהריים/, dialog()).tap();
+  await button(/^סיום/, dialog()).tap();
+  const photo = button('תמונה 1: ארוחת צהריים', meal('ארוחת צהריים'));
+  await photo.waitFor();
+  const foods = entries('ארוחת צהריים');
+  while (await foods.count() > 1) { await foods.first().tap(); assert.equal(await photo.count(), 1); } // not the last: the photo stays
+  await foods.first().tap();
+  await page.getByRole('status').filter({ hasText: 'נמחק עם תמונת הארוחה' }).waitFor();
+  assert.equal(await photo.count(), 0);
+  await button('בטל').tap();
+  await photo.waitFor();
+  assert.equal(await foods.count(), 1);
+  // without undo it's gone for good: still gone after a reload
+  await foods.first().tap();
+  await page.getByRole('status').filter({ hasText: 'נמחק' }).waitFor({ state: 'detached', timeout: 10_000 });
+  await page.reload();
+  await button('יום קודם').tap();
+  await meal('ארוחת צהריים').getByText('עוד לא נרשם כלום').waitFor();
+  assert.equal(await photo.count(), 0);
+  await button('יום הבא').tap();
+});
+
 test('the phone back button closes a window, and returns from the reports tab to the diary', async () => {
   await openAdd();
   await page.keyboard.press('Escape'); // the same close request Android's back gesture sends
