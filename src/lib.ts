@@ -144,16 +144,52 @@ export async function savePhoto(file: File, date: string, meal: MealKey): Promis
   if (error) throw error;
   return (await signed([path]))[0];
 }
+// The names one level down in a folder (files, or the day folders), oldest first; Storage pages its lists.
+async function names(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await photos().list(dir, { limit: 1000, offset, sortBy: { column: 'created_at', order: 'asc' } });
+    if (error) throw error;
+    out.push(...data.map((f) => f.name));
+    if (data.length < 1000) return out;
+  }
+}
 export async function listPhotos(date: string): Promise<MealPhoto[]> {
   if (!navigator.onLine) return [];
   const dir = `${await userId()}/${date}`;
-  const { data, error } = await photos().list(dir, { sortBy: { column: 'created_at', order: 'asc' } });
-  if (error) throw error;
-  return data.length ? signed(data.map((f) => `${dir}/${f.name}`)) : [];
+  const files = await names(dir);
+  return files.length ? signed(files.map((f) => `${dir}/${f}`)) : [];
 }
 export async function deletePhoto(p: MealPhoto) {
   const { error } = await photos().remove([p.path]);
   if (error) throw error;
+}
+
+// Backups carry the photos as base64 JPEGs, each by its path inside the user's folder (<date>/<meal>.<id>.jpg).
+export type PhotoFile = { path: string; jpeg: string };
+const toBase64 = (b: Blob) => new Promise<string>((ok, fail) => {
+  const r = new FileReader();
+  r.onload = () => ok((r.result as string).split(',')[1]);
+  r.onerror = () => fail(r.error);
+  r.readAsDataURL(b);
+});
+export async function exportPhotos(): Promise<PhotoFile[]> {
+  const me = await userId();
+  const paths = (await Promise.all((await names(me)).map(async (day) => (await names(`${me}/${day}`)).map((f) => `${day}/${f}`)))).flat();
+  return Promise.all(paths.map(async (path) => {
+    const { data, error } = await photos().download(`${me}/${path}`);
+    if (error) throw error;
+    return { path, jpeg: await toBase64(data) };
+  }));
+}
+// Puts the backup's photos back in the user's folder; photos already there stay.
+export async function restorePhotos(files: PhotoFile[]) {
+  const me = await userId();
+  for (const { path, jpeg } of files) {
+    const body = new Blob([Uint8Array.from(atob(jpeg), (c) => c.charCodeAt(0))], { type: 'image/jpeg' });
+    const { error } = await photos().upload(`${me}/${path}`, body, { contentType: 'image/jpeg', upsert: true });
+    if (error) throw error;
+  }
 }
 
 // One weigh-in a day: a second one that day replaces it. Returns the new list, oldest first.

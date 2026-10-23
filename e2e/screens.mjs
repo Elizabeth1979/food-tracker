@@ -6,6 +6,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 
 const PORT = 5175;
@@ -84,14 +85,31 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   await dialog().waitFor({ state: 'detached' });
 });
 
-test('the meal photo is kept with the meal: open it, then delete it', async () => {
+test('the meal photo is kept with the meal; a backup carries it; delete, then restore it', async () => {
   const photo = button('תמונה 1: ארוחת ערב', meal('ארוחת ערב'));
   await photo.tap();
   assert.ok(await dialog().getByRole('img', { name: 'הארוחה שצולמה' }).isVisible());
+  await button('סגור', dialog()).tap();
+  // the backup file holds the photo itself
+  await button(/הגדרות/).tap();
+  const [download] = await Promise.all([page.waitForEvent('download'), button('הורדת גיבוי').tap()]);
+  const backup = await readFile(await download.path());
+  const { Photo } = JSON.parse(backup.toString());
+  assert.equal(Photo.length, 1);
+  assert.match(Photo[0].path, /^\d{4}-\d\d-\d\d\/dinner\..+\.jpg$/);
+  assert.ok(Photo[0].jpeg.length > 100);
+  // delete it, and restoring the backup brings it back
+  await button('יומן').tap();
+  await photo.tap();
   page.once('dialog', (d) => d.accept());
   await button('מחק תמונה', dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await photo.count(), 0);
+  await button(/הגדרות/).tap();
+  page.once('dialog', (d) => d.accept());
+  await Promise.all([page.waitForEvent('load'), page.getByLabel('שחזור מגיבוי').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: backup })]);
+  await button('יומן').tap();
+  await photo.waitFor();
 });
 
 test('the diary shows them under the right meals, with a total', async () => {
