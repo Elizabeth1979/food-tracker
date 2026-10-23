@@ -182,26 +182,28 @@ test('save a meal, then add it again in one tap', async () => {
   await asked('שמירה כארוחה').getByRole('textbox', { name: 'שם הארוחה' }).fill('ערב קבוע');
   await button('שמור', asked('שמירה כארוחה')).tap();
   await page.getByText('"ערב קבוע" נשמרה').waitFor();
-  // a food logged once, just now, at breakfast: the newest, but grapes (twice) has been logged more
+  // six foods logged once, just now, at breakfast: the newest, but grapes (twice) has been logged more
   await at('08:00');
   await openAdd();
-  await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('מלפפון');
-  await button(/^מלפפון/, dialog()).first().tap();
-  await button('הוסף', dialog()).tap();
+  await button('כתיבה', dialog()).tap();
+  await dialog().getByRole('textbox', { name: /^מה אכלת/ }).fill('מלפפון, עגבניה, גזר, תפוח, בננה, חסה');
+  await button('המשך לבדיקה', dialog()).tap();
+  await button(/^הוסף \(6\)/, dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   await at('22:00');
   await openAdd();
-  // the usual foods are one list, the most logged first, not the newest
+  // one list of foods and saved meals, the most logged first, not the newest
   const usual = dialog().getByRole('region', { name: 'הרגילים שלך' });
-  const picks = usual.getByRole('button', { name: /^הוסף: / });
-  const names = () => picks.evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')));
+  const rows = usual.getByRole('button', { name: /^הוסף: |\(ארוחה שמורה\)/ }); // a food's ＋, or a saved meal
+  const names = () => rows.evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label') ?? b.textContent));
   for (let i = 0; !(await names())[0]?.includes('ענבים'); i++) { assert.ok(i < 50, 'grapes never came first'); await page.waitForTimeout(100); } // the month loads after opening
-  // saved meals have their own titled group; the usual foods show up to 5, the rest behind "עוד"
-  await button(/^ערב קבוע/, dialog().getByRole('region', { name: 'ארוחות שמורות' })).tap();
-  assert.equal(await picks.count(), 5); // 6 foods logged so far: 5 shown, the last behind "עוד"
-  await button('עוד 1', usual).tap();
-  assert.equal(await picks.count(), 6);
+  // 10 shown, the rest behind "עוד"; the saved meal is among them, marked as one
+  assert.equal(await rows.count(), 10);
+  await button(/^עוד \d/, usual).tap();
+  assert.ok(await rows.count() > 10);
+  assert.equal(await dialog().getByRole('region', { name: 'ארוחות שמורות' }).count(), 0);
+  await button(/^ערב קבוע \(ארוחה שמורה\)/, usual).tap();
   await button(/^סיום · נוספו 6/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('נשנושים ואחר').count(), 6);
