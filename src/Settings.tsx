@@ -9,7 +9,7 @@ import { goalsOf } from './goals';
 import { Tailor } from './Tailor';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
-export default function Settings({ ctx, email, onFoods }: { ctx: Ctx; email: string; onFoods: () => void }) {
+export default function Settings({ ctx, email, onFoods, onGuide }: { ctx: Ctx; email: string; onFoods: () => void; onGuide: () => void }) {
   const p = ctx.profile;
   const goalForm = (g: Partial<Profile> | null) => Object.fromEntries(GOALS.map(([k]) => [k, String(goalsOf(g)[k])]));
   const [v, setV] = useState<Record<string, string>>(() => goalForm(p));
@@ -79,6 +79,10 @@ export default function Settings({ ctx, email, onFoods }: { ctx: Ctx; email: str
       <Group title="מזונות" body="pad form">
         <p className="muted small">עריכה, הסתרה ומחיקה של מזונות שהוספת וארוחות ששמרת, וחיפוש בערכים של כל מזון.</p>
         <button className="btn" onClick={onFoods}><Icon name="utensils" />המזונות והארוחות שלי</button>
+      </Group>
+      <Group title="מדריך" body="pad form">
+        <p className="muted small">כתבות קצרות עם מקורות: קלוריות, טבלת ערכים, חלבון, מה תמונה מפספסת והערכת כמויות.</p>
+        <button className="btn" onClick={onGuide}><Icon name="book" />פתיחת המדריך</button>
       </Group>
       <Group title="גיבוי" body="pad form">
         <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>

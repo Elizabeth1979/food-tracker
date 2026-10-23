@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: a guide ("מדריך") and a research log
+
+**Done:**
+- Settings → "פתיחת המדריך" opens a guide page (a tab outside the bar, like the foods page): five short Hebrew articles, each opens in a window (back closes it) and ends with linked sources (new tab): calories and 4/4/9 (and the kcalOff warning), reading a label (the cottage cheese scan), protein (the app's 1.8 g/kg at a BMI-25 weight), what photos miss (the NIH study, the guessed-fat row), portions (Tzameret's spoon 10 g vs USDA's 13.5 g).
+- Articles are Markdown in `src/articles/`, read by a tiny parser (`src/guide.ts`, headings, paragraphs, lists, bold, https links); `guide.test.ts` checks each has headings, a not-medical-advice line and linked sources last. Screen test: open from Settings, an article, a source link, back twice.
+- `docs/research.md`: every source used so far and what it changed. CLAUDE.md points future sessions there.
+
+**Next:** the cloud session can't open most source sites (only search), so numbers were checked through search results; recheck when one matters. `GoalsInfo` says 1.6–2.2 g/kg for strength training; 2.2 wasn't confirmed this time.
+
 ## 2026-10-23: vitamins and minerals as rows with daily values
 
 **Done:**

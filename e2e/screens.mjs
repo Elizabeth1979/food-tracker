@@ -358,6 +358,26 @@ test('the foods page, from Settings: search first, then my foods and saved meals
   assert.equal(await entries('ארוחת צהריים').count(), 6); // added once, the second add undone
 });
 
+test('the guide, from Settings: an article with its sources; back closes it, back again returns to the diary', async () => {
+  assert.equal(await page.getByRole('navigation').getByRole('button', { name: /מדריך/ }).count(), 0); // not in the bar
+  await button(/הגדרות/).tap();
+  await button(/פתיחת המדריך/).tap();
+  await page.getByRole('heading', { name: 'מדריך', level: 1 }).waitFor();
+  await button(/^למה תמונה מפספסת קלוריות/).tap();
+  const article = page.getByRole('dialog', { name: 'למה תמונה מפספסת קלוריות' });
+  await article.getByRole('heading', { name: 'מקורות' }).waitFor();
+  assert.ok(await article.getByText('מידע כללי, לא ייעוץ רפואי.').isVisible());
+  // a source opens in a new tab, and says so to screen readers
+  const source = article.getByRole('link', { name: /^ScienceDaily.*\(נפתח בלשונית חדשה\)$/ });
+  assert.equal(await source.getAttribute('target'), '_blank');
+  assert.match(await source.getAttribute('rel'), /noopener/);
+  await page.keyboard.press('Escape'); // the phone's back gesture
+  await article.waitFor({ state: 'detached' });
+  await button(/^מה זו קלוריה/).waitFor(); // still on the guide
+  await page.goBack();
+  await button(/הוספה$/).waitFor();
+});
+
 test('a supplement from its label: every vitamin per tablet, logged, and summed in the day', async () => {
   await openAdd();
   // the label button opens the camera; test mode reads any photo as a multivitamin's label, values per tablet
