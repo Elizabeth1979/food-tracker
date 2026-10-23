@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { MACROS, MICROS, isFFQ, type Nut, type Unit } from './lib';
+import { MACROS, MICROS, WATER_GOAL_ML, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
 import { DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
 
@@ -161,6 +161,23 @@ export function DayGoals({ n, goals }: { n: Nut; goals: Goals }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// The day's water against its goal, a glass at a time, with the same look as the macro rows above it.
+const liters = (ml: number) => (ml / 1000).toLocaleString('he-IL', { maximumFractionDigits: 2 });
+export function WaterLine({ ml, onAdd, onRemove }: { ml: number; onAdd: () => void; onRemove?: () => void }) {
+  const done = ml >= WATER_GOAL_ML;
+  return (
+    <div className="legend-row" role="group" aria-label="מים">
+      <div className="legend-line">
+        <span className="grow">מים{done && <span className="ok"> ✓ הושג</span>}</span>
+        <span role="status"><b>{liters(ml)}</b><span className="muted"> / {liters(WATER_GOAL_ML)} ליטר</span></span>
+        <button className="icon" aria-label="פחות כוס מים" disabled={!onRemove} onClick={onRemove}><Icon name="minus" /></button>
+        <button className="icon" aria-label="עוד כוס מים" onClick={onAdd}><Icon name="plus" /></button>
+      </div>
+      <div className="bar"><i className={done ? 'done' : ''} style={{ width: `${Math.min(100, (ml / WATER_GOAL_ML) * 100)}%` }} /></div>
     </div>
   );
 }
