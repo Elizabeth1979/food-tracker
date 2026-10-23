@@ -2,6 +2,14 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: deleting a meal's last food takes its photo
+
+**Done:**
+- The owner deleted the only food in dinner and the meal photo stayed, over "עוד לא נרשם כלום". Photos aren't linked to entries (no table), so `Day.tsx` now hides the meal's photos when its last food is deleted, says so in the undo toast ("נמחק עם תמונת הארוחה", now `role="status"`), and deletes them for good once the 6-second undo passes. Undo brings both back.
+- Screen test for it (fails without the fix). CLAUDE.md: every reported bug gets a test that reproduces it.
+
+**Next:** moving a meal's last food to another meal (entry edit) still leaves the photo on the old meal.
+
 ## 2026-10-23: a photo's potato: boiled is boiled, "מעוך" is פירה
 
 **Done:**
