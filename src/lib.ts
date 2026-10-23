@@ -10,7 +10,7 @@ export const MICROS = [
   { key: 'sodium', label: 'נתרן', unit: 'מ״ג', dp: 0 },
   { key: 'calcium', label: 'סידן', unit: 'מ״ג', dp: 0 },
   { key: 'potassium', label: 'אשלגן', unit: 'מ״ג', dp: 0 },
-  { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2, rda: 2.4 },
+  { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2 },
 ] as const;
 export type MicroKey = (typeof MICROS)[number]['key'];
 // Vitamins and minerals beyond the four columns above, mostly from supplement labels: { "ויטמין D (מק״ג)": 25, … }.
@@ -87,11 +87,18 @@ export const pickItem = (e: Item): Item => {
   const { foodId, name, grams, qty, unit, kcal, carbs, fat, protein } = e;
   return { foodId, name, grams, qty, unit, kcal, carbs, fat, protein, ...Object.fromEntries(MICROS.map((m) => [m.key, e[m.key] ?? null])), extra: e.extra ?? null };
 };
-// The extras for display, in VITAMINS order then the rest: "ויטמין D 25 מק״ג".
-export const extraParts = (x: Extra | null | undefined) => Object.entries(x ?? {})
+// The extras that have a value, in VITAMINS order then the rest, split into name and unit: "ויטמין D (מק״ג)" → ויטמין D, מק״ג.
+const extraList = (x: Extra | null | undefined) => Object.entries(x ?? {})
   .filter(([, v]) => v)
   .sort(([a], [b]) => ((VITAMINS.indexOf(a) + 1 || 99) - (VITAMINS.indexOf(b) + 1 || 99)))
-  .map(([k, v]) => { const [, name, unit] = k.match(/^(.*?)\s*\((.+)\)$/) ?? [, k, '']; return `${name} ${v}${unit ? ` ${unit}` : ''}`; });
+  .map(([key, v]) => { const [, name, unit] = key.match(/^(.*?)\s*\((.+)\)$/) ?? [, key, '']; return { key, name, unit, v }; });
+// For display in one line: "ויטמין D 25 מק״ג".
+export const extraParts = (x: Extra | null | undefined) => extraList(x).map((m) => `${m.name} ${m.v}${m.unit ? ` ${m.unit}` : ''}`);
+// Every vitamin and mineral, one each: the four columns (0 counts: food carries them), then the extras. Keyed "name (unit)" like VITAMINS.
+export const microAmounts = (n: Nut) => [
+  ...MICROS.map((m) => ({ key: `${m.label} (${m.unit})`, name: m.label as string, unit: m.unit as string, v: n[m.key] ?? 0 })),
+  ...extraList(n.extra),
+];
 export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };

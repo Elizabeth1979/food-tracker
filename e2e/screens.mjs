@@ -383,11 +383,14 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   await button('הוסף', dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
-  // the day's vitamins are folded away until asked for
-  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים היום' });
+  // the day's vitamins are folded away until asked for, then a row each against the label's daily value
+  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים שצרכת היום' });
   assert.doesNotMatch(await vitamins.innerText(), /ויטמין D/);
-  await vitamins.getByText('ויטמינים ומינרלים היום').tap();
-  assert.match(await vitamins.innerText(), /ויטמין D 50 מק״ג[\s\S]*ויטמין C 160 מ״ג[\s\S]*ברזל 28 מ״ג[\s\S]*מגנזיום 100 מ״ג[\s\S]*אבץ 20 מ״ג/);
+  await vitamins.getByText('ויטמינים ומינרלים שצרכת היום').tap();
+  const rows = (await vitamins.innerText()).replace(/\s+/g, ' ');
+  for (const row of [/נתרן מעל היעד \d+ \/ עד 2300 מ״ג/, /B12 ✓ הושג [\d.]+ \/ 2.4 מק״ג/, /ויטמין D ✓ הושג 50 \/ 20 מק״ג/, /ויטמין C ✓ הושג 160 \/ 90 מ״ג/,
+    /ברזל ✓ הושג 28 \/ 18 מ״ג/, /מגנזיום 100 \/ 420 מ״ג/, /אבץ ✓ הושג 20 \/ 11 מ״ג/]) assert.match(rows, row);
+  assert.match(rows, /ויטמין D[\s\S]*ויטמין C[\s\S]*ברזל[\s\S]*מגנזיום[\s\S]*אבץ/);
   // and a food's own, per tablet, when it is opened in the foods page
   await openFoods();
   const mine = page.getByRole('region', { name: /^המזונות שלי/ });

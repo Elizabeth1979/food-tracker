@@ -2,6 +2,14 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: vitamins and minerals as rows with daily values
+
+**Done:**
+- The owner couldn't tell what the day's vitamin line was, and wanted it like the macros, with targets. "ויטמינים ומינרלים שצרכת היום" (still folded) now says what it counts and lists a row each: amount / label Daily Value, a bar, "✓ הושג" once reached; sodium is a limit ("עד 2300", "מעל היעד"). Reports has the same rows (a day's or the average) in their own card. One `GoalRow` in `ui.tsx` draws the macro rows and these; `microAmounts` in `lib.ts` lists the nutrients, `DAILY_VALUES` in `goals.ts` the targets (FDA label values, same basis as the default goals).
+- Screen test: the multivitamin's rows against their values, ✓ where reached, sodium over its limit.
+
+**Next:** the honest gap: foods carry only sodium, calcium, potassium and B12, so an orange adds no vitamin C. The full Tzameret file (data.gov.il) has vitamin C, iron, magnesium, zinc, A, D, folate…; adding them to `moh.json` would make the rows mean something for food. data.gov.il is blocked from the cloud session's network; needs the file uploaded or the domain allowed.
+
 ## 2026-10-23: the add window: foods and saved meals in one list
 
 **Done:**
