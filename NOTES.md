@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: photo amounts no longer blown up
+
+**Done:**
+- The owner's photos came back as 4 lettuces (2.6 kg) and 6 medium potatoes for two leaves and a few small potatoes. The cause was mostly the app: the model said "4 יחידה" meaning leaves, and `unitFor` turned a bare "יחידה" into the food's medium whole unit (a 648 g head).
+- `meal-photo` (v7) now also returns `grams`, its weight guess per item, and the prompt says a יחידה is a whole item, count only what's visible, judge size against the plate, guess smaller when unsure.
+- `unitFor` checks the unit against `grams`: more than 1.6× off, it takes the food's unit that fits the same count (4 × "עלה" of 11 g), else the grams themselves. Typed text has no `grams`, so it's unchanged. Tested in `search.test.ts` with the owner's lettuce, potatoes and schnitzel.
+
+**Next:** if photos still misjudge sizes, a stronger model (`MEAL_PHOTO_MODEL`) is the next lever; it costs more per photo, so ask first.
+
 ## 2026-10-23: vitamins out of the way while adding
 
 **Done:**
