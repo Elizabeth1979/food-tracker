@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: the app's own confirm and prompt windows
+
+**Done:**
+- The browser's `confirm()`/`prompt()` boxes (site address, "Cancel/OK") are gone: `confirmIt`/`promptIt` + `AskHost` in `ui.tsx` show a small app-styled `Modal` instead. Used for deleting a photo, naming a saved meal, hiding a food, deleting a saved meal, restoring a backup.
+- Screen tests tap the app's buttons (cancel keeps the photo) and fail if any browser dialog opens.
+
 ## 2026-10-23: deleting a meal's last food takes its photo
 
 **Done:**

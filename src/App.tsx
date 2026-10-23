@@ -6,6 +6,7 @@ import Reports from './Reports';
 import Foods from './Foods';
 import Settings from './Settings';
 import { Icon, type IconName } from './icons';
+import { AskHost } from './ui';
 
 export type Ctx = {
   foods: Food[];
@@ -127,6 +128,7 @@ export default function App({ email }: { email: string }) {
         {tab === 'foods' && <Foods ctx={ctx} date={date} />}
         {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} />}
       </main>
+      <AskHost />
     </div>
   );
 }
