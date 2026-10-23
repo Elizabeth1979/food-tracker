@@ -16,6 +16,15 @@ What was done in each work session and what's next. Newest first.
 - "תווית": a 4th big button beside צילום / מהגלריה / כתיבה (`FileButton` in `ui.tsx`, shared with `PhotoPick`; `.choices` lays out any number in a row). It opens the camera, reads the label, and `LabelCheck` shows the name and values; "המשך" saves the food and opens the amount, "עריכה" opens `FoodForm` filled in (`labelFood` in `Foods.tsx`, shared with the form's own label reading). The old "מוצר ארוז או תוסף?" link is gone.
 - The מזונות tab is out of the bottom bar; Settings → "המזונות והארוחות שלי" opens the same page (editing and hiding foods, saved meals). Screen test reworked: it picks meals with the clock (`at()`), and opens the foods page through Settings.
 
+## 2026-10-23: doubled foods, misread labels, single-food "meals"
+
+**Done:**
+- The owner's "קוטג' קטן" was saved at 350 kcal per 100 g: the label scan put sodium (350) in calories (95), saturated fat (3.25) in carbs (1.5) and cholesterol (15) in calcium (100). Saving a food now asks first ("לשמור בכל זאת?") when its calories don't fit its macros (4/4/9, off by more than 25% and 20 kcal: `kcalOff` in `search.ts`), or when it's likely one you have: the same name, or one of your own with the same numbers per gram (`sameFood`; yogurt 20% and 25% differ). One helper, `saveFood` in `Foods.tsx`, for the form and the add window's label check.
+- The label photo a food was read from is kept at `<user>/labels/<food id>.jpg` in the `meal-photos` bucket (its policy already covers the user's folder; no database change) and shows under "הטבלה שנסרקה" when editing the food. Backups carry it. Older scans weren't kept.
+- Saved meals use each food's current values (`mealItems` in `lib.ts`), so fixing a food fixes every meal that has it. "בוקר מליו" shows the 350 until the cottage cheese is fixed (rescan it, or עריכה: 95 kcal, 1.5 g carbs, 350 mg sodium, 100 mg calcium).
+- A saved meal needs two foods or more: "שמור כארוחה" shows only then, and the meal editor says why. The existing one-food meal "הפוך" is the owner's to delete.
+- Tests: `search.test.ts` (the cottage cheese, the yogurts); screen test (the warning, cancel and save anyway, a duplicate, a two-food meal that follows its food's fix, the label photo).
+
 ## 2026-10-23: the photo guesses hidden oil and sauce
 
 **Done:**

@@ -155,7 +155,8 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
                   <button className="icon del" aria-label={`מחק: ${e.name}`} onClick={(ev) => { ev.stopPropagation(); remove(e); }}><Icon name="x" /></button>
                 </div>
               ))}
-              {es.length ? <footer><button onClick={() => saveMeal(m.key)}><Icon name="star" />שמור כארוחה</button></footer> : <p className="empty">עוד לא נרשם כלום</p>}
+              {/* a saved meal is foods that go together; a single food is already one tap in "הרגילים שלך" */}
+              {es.length > 1 ? <footer><button onClick={() => saveMeal(m.key)}><Icon name="star" />שמור כארוחה</button></footer> : !es.length && <p className="empty">עוד לא נרשם כלום</p>}
             </div>
           </section>
         );

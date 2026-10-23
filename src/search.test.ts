@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { Food } from './db';
-import { GRAMS, isFFQ, matchFoods, parseLine, searchFoods, splitAnd, unitFor } from './search.ts';
+import { GRAMS, isFFQ, kcalOff, matchFoods, parseLine, sameFood, searchFoods, splitAnd, unitFor } from './search.ts';
 
 const moh: Food[] = JSON.parse(readFileSync(new URL('../public/foods/moh.json', import.meta.url), 'utf8'));
 const first = (q: string, foods = moh, recent: string[] = []) => searchFoods(foods, q, recent)[0]?.name ?? '';
@@ -119,4 +119,23 @@ test('staples find the plain everyday version', () => {
   assert.match(first('פיתה'), /^פיתה, פיתה ביס/); // not toasted ("קלויה") or a brand's
   assert.match(first('פיתות'), /^פיתה, פיתה ביס/);
   assert.match(first('פיתה דרוזית'), /^פיתה דרוזית/); // a typed kind still wins
+});
+
+test('calories that don\'t fit the macros: the owner\'s cottage cheese, its sodium read as calories', () => {
+  const label = { kcal: 95, fat: 5, carbs: 1.5, protein: 11 }; // as printed: 4×11 + 4×1.5 + 9×5 = 95
+  assert.equal(kcalOff(label), null);
+  assert.equal(kcalOff({ ...label, kcal: 350 }), 95); // as the scan saved it
+  assert.equal(kcalOff({ kcal: 0, fat: 0, carbs: 0, protein: 0 }), null); // a vitamin
+  assert.equal(kcalOff({ kcal: 8, fat: 0.1, carbs: 1.6, protein: 0.3 }), null); // a cucumber: small numbers, small gaps
+});
+
+test('a food you already have: same name, or your own with the same numbers; 20% and 25% yogurt differ', () => {
+  const y25 = own('y25', 'יוגורט מולר 25 חלבון', { source: 'user', kcal: 82, protein: 12.5, fat: 2, carbs: 2.2 });
+  const foods = [...moh, y25];
+  assert.equal(sameFood(foods, { name: 'יוגורט חלבון מולר', servingG: 100, kcal: 82, protein: 12.5, fat: 2, carbs: 2.2 })?.id, 'y25'); // scanned again, named otherwise
+  assert.equal(sameFood(foods, { name: 'יוגורט 25 גרם', servingG: 200, kcal: 164, protein: 25, fat: 4, carbs: 4.4 })?.id, 'y25'); // per 200 g, same food
+  assert.equal(sameFood(foods, { name: 'יוגורט מולר 20 חלבון', servingG: 100, kcal: 75, protein: 10, fat: 2.5, carbs: 3 }), undefined);
+  assert.equal(sameFood(foods, { name: 'יוגורט מולר 25 חלבון', servingG: 100, kcal: 1, protein: 0, fat: 0, carbs: 0 })?.id, 'y25'); // the name alone
+  assert.equal(sameFood(foods, { ...y25 }), undefined); // editing it isn't a duplicate of itself
+  assert.equal(sameFood([own('v', 'ויטמין D', { source: 'user' })], { name: 'מגנזיום', servingG: 100, kcal: 0, protein: 0, fat: 0, carbs: 0 }), undefined); // two supplements, both zero
 });

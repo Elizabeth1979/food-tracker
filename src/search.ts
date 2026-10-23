@@ -1,4 +1,4 @@
-// Food search and free-text meal parsing. Pure functions (no data layer), so they run under plain Node too.
+// Food search, free-text meal parsing, and the checks on a new food. Pure functions (no data layer), so they run under plain Node too.
 import type { Food } from './db';
 
 export type Unit = { n: string; g: number };
@@ -180,4 +180,21 @@ export function splitAnd(foods: Food[], items: Parsed[], recent: string[]): Pars
     const a = words.slice(0, i).join(' '), b = [words[i].slice(1), ...words.slice(i + 1)].join(' ');
     return [{ ...p, text: a, query: a }, ...splitAnd(foods, [{ text: b, query: b, qty: null, unit: null }], recent)];
   });
+}
+
+// ---------- checks before a food is saved ----------
+// Calories from the macros: 4 per gram of protein and carbs, 9 per gram of fat. Labels round, and fibre and alcohol
+// count otherwise, so only a big gap means a misread: the owner's cottage cheese got its sodium (350) as calories (95).
+// Returns the calories the macros give, or null when they fit.
+export function kcalOff(f: Partial<Food>): number | null {
+  const kcal = f.kcal ?? 0, est = 4 * ((f.protein ?? 0) + (f.carbs ?? 0)) + 9 * (f.fat ?? 0);
+  return Math.abs(kcal - est) > Math.max(20, 0.25 * Math.max(kcal, est)) ? Math.round(est) : null;
+}
+// A food you most likely have already: the same name, or one of your own with the same calories and macros
+// (the same package scanned twice comes back with another name, but the same numbers). Yogurt 20% and 25% differ.
+export function sameFood(foods: Food[], f: Partial<Food>): Food | undefined {
+  const per = (x: Partial<Food>, k: 'kcal' | 'protein' | 'fat' | 'carbs') => ((x[k] ?? 0) * 100) / (x.servingG || 100);
+  const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.5, 0.02 * Math.max(a, b));
+  const sameNumbers = (x: Food) => !!f.kcal && (['kcal', 'protein', 'fat', 'carbs'] as const).every((k) => close(per(x, k), per(f, k)));
+  return foods.find((x) => x.id !== f.id && !x.hidden && (norm(x.name) === norm(f.name ?? '') || (x.source !== 'moh' && sameNumbers(x))));
 }
