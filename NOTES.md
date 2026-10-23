@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: a photo's potato: boiled is boiled, "מעוך" is פירה
+
+**Done:**
+- The owner photographed one boiled potato. The photo AI listed it twice ("מבושל" and "מעוך"), "מבושל" matched *fried* potatoes (185 kcal/100 g instead of 86), and "מעוך" matched nothing.
+- `search.ts`: "מטוגנים" and words like "ושמן" now count as processed, so plain boiled ranks first; `SAME` maps מעוך → פירה; `matchFoods` drops unknown words from the end instead of leaving a row unmatched (`splitAnd` still checks the exact phrase). Test in `search.test.ts`.
+- `meal-photo` prompt: each food once (a cut or squashed potato is one item), mashed potato is "פירה". Function redeployed.
+
 ## 2026-10-23: "שכחתי משהו?" offers foods as you type
 
 **Done:**

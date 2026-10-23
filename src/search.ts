@@ -14,11 +14,13 @@ export const isFFQ = (f: { name: string }) => f.name.startsWith('FFQ');
 // Forms people rarely mean unless they type the word: "ענבים" should find grapes before grape juice or grape-seed oil,
 // and "ביצה" a hen's egg before a turkey's.
 const PROCESSED = ['מיץ', 'שמן', 'סירופ', 'בסירופ', 'משומר', 'משומרים', 'משקה', 'אבקה', 'אבקת', 'ממרח', 'חטיף', 'עוגיות', 'מחית', 'רוטב', 'תרכיז',
-  'מיובש', 'מיובשת', 'מיובשים', 'מוס', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
+  'מיובש', 'מיובשת', 'מיובשים', 'מוס', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'מטוגנים', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
 const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות', 'גמלים', 'כבשים', 'עזים', 'אווז', 'ברווז', 'שליו',
   // organs, odd cuts and fast food: "עוף" means the meat, not its liver, feet or a McDonald's item
   'לב', 'לבבות', 'כבד', 'טחול', 'קורקבן', 'קורקבנים', 'כליות', 'לשון', 'מוח', 'קיבה', 'גב', 'צוואר', 'עצמות', 'רגליים',
   'מקדונלדס', 'גלוטן', 'הצומח']; // gluten-free and plant-based ("מן הצומח") versions only when typed
+// Words a photo or a person uses that the database names otherwise: mashed potato is "פירה".
+const SAME: Record<string, string> = { מעוך: 'פירה', מעוכים: 'פירה', מעוכה: 'פירה' };
 const FRESH = ['טרי', 'טריה', 'טריים', 'טריות', 'רגיל'];
 // Everyday staples whose plain entry loses on name length alone: "פיתה" means a regular pita, not a toasted one.
 const STAPLES: Record<string, string> = { פיתה: 'moh-1946' };
@@ -27,7 +29,7 @@ const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, w.sl
 const sameWord = (a: string, w: string) => forms(w).some((x) => a === x || (x !== w && a.startsWith(x) && a.length <= x.length + 1));
 
 export function searchFoods(foods: Food[], q: string, recent: string[]) {
-  const words = norm(q).split(' ').filter(Boolean);
+  const words = norm(q).split(' ').filter(Boolean).map((w) => SAME[w] ?? w);
   const query = words.join(' ');
   const has = (text: string, phrase: string) => ` ${text} `.includes(` ${phrase} `);
   const rank = (f: Food) => {
@@ -46,7 +48,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     s += name === query ? 0 : first === query || firstWords.some((w) => sameWord(w, words[0] ?? '')) ? 10 : name.startsWith(query) ? 20 : name.startsWith(words[0] ?? '') ? 30 : 50;
     // a typed word found only inside another ("רום וקולה" for "קולה") is a weaker match
     if (!words.every((w) => forms(w).some((x) => name.split(/[ \/]/).some((t) => t.startsWith(x))))) s += 20;
-    s += PROCESSED.filter((w) => !words.includes(w) && has(what, w)).length * 15;
+    // "ושמן קנולה" (and canola oil) counts as oil too
+    s += PROCESSED.filter((w) => !words.includes(w) && (has(what, w) || has(what, 'ו' + w))).length * 15;
     s += RARE.filter((w) => !words.includes(w) && has(name, w)).length * 20;
     if (has(name, 'לא מבושל') && !words.includes('מבושל')) s += 10;
     if ((has(first, 'עם') || has(first, 'או')) && !words.includes('עם')) s += 10; // mixed dishes: "אורז עם בצל"
@@ -149,7 +152,7 @@ function unitByName(food: Food, p: Pick<Parsed, 'qty' | 'unit'>): { qty: number;
 // Best matches for a typed name; retries without a leading "ו" ("וגרנולה"), since names like "ויטמין" start with one.
 // Is a typed word the food itself (in the name's first part), rather than one ingredient of a dish?
 const inHead = (f: Food, words: string[]) => norm(f.name.split(',')[0]).split(/[ \/]/).some((t) => words.some((w) => sameWord(t, w)));
-export function matchFoods(foods: Food[], query: string, recent: string[]) {
+function matchExact(foods: Food[], query: string, recent: string[]) {
   const hits = searchFoods(foods, query, recent);
   if (!hits.length && /^ו\S{3}/.test(query)) return searchFoods(foods, query.slice(1), recent);
   // "גזר כבוש" has no pickled-carrot food, only dishes that list carrot among their ingredients (potato salad).
@@ -159,11 +162,17 @@ export function matchFoods(foods: Food[], query: string, recent: string[]) {
   const plain = searchFoods(foods, words[0], recent).filter((f) => inHead(f, words.slice(0, 1)));
   return plain.length ? [...plain, ...hits.filter((f) => !plain.includes(f))] : hits;
 }
+// A word the database doesn't know ("תפוח אדמה מבושל בתנור") shouldn't leave the row unmatched: drop words from the end.
+export function matchFoods(foods: Food[], query: string, recent: string[]): Food[] {
+  const hits = matchExact(foods, query, recent);
+  const words = norm(query).split(' ');
+  return hits.length || words.length < 2 ? hits : matchFoods(foods, words.slice(0, -1).join(' '), recent);
+}
 
 // "קפה וגרנולה" matches nothing as one food: split it at the "ו" into two items. Only when the whole phrase has no match.
 export function splitAnd(foods: Food[], items: Parsed[], recent: string[]): Parsed[] {
   return items.flatMap((p) => {
-    if (matchFoods(foods, p.query, recent).length) return [p];
+    if (matchExact(foods, p.query, recent).length) return [p];
     const words = p.query.split(' ');
     const i = words.findIndex((w, j) => j > 0 && /^ו\S{2}/.test(w));
     if (i < 0) return [p];
