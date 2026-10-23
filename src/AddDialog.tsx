@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
+import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
 import { FileButton, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
-import { FoodForm, labelFood } from './Foods';
+import { FoodForm, labelFood, saveFood } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
 
@@ -90,6 +90,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const [creating, setCreating] = useState<Partial<Food> | null>(null); // the full new-food form, with what's known
   const [labelShot, setLabelShot] = useState<File | null>(null); // a label photo being read
   const [checking, setChecking] = useState<Partial<Food> | null>(null); // a read label, to check before logging
+  const [scanned, setScanned] = useState<File | null>(null); // that label photo, kept with the food once saved
   const [err, setErr] = useState('');
   const uid = useId();
   const [busy, setBusy] = useState(false);
@@ -122,7 +123,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     const byScore = <T extends { score: number }>(xs: T[]) => xs.sort((a, b) => b.score - a.score); // stable: ties stay most recent first
     const foods = byScore(searchFoods(ctx.foods, '', order).map((f) => ({ key: `f:${f.id}`, f, score: n[f.id] ?? 0 }))).slice(0, USUAL_MAX);
     const saved = ctx.meals.map((m) => {
-      const items = json<Item[]>(m.items, []);
+      const items = mealItems(ctx.foods, m);
       const ids = items.flatMap((it) => (it.foodId ? [it.foodId] : []));
       const score = ids.length ? Object.values(had).filter((s) => ids.every((id) => s.has(id))).length : 0;
       return { key: `m:${m.id}`, m, items, score };
@@ -145,13 +146,11 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   };
   const readShot = async (file: File) => {
     setErr(''); setLabelShot(file);
-    try { setChecking(labelFood(await readLabel(file))); } catch (x: any) { setErr(x.message); } finally { setLabelShot(null); }
+    try { setChecking(labelFood(await readLabel(file))); setScanned(file); } catch (x: any) { setErr(x.message); } finally { setLabelShot(null); }
   };
   const created = (f: Food) => { ctx.setFoods([...ctx.foods, f]); setCreating(null); setChecking(null); setSel(f); };
   const saveLabel = async (f: Partial<Food>) => {
-    const { data, errors } = await client.models.Food.create({ ...f, source: 'user' } as Food);
-    if (errors) return setErr(errors[0].message);
-    created(data!);
+    try { const food = await saveFood(ctx.foods, f, scanned); if (food) created(food); } catch (x: any) { setErr(x.message); }
   };
   const takeBack = async (key: string) => {
     const es = done[key];
@@ -177,7 +176,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   if (creating)
     return (
       <Modal title="מזון חדש" onClose={() => setCreating(null)}>
-        <FoodForm init={creating} onSaved={created} />
+        <FoodForm foods={ctx.foods} init={creating} scan={checking && scanned} onSaved={created} />
       </Modal>
     );
   return (
@@ -211,7 +210,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
             {err && <p className="error" role="alert">{err}</p>}
           </>}
           <div className="usual">
-            {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : <>
+            {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: mealItems(ctx.foods, m) })) : <>
               {/* Your usual things, one tap each with last time's amount; ignore them and search, photograph or type instead */}
               {usual.length > 0 && (
                 <section aria-labelledby={`${uid}-u`}>

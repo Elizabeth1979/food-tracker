@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { amountLabel, client, json, searchFoods, sum, type Food, type Item, type SavedMeal } from './lib';
+import { amountLabel, client, mealItems, searchFoods, sum, type Food, type Item, type SavedMeal } from './lib';
 import { FoodSummary, Modal } from './ui';
 import { Amount, NutLine, itemFood, itemInit, unitSaver } from './AddDialog';
 import { Icon } from './icons';
@@ -8,7 +8,7 @@ import { Icon } from './icons';
 // Build or edit a saved meal (a bundle of foods with fixed amounts).
 export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal; onClose: () => void }) {
   const [name, setName] = useState(meal?.name ?? '');
-  const [items, setItems] = useState<Item[]>(() => json<Item[]>(meal?.items, []));
+  const [items, setItems] = useState<Item[]>(() => (meal ? mealItems(ctx.foods, meal) : []));
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<Food | null>(null);
   const [edit, setEdit] = useState<number | null>(null); // index of the item being re-portioned
@@ -18,7 +18,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
   const real = edit === null ? undefined : ctx.foods.find((x) => x.id === items[edit].foodId);
 
   const save = async () => {
-    if (!name.trim() || !items.length) return setErr('יש לתת שם ולהוסיף לפחות מזון אחד');
+    if (!name.trim() || items.length < 2) return setErr('יש לתת שם ולהוסיף לפחות שני מזונות. מזון אחד לבד כבר מופיע ב״הרגילים שלך״.');
     const input = { name: name.trim(), items: JSON.stringify(items) };
     const { data, errors } = meal ? await client.models.SavedMeal.update({ id: meal.id, ...input }) : await client.models.SavedMeal.create(input);
     if (errors) return setErr(errors[0].message);
@@ -46,7 +46,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
         </div>
       ) : (
         <>
-          <input className="search" placeholder="הוסף מזון לארוחה…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="search" type="search" aria-label="הוסף מזון לארוחה" placeholder="הוסף מזון לארוחה…" value={q} onChange={(e) => setQ(e.target.value)} />
           {q && (
             <div className="list">
               {hits.map((f) => (

@@ -58,6 +58,7 @@ test('search, pick an amount, add', async () => {
   await button(/^סיום · נוספו 1/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('ארוחת צהריים').count(), 1); // lunchtime: filed under lunch
+  assert.equal(await button('שמור כארוחה', meal('ארוחת צהריים')).count(), 0); // one food isn't a saved meal: it's one tap in "הרגילים שלך"
 });
 
 test('in the evening, a photo goes to the review list', async () => {
@@ -395,6 +396,66 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   await button('יומן').tap();
 });
 
+
+test('a new food: calories that don\'t fit its macros, or a food you have, ask first; the label photo stays with the food', async () => {
+  await openFoods();
+  const mine = page.getByRole('region', { name: /^המזונות שלי/ });
+  const form = (title = 'מזון חדש') => page.getByRole('dialog', { name: title });
+  const warn = asked('לשמור בכל זאת?');
+  const fill = async (name, kcal) => {
+    await form().getByRole('textbox', { name: 'שם' }).fill(name);
+    for (const [field, x] of [['קלוריות', kcal], ['פחמימות (ג׳)', 1.5], ['שומן (ג׳)', 5], ['חלבון (ג׳)', 11]]) await form().getByRole('spinbutton', { name: field }).fill(String(x));
+    await button('שמור', form()).tap();
+  };
+  // the owner's cottage cheese, its sodium (350) read as calories: 11 g protein, 5 g fat and 1.5 g carbs make 95
+  await button('מזון חדש', mine).tap();
+  await fill('קוטג׳ בדיקה', 350);
+  await warn.getByText(/350 קלוריות לא מתאימות .* בערך 95/).waitFor();
+  await button('ביטול', warn).tap();
+  assert.ok(await form().isVisible()); // back in the form, to fix it
+  await button('שמור', form()).tap();
+  await button('שמור בכל זאת', warn).tap();
+  await form().waitFor({ state: 'detached' });
+  // the same numbers under another name: it's the food you have
+  await button('מזון חדש', mine).tap();
+  await fill('קוטג קטן', 350);
+  await warn.getByText(/כבר יש לך ״קוטג׳ בדיקה״/).waitFor();
+  await button('ביטול', warn).tap();
+  await button('סגור', form()).tap();
+  assert.equal(await mine.getByText('קוטג קטן').count(), 0);
+  // a saved meal is two foods or more
+  await button('ארוחה חדשה').tap();
+  const editor = page.getByRole('dialog', { name: 'ארוחה שמורה חדשה' });
+  await editor.getByRole('textbox', { name: 'שם הארוחה' }).fill('בוקר בדיקה');
+  const addToMeal = async (q, name) => {
+    await editor.getByRole('searchbox', { name: 'הוסף מזון לארוחה' }).fill(q);
+    await editor.getByRole('button', { name }).first().tap();
+    await button('הוסף לארוחה', editor).tap();
+  };
+  await addToMeal('קוטג׳ בדיקה', /^קוטג׳ בדיקה/);
+  await button('שמור ארוחה', editor).tap();
+  await editor.getByText(/לפחות שני מזונות/).waitFor();
+  await addToMeal('מלפפון', /^מלפפון/);
+  await button('שמור ארוחה', editor).tap();
+  await editor.waitFor({ state: 'detached' });
+  // fixing the food fixes the meal: 100 g of it, 255 kcal less
+  const kcal = async () => Number((await page.getByRole('region', { name: /^ארוחות שמורות/ }).getByText(/^קוטג׳ בדיקה · .* קק״ל$/).innerText()).match(/(\d+) קק״ל/)[1]);
+  await page.getByText('בוקר בדיקה', { exact: true }).tap();
+  const before = await kcal();
+  await mine.getByText('קוטג׳ בדיקה', { exact: true }).tap();
+  await button('עריכה: קוטג׳ בדיקה').tap();
+  await form('עריכת מזון').getByRole('spinbutton', { name: 'קלוריות' }).fill('95');
+  await button('שמור', form('עריכת מזון')).tap();
+  await form('עריכת מזון').waitFor({ state: 'detached' }); // no question: the numbers fit
+  assert.equal(await kcal(), before - 255);
+  // the multivitamin was read from a label: its photo is kept, to check the values against
+  await mine.getByText('מולטי ויטמין', { exact: true }).tap();
+  await button('עריכה: מולטי ויטמין').tap();
+  await form('עריכת מזון').getByText('הטבלה שנסרקה').tap();
+  assert.ok(await form('עריכת מזון').getByRole('img', { name: 'טבלת הערכים של מולטי ויטמין' }).isVisible());
+  await button('סגור', form('עריכת מזון')).tap();
+  await button('יומן').tap();
+});
 
 test('settings show the goals first; tailoring is a few steps; a weigh-in in reports only logs', async () => {
   const spin = (name, scope = page) => scope.getByRole('spinbutton', { name });

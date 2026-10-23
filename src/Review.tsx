@@ -41,7 +41,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
   if (creating)
     return (
       <Modal title="מזון חדש" onClose={() => setCreating(null)}>
-        <FoodForm init={{ name: creating.p.query }} onSaved={(f) => {
+        <FoodForm foods={ctx.foods} init={{ name: creating.p.query }} onSaved={(f) => {
           ctx.setFoods([...ctx.foods, f]);
           setRows((rs) => rs.map((r) => (r.id === creating.id ? { ...rowFor(ctx, r.p, r.id, f), options: [f, ...r.options] } : r)));
           setCreating(null);

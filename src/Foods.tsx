@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
-import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type Label, type SavedMeal, type Unit } from './lib';
+import { MEALS, VITAMINS, addEntries, client, fmtDate, json, kcalOff, labelPhotoUrl, mealItems, mealNow, readLabel, sameFood, saveLabelPhoto, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type Label, type SavedMeal, type Unit } from './lib';
 import { Group, FoodSummary, MicroLine, Modal, PhotoPick, confirmIt, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
@@ -18,7 +18,20 @@ export const labelFood = (l: Label): Partial<Food> => ({
   units: JSON.stringify(l.unit ? [l.unit] : []),
 });
 
-export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: Food) => void }) {
+// Saves a food of your own. A likely duplicate, or calories that don't fit the macros (a misread label), asks first;
+// null when the user goes back to fix it. The label photo the values were read from is kept with the food.
+export async function saveFood(foods: Food[], f: Partial<Food>, scan?: File | null): Promise<Food | null> {
+  const dup = sameFood(foods, f), est = kcalOff(f);
+  const why = [dup && `כבר יש לך ״${dup.name}״.`, est != null && `${f.kcal} קלוריות לא מתאימות לחלבון, לפחמימות ולשומן, שנותנים בערך ${est}. אולי הטבלה נקראה לא נכון.`];
+  if ((dup || est != null) && !(await confirmIt('לשמור בכל זאת?', 'שמור בכל זאת', why.filter(Boolean).join(' ')))) return null;
+  const row = { ...f, source: 'user' }; // app edits win over the shipped food files
+  const { data, errors } = f.id ? await client.models.Food.update(row as Food) : await client.models.Food.create(row as Food);
+  if (errors) throw new Error(errors[0].message);
+  if (scan) saveLabelPhoto(scan, data!.id).catch(console.error);
+  return data!;
+}
+
+export function FoodForm({ foods, init, scan: scanned, onSaved }: { foods: Food[]; init: Partial<Food>; scan?: File | null; onSaved: (f: Food) => void }) {
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
   const [units, setUnits] = useState<UnitDraft[]>(() => json<Unit[]>(init.units, []).map(draftOf));
@@ -27,6 +40,9 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   const [err, setErr] = useState('');
   const [filled, setFilled] = useState(''); // how the photo filled the form, said once it has
   const [reading, setReading] = useState<File | null>(null); // the label photo being read
+  const [scan, setScan] = useState(scanned ?? null); // the label photo read, saved with the food
+  const [shot, setShot] = useState<string | null>(null); // the one saved before, to check the values against
+  useEffect(() => { if (init.id) labelPhotoUrl(init.id).then(setShot, () => {}); }, [init.id]);
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
   // Supplements (creatine, vitamins): no energy or macros, logged by the serving.
   // With nothing to scale, the serving is just the scoop: 5 g unless one was typed over the 100 g default.
@@ -45,6 +61,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
       setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: String(l.basisG) }));
       setExtra((x) => ({ ...x, ...Object.fromEntries(Object.entries(l.extra ?? {}).map(([k, n]) => [k, String(n)])) }));
       if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), draftOf(l.unit!)]);
+      setScan(file);
       setFilled(l.basisG !== 100 && l.unit ? `הערכים מולאו מהתמונה, ל${l.unit.n} אחת` : l.perServing ? 'הערכים מולאו מהתמונה וחושבו ל־100 גרם לפי משקל המנה' : 'הערכים מולאו מהתמונה');
     } catch (x: any) { setErr(x.message); setFilled(''); } finally { setReading(null); }
   };
@@ -52,14 +69,12 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
     const kept = Object.entries(extra).filter(([, x]) => x !== '').map(([k, x]) => [k, Number(x)]);
     const input = {
-      name: v.name.trim(), servingG: num('servingG') || 100, source: 'user', // app edits win over the shipped food files
+      id: init.id, name: v.name.trim(), servingG: num('servingG') || 100,
       kcal: num('kcal')!, carbs: num('carbs')!, fat: num('fat')!, protein: num('protein')!, sodium: num('sodium'), calcium: num('calcium'), potassium: num('potassium'), b12: num('b12'),
       extra: kept.length ? Object.fromEntries(kept) : null,
       units: JSON.stringify(units.map(unitOf).filter((u) => u.n && u.g > 0)),
     };
-    const { data, errors } = init.id ? await client.models.Food.update({ id: init.id, ...input }) : await client.models.Food.create(input);
-    if (errors) return setErr(errors[0].message);
-    onSaved(data!);
+    try { const f = await saveFood(foods, input, scan); if (f) onSaved(f); } catch (x: any) { setErr(x.message); }
   };
   const inp = (k: string, label: string) => (
     <label key={k}><span>{label}</span><input type={k === 'name' ? 'text' : 'number'} inputMode={k === 'name' ? 'text' : 'decimal'} step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></label>
@@ -68,6 +83,7 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     <div className="form">
       <PhotoPick camera="צילום טבלת ערכים" gallery="טבלה מהגלריה" reading={reading} busyText="קורא את הטבלה…" onFile={photo} />
       {filled && <p className="muted small" role="status">{filled}. כדאי לבדוק אותם מול האריזה לפני השמירה.</p>}
+      {shot && <details><summary>הטבלה שנסרקה</summary><img src={shot} alt={`טבלת הערכים של ${init.name}`} /></details>}
       {inp('name', 'שם')}
       {inp('servingG', 'הערכים הם עבור (גרם)')}
       <button className="link start" onClick={supplement}><Icon name="pill" />תוסף תזונה / ללא קלוריות: מלא אפסים</button>
@@ -144,7 +160,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
     </ItemRow>
   );
   const mealRow = (m: SavedMeal) => {
-    const items = json<Item[]>(m.items, []);
+    const items = mealItems(ctx.foods, m);
     return (
       <ItemRow key={m.id} name={m.name} onAdd={() => addMeal(m, items)}>
         <small className="muted">{items.map((i) => i.name.split(',')[0]).join(' · ')} · <b>{sum(items).kcal} קק״ל</b></small>
@@ -179,7 +195,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
       {added && <div className="toast" role="status">״{added.name}״ נוסף ל{now} <button onClick={undoAdd}>בטל</button></div>}
       {logging && <AddDialog ctx={ctx} meal={mealNow()} date={date} fromFoods initial={logging} onClose={() => setLogging(null)} onAdded={logged} />}
       {mealEdit && <MealEditor ctx={ctx} meal={mealEdit === 'new' ? undefined : mealEdit} onClose={() => setMealEdit(null)} />}
-      {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm init={edit} onSaved={saved} /></Modal>}
+      {edit && <Modal title={edit.id ? 'עריכת מזון' : 'מזון חדש'} onClose={() => setEdit(null)}><FoodForm foods={ctx.foods} init={edit} onSaved={saved} /></Modal>}
     </div>
   );
 }

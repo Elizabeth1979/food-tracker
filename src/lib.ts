@@ -1,9 +1,9 @@
 import type { IconName } from './icons';
-import { client, hasPending, listEntries, supabase, syncPending, type Food, type Weight } from './db';
+import { client, hasPending, listEntries, supabase, syncPending, type Food, type SavedMeal, type Weight } from './db';
 import { GRAMS, json, unitsOf, type Parsed, type Unit } from './search';
 
 export { client, hasPending, syncPending };
-export { GRAMS, json, unitsOf, searchFoods, matchFoods, parseLine, splitAnd, unitFor, isFFQ, type Unit, type Parsed } from './search';
+export { GRAMS, json, unitsOf, searchFoods, matchFoods, parseLine, splitAnd, unitFor, isFFQ, kcalOff, sameFood, type Unit, type Parsed } from './search';
 export type { Food, Entry, SavedMeal, Profile, BodyInfo, Weight } from './db';
 export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export const MICROS = [
@@ -96,6 +96,12 @@ export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };
 };
+// A saved meal's foods at their current values, so fixing a food (a misread label) fixes every meal that has it.
+// A food no longer there keeps the meal's own copy.
+export const mealItems = (foods: Food[], m: SavedMeal): Item[] => json<Item[]>(m.items, []).map((it) => {
+  const f = it.foodId ? foods.find((x) => x.id === it.foodId) : undefined;
+  return f ? { ...it, name: f.name, ...scale(f as Nut, it.grams / f.servingG) } : it;
+});
 export const amountLabel = (e: { grams: number; qty?: number | null; unit?: string | null }) =>
   e.unit && e.unit !== GRAMS ? `${e.qty} ${e.unit} (${e.grams} ג׳)` : `${e.grams} ג׳`;
 
@@ -168,11 +174,13 @@ async function signed(paths: string[]): Promise<MealPhoto[]> {
   if (error) throw error;
   return data.flatMap((d) => (d.path && d.signedUrl ? [{ path: d.path, meal: d.path.split('/')[2].split('.')[0] as MealKey, url: d.signedUrl }] : []));
 }
+const jpegOf = async (file: File, max: number) => {
+  const c = await shrunk(file, max);
+  return new Promise<Blob>((ok) => c.toBlob((b) => ok(b!), 'image/jpeg', 0.8));
+};
 export async function savePhoto(file: File, date: string, meal: MealKey): Promise<MealPhoto> {
-  const c = await shrunk(file, 1024);
-  const jpeg = await new Promise<Blob>((ok) => c.toBlob((b) => ok(b!), 'image/jpeg', 0.8));
   const path = `${await userId()}/${date}/${meal}.${crypto.randomUUID()}.jpg`;
-  const { error } = await photos().upload(path, jpeg, { contentType: 'image/jpeg' });
+  const { error } = await photos().upload(path, await jpegOf(file, 1024), { contentType: 'image/jpeg' });
   if (error) throw error;
   return (await signed([path]))[0];
 }
@@ -204,7 +212,21 @@ export async function deletePhoto(p: MealPhoto) {
   if (error) throw error;
 }
 
-// Backups carry the photos as base64 JPEGs, each by its path inside the user's folder (<date>/<meal>.<id>.jpg).
+// The label photo a food's values were read from, kept at <user>/labels/<food id>.jpg to check them against later.
+// A new scan of the same food replaces it.
+const labelPath = async (foodId: string) => `${await userId()}/labels/${foodId}.jpg`;
+export async function saveLabelPhoto(file: File, foodId: string) {
+  const { error } = await photos().upload(await labelPath(foodId), await jpegOf(file, 1568), { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+}
+export async function labelPhotoUrl(foodId: string): Promise<string | null> {
+  if (!navigator.onLine) return null;
+  const { data } = await photos().createSignedUrls([await labelPath(foodId)], 3600);
+  return data?.[0]?.signedUrl ?? null;
+}
+
+// Backups carry the photos as base64 JPEGs, each by its path inside the user's folder (<date>/<meal>.<id>.jpg,
+// and labels/<food id>.jpg).
 export type PhotoFile = { path: string; jpeg: string };
 const toBase64 = (b: Blob) => new Promise<string>((ok, fail) => {
   const r = new FileReader();
