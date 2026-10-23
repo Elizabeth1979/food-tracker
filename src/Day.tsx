@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
-import { DayGoals, GoalsInfo, Group, MicroLine, Modal, Ring, WaterLine } from './ui';
+import { DayGoals, GoalsInfo, Group, MicroLine, Modal, Ring, WaterLine, confirmIt, promptIt } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -70,14 +70,14 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
     added(await addEntries(e.date, e.meal as MealKey, [pickItem(e)]));
   };
   const removePhoto = async (p: MealPhoto) => {
-    if (!confirm('למחוק את התמונה?')) return;
+    if (!(await confirmIt('למחוק את התמונה?', 'מחק תמונה'))) return;
     await deletePhoto(p);
     setPhotos((cur) => cur.filter((x) => x.path !== p.path));
     setViewing(null);
   };
   const saveMeal = async (meal: MealKey) => {
     const items = food.filter((e) => e.meal === meal).map(pickItem);
-    const name = items.length && prompt('שם לארוחה השמורה:');
+    const name = items.length && (await promptIt('שמירה כארוחה', 'שם הארוחה', 'שמור'));
     if (!name) return;
     const { data } = await client.models.SavedMeal.create({ name, items: JSON.stringify(items) });
     ctx.setMeals([...ctx.meals, data!]);

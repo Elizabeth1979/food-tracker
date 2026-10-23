@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
 import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type SavedMeal, type Unit } from './lib';
-import { Group, FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
+import { Group, FoodSummary, MicroLine, Modal, PhotoPick, confirmIt, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 import { Icon } from './icons';
@@ -101,12 +101,12 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const hits = useMemo(() => (q ? searchFoods(ctx.foods, q, ctx.recent) : []), [ctx.foods, q, ctx.recent]);
   const saved = (f: Food) => { ctx.setFoods(edit?.id ? ctx.foods.map((x) => (x.id === f.id ? f : x)) : [...ctx.foods, f]); setEdit(null); };
   const hide = async (f: Food) => {
-    if (!confirm(`להסיר את "${f.name}" מהרשימה?`)) return;
+    if (!(await confirmIt(`להסתיר את "${f.name}"?`, 'הסתרה'))) return;
     await client.models.Food.update({ ...f, hidden: true }); // whole food: a MoH food has no row of its own yet
     ctx.setFoods(ctx.foods.map((x) => (x.id === f.id ? { ...x, hidden: true } : x)));
   };
   const delMeal = async (id: string) => {
-    if (!confirm('למחוק את הארוחה השמורה?')) return;
+    if (!(await confirmIt('למחוק את הארוחה השמורה?', 'מחיקה'))) return;
     await client.models.SavedMeal.delete({ id });
     ctx.setMeals(ctx.meals.filter((m) => m.id !== id));
   };

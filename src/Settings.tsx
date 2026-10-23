@@ -3,7 +3,7 @@ import type { Ctx } from './App';
 import { client, exportPhotos, loadMoh, restorePhotos, today, type Profile } from './lib';
 import { exportAll, restoreAll, supabase } from './db';
 import { APP_VERSION } from './update';
-import { Group } from './ui';
+import { Group, confirmIt } from './ui';
 import { goalsOf } from './goals';
 import { Tailor } from './Tailor';
 
@@ -42,7 +42,7 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
   const restore = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow picking the same file again
-    if (!file || !confirm('השחזור יחליף את כל הנתונים באפליקציה בתוכן הגיבוי. להמשיך?')) return;
+    if (!file || !(await confirmIt('השחזור יחליף את כל הנתונים באפליקציה בתוכן הגיבוי. להמשיך?', 'שחזור'))) return;
     try {
       const { Photo, ...data } = JSON.parse(await file.text());
       await restoreAll(data, await loadMoh());

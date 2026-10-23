@@ -19,6 +19,32 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
   );
 }
 
+// The app's own confirm() and prompt(): the browser's boxes show the site's address and don't match the app.
+// `ask` resolves to the typed text (or '' for a plain yes), or null when cancelled. `AskHost` is mounted once, in App.
+type Asking = { title: string; ok: string; danger?: boolean; field?: string; done: (v: string | null) => void };
+let show: (a: Asking | null) => void = () => {};
+const ask = (a: Omit<Asking, 'done'>) => new Promise<string | null>((done) => show({ ...a, done }));
+export const confirmIt = async (title: string, ok: string) => (await ask({ title, ok, danger: true })) != null;
+export const promptIt = (title: string, field: string, ok: string) => ask({ title, field, ok });
+export function AskHost() {
+  const [a, setA] = useState<Asking | null>(null);
+  const [text, setText] = useState('');
+  show = (next) => { setText(''); setA(next); };
+  if (!a) return null;
+  const end = (v: string | null) => { setA(null); a.done(v); };
+  return (
+    <Modal title={a.title} onClose={() => end(null)}>
+      <form className="stack" onSubmit={(e) => { e.preventDefault(); if (!a.field || text.trim()) end(a.field ? text.trim() : ''); }}>
+        {a.field && <label>{a.field}<input autoFocus required value={text} onChange={(e) => setText(e.target.value)} /></label>}
+        <div className="grid2">
+          <button className={a.danger ? 'btn danger' : 'btn primary'}>{a.ok}</button>
+          <button type="button" className="btn" onClick={() => end(null)}>ביטול</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 // One button for a photo: without `capture`, the phone offers both the camera and the gallery.
 // While `reading` (the photo being read) is set, it shows that photo dimmed under a spinner instead.
 // Two ways in: Android's file picker no longer offers the camera, so the camera gets its own button (capture).

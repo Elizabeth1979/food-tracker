@@ -3,7 +3,7 @@
 // (`npx playwright install chromium`) or one named by CHROMIUM_PATH.
 // Elements are found the way a person (or a screen reader) finds them: by role and visible or accessible name,
 // never by CSS class, so a redesign that keeps behavior keeps this test green.
-import { test, before, after } from 'node:test';
+import { test, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
@@ -12,6 +12,8 @@ import { chromium } from 'playwright-core';
 const PORT = 5175;
 const URL = `http://localhost:${PORT}/`;
 let server, browser, page;
+const native = []; // browser confirm/prompt boxes that opened: there should be none
+afterEach(() => assert.deepEqual(native.splice(0), [], 'a browser dialog opened instead of the app\'s own'));
 
 before(async () => {
   server = spawn('npx', ['vite', '--mode', 'demo', '--port', String(PORT), '--strictPort'], { stdio: 'ignore', detached: true });
@@ -23,6 +25,7 @@ before(async () => {
   browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   page = await browser.newPage({ viewport: { width: 400, height: 860 }, hasTouch: true, isMobile: true, locale: 'he-IL' });
   await page.clock.setFixedTime(new Date('2026-10-21T13:00:00')); // lunchtime: the add window starts on lunch
+  page.on('dialog', (d) => { native.push(d.message()); void d.dismiss(); }); // the app asks in its own windows
   await page.goto(URL);
 });
 after(async () => {
@@ -33,6 +36,7 @@ after(async () => {
 // ---- the vocabulary of the app, by role and name ----
 const button = (name, scope = page) => scope.getByRole('button', { name, exact: typeof name === 'string' });
 const dialog = () => page.getByRole('dialog');
+const asked = (title) => page.getByRole('dialog', { name: title }); // the app's own confirm/prompt, over another window
 const mealTab = (name) => dialog().getByRole('group', { name: 'ארוחה' }).getByRole('button', { name: new RegExp(name) });
 const meal = (label) => page.getByRole('region', { name: label });
 const entries = (label) => meal(label).getByRole('button', { name: /^מחק: / }); // one delete button per entry
@@ -109,13 +113,19 @@ test('the meal photo is kept with the meal; a backup carries it; delete, then re
   // delete it, and restoring the backup brings it back
   await button('יומן').tap();
   await photo.tap();
-  page.once('dialog', (d) => d.accept());
+  // the app asks in its own window, not the browser's; cancel keeps it
   await button('מחק תמונה', dialog()).tap();
+  await button('ביטול', asked('למחוק את התמונה?')).tap();
+  await asked('למחוק את התמונה?').waitFor({ state: 'detached' });
+  assert.ok(await page.getByRole('img', { name: 'הארוחה שצולמה' }).isVisible());
+  await button('מחק תמונה', dialog()).tap();
+  await button('מחק תמונה', asked('למחוק את התמונה?')).tap();
+  await asked('למחוק את התמונה?').waitFor({ state: 'detached' });
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await photo.count(), 0);
   await button(/הגדרות/).tap();
-  page.once('dialog', (d) => d.accept());
-  await Promise.all([page.waitForEvent('load'), page.getByLabel('שחזור מגיבוי').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: backup })]);
+  await page.getByLabel('שחזור מגיבוי').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: backup });
+  await Promise.all([page.waitForEvent('load'), button('שחזור', asked(/^השחזור יחליף/)).tap()]);
   await button('יומן').tap();
   await photo.waitFor();
 });
@@ -157,8 +167,9 @@ test('delete an entry, then undo', async () => {
 });
 
 test('save a meal, then add it again in one tap', async () => {
-  page.once('dialog', (d) => d.accept('ערב קבוע'));
   await button('שמור כארוחה', meal('ארוחת ערב')).tap();
+  await asked('שמירה כארוחה').getByRole('textbox', { name: 'שם הארוחה' }).fill('ערב קבוע');
+  await button('שמור', asked('שמירה כארוחה')).tap();
   await page.getByText('"ערב קבוע" נשמרה').waitFor();
   await openAdd();
   await mealTab('נשנושים').tap();
