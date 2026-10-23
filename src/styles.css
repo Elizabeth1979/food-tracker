@@ -161,10 +161,11 @@ main button.banner { width: 100%; }
 .seg button.on .i { color: inherit; }
 .list { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; }
 .list .row { padding-inline: 4px; }
-/* add dialog: one list of usual things; tap adds, tap again takes back */
+/* add dialog: one list of usual things; ＋ adds, tap again takes back; a food's name opens the amount */
 .usual { display: flex; flex-direction: column; }
 .usual .row { padding-inline: 4px; min-height: 56px; }
 .row.pick .kcal { color: var(--muted); font-variant-numeric: tabular-nums; }
+.row.pick > button.grow { display: flex; align-items: center; gap: 10px; align-self: stretch; text-align: start; }
 .row .mark { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent); transition: background .15s ease-out, border-color .15s ease-out; }
 .row.on .mark { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .row.pick.on .kcal { color: var(--text); }

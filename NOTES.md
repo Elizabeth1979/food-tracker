@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: usual foods at another amount
+
+**Done:**
+- In the add window's "הרגילים שלך", each food row is now two buttons: ＋ adds at last time's amount (tap again takes it back), and the name opens the amount picker filled with last time's amount (`Pick` with `onOpen` in `AddDialog.tsx`). Saved meals stay one tap. A row shows what this visit added, so after adding 2 tomatoes it says 2. (The owner wanted 2 tomatoes where the list offered 1.)
+
 ## 2026-10-22: a note with every photo
 
 **Done:**
