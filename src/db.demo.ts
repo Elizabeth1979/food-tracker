@@ -65,6 +65,7 @@ const bucket = {
   }),
   download: async (path: string) => ({ data: await (await fetch(files[path])).blob(), error: null }),
   createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: files[path] ?? null })), error: null }),
+  move: async (from: string, to: string) => { files[to] = files[from]; delete files[from]; saveFiles(); return { error: null }; },
   remove: async (paths: string[]) => { paths.forEach((p) => delete files[p]); saveFiles(); return { error: null }; },
 };
 export const supabase = {

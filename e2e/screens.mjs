@@ -272,6 +272,34 @@ test('deleting a meal\'s last food takes its photo too, and undo brings both bac
   await button('יום הבא').tap();
 });
 
+test('moving a meal\'s last food to another meal takes its photo along', async () => {
+  await button('יום קודם').tap();
+  await openAdd();
+  await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await button('זהה מזונות', dialog()).tap();
+  await button(/^הוסף לארוחת צהריים/, dialog()).tap();
+  await button(/^סיום/, dialog()).tap();
+  const atLunch = button('תמונה 1: ארוחת צהריים', meal('ארוחת צהריים'));
+  const atDinner = button('תמונה 1: ארוחת ערב', meal('ארוחת ערב'));
+  await atLunch.waitFor();
+  const foods = entries('ארוחת צהריים');
+  for (let n = await foods.count(); n > 0; n--) {
+    const name = (await foods.first().getAttribute('aria-label')).replace(/^מחק: /, '');
+    await meal('ארוחת צהריים').getByRole('button', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) }).first().tap();
+    await mealTab('ערב').tap();
+    await button('שמור', dialog()).tap();
+    await dialog().waitFor({ state: 'detached' });
+    if (n > 1) assert.equal(await atLunch.count(), 1); // other food is still at lunch: the photo stays
+  }
+  await atDinner.waitFor();
+  assert.equal(await atLunch.count(), 0);
+  // and it's really moved: still at dinner after a reload
+  await page.reload();
+  await button('יום קודם').tap();
+  await atDinner.waitFor();
+  await button('יום הבא').tap();
+});
+
 test('the phone back button closes a window, and returns from the reports tab to the diary', async () => {
   await openAdd();
   await page.keyboard.press('Escape'); // the same close request Android's back gesture sends

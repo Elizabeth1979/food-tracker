@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: a meal's photo moves with its last food
+
+**Done:**
+- Moving a meal's last food to another meal (tap the entry, change the meal) left the photo on the empty meal. `Day.tsx` now moves it along (`movePhoto` in `lib.ts`: Storage `move`, renaming `<meal>.<id>.jpg`; the existing `own_meal_photos` policy is `for all`, so no database change). One helper, `photosLeft`, decides for both delete and move.
+- Screen test: move the foods one by one, the photo stays until the last, then is at dinner, still after a reload. Fails without the fix.
+
 ## 2026-10-23: the add window's usual foods: one list at every meal
 
 **Done:**
@@ -20,7 +26,6 @@ What was done in each work session and what's next. Newest first.
 - The owner deleted the only food in dinner and the meal photo stayed, over "עוד לא נרשם כלום". Photos aren't linked to entries (no table), so `Day.tsx` now hides the meal's photos when its last food is deleted, says so in the undo toast ("נמחק עם תמונת הארוחה", now `role="status"`), and deletes them for good once the 6-second undo passes. Undo brings both back.
 - Screen test for it (fails without the fix). CLAUDE.md: every reported bug gets a test that reproduces it.
 
-**Next:** moving a meal's last food to another meal (entry edit) still leaves the photo on the old meal.
 
 ## 2026-10-23: a photo's potato: boiled is boiled, "מעוך" is פירה
 
