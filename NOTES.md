@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: vitamins out of the way while adding
+
+**Done:**
+- The owner found the vitamin line while adding food confusing and incomplete. `NutLine` (amount picker, review list, meal editor) now shows calories and macros only. Vitamins show in a food's details in the מזונות tab (`MicroLine` under `FoodSummary`) and in the day summary folded as "ויטמינים ומינרלים היום" (`MicroLine` with `label` is now a `<details>` with a note that MoH foods carry only sodium, calcium, potassium and B12). Reports unchanged.
+
+**Next:** the MoH database has more vitamins than the four the app loads; adding them would complete the picture for food.
+
 ## 2026-10-23: supplements and all their vitamins
 
 **Done:**

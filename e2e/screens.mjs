@@ -268,13 +268,23 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   await dialog().getByRole('combobox', { name: 'ויטמין או מינרל נוסף' }).selectOption('מגנזיום (מ״ג)');
   await dialog().getByRole('spinbutton', { name: 'מגנזיום (מ״ג)' }).fill('50');
   await button('שמור', dialog()).tap();
-  // then straight to the amount: 2 tablets
+  // then straight to the amount, 2 tablets: calories and macros only, no vitamins while adding
   await dialog().getByRole('spinbutton').first().fill('2');
+  assert.doesNotMatch(await dialog().innerText(), /ויטמין D/);
   await button('הוסף לארוחת צהריים', dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
-  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים' });
+  // the day's vitamins are folded away until asked for
+  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים היום' });
+  assert.doesNotMatch(await vitamins.innerText(), /ויטמין D/);
+  await vitamins.getByText('ויטמינים ומינרלים היום').tap();
   assert.match(await vitamins.innerText(), /ויטמין D 50 מק״ג[\s\S]*ויטמין C 160 מ״ג[\s\S]*ברזל 28 מ״ג[\s\S]*מגנזיום 100 מ״ג[\s\S]*אבץ 20 מ״ג/);
+  // and a food's own, per tablet, when it is opened in the foods tab
+  await button(/מזונות/).tap();
+  const mine = page.getByRole('region', { name: /^המזונות שלי/ });
+  await mine.getByText('מולטי ויטמין').tap();
+  await mine.getByText('ויטמין D 25 מק״ג').waitFor();
+  await button('יומן').tap();
 });
 
 
