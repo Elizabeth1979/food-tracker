@@ -192,6 +192,13 @@ export async function listPhotos(date: string): Promise<MealPhoto[]> {
   const files = await names(dir);
   return files.length ? signed(files.map((f) => `${dir}/${f}`)) : [];
 }
+// To another meal of the same day: only the file name's meal changes.
+export async function movePhoto(p: MealPhoto, meal: MealKey): Promise<MealPhoto> {
+  const to = p.path.replace(/\/[^/.]+\.([^/]+)$/, `/${meal}.$1`);
+  const { error } = await photos().move(p.path, to);
+  if (error) throw error;
+  return (await signed([to]))[0];
+}
 export async function deletePhoto(p: MealPhoto) {
   const { error } = await photos().remove([p.path]);
   if (error) throw error;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
-import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
+import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, movePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
 import { DayGoals, GoalsInfo, Group, MicroLine, Modal, Ring, WaterLine, confirmIt, promptIt } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
@@ -51,11 +51,12 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
     setEntries((cur) => [...(cur ?? []), ...es]);
     if (es[0]) setOpen(es[0].meal, true);
   };
+  // A meal's photos belong to its food: they go (or move) with the meal's last food.
+  const photosLeft = (e: Entry) => (!isWater(e) && !food.some((x) => x.meal === e.meal && x.id !== e.id) ? photos.filter((p) => p.meal === e.meal) : []);
   const remove = async (e: Entry) => {
     await client.models.Entry.delete({ id: e.id });
     setEntries((cur) => cur!.filter((x) => x.id !== e.id));
-    const last = !isWater(e) && !food.some((x) => x.meal === e.meal && x.id !== e.id);
-    const ps = last ? photos.filter((p) => p.meal === e.meal) : [];
+    const ps = photosLeft(e);
     setPhotos((cur) => cur.filter((p) => !ps.includes(p)));
     setUndo({ e, photos: ps });
     setTimeout(() => {
@@ -68,6 +69,14 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
     setUndo(null);
     setPhotos((cur) => [...cur, ...ps]);
     added(await addEntries(e.date, e.meal as MealKey, [pickItem(e)]));
+  };
+  const saved = async (old: Entry, e: Entry) => {
+    setEntries((cur) => cur!.map((x) => (x.id === e.id ? e : x)));
+    setEditing(null);
+    const ps = e.meal === old.meal ? [] : photosLeft(old);
+    if (!ps.length) return;
+    const moved = await Promise.all(ps.map((p) => movePhoto(p, e.meal as MealKey)));
+    setPhotos((cur) => [...cur.filter((p) => !ps.includes(p)), ...moved]);
   };
   const removePhoto = async (p: MealPhoto) => {
     if (!(await confirmIt('למחוק את התמונה?', 'מחק תמונה'))) return;
@@ -168,7 +177,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
       )}
       {editing && (
         <EntryDialog ctx={ctx} entry={editing} onClose={() => setEditing(null)} onDelete={() => { remove(editing); setEditing(null); }}
-          onSaved={(e) => { setEntries((cur) => cur!.map((x) => (x.id === e.id ? e : x))); setEditing(null); }} />
+          onSaved={(e) => saved(editing, e)} />
       )}
     </div>
   );
