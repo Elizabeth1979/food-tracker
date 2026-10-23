@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, saveWeight, scale, sum, today, type Entry, type Nut } from './lib';
-import { Group, Donut, MacroLegend, MicroLine } from './ui';
+import { Group, Donut, MacroLegend, MicroGoals } from './ui';
 import { Icon } from './icons';
 
 const PRESETS: [string, number][] = [['יום', 0], ['שבוע', 6], ['חודש', 29]];
@@ -63,8 +63,11 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
             <div className="grow">
               <div className="kcal-line"><span>{days.length > 1 ? `ממוצע ל-${logged.length} ימים מתועדים` : 'סה״כ'}</span><b>{avg.kcal}</b><span className="muted">/ {goal} קק״ל</span></div>
               <MacroLegend n={avg} goals={goals} />
-              <MicroLine n={avg} rda />
             </div>
+          </section>
+          <section className="card pad stack">
+            <h3>ויטמינים ומינרלים{days.length > 1 ? ' · ממוצע ליום' : ''}</h3>
+            <MicroGoals n={avg} />
           </section>
           {days.length > 1 && <KcalChart data={byDay.map((x) => ({ d: x.d, v: x.t.kcal }))} goal={goal} />}
           {days.length > 1 && (
