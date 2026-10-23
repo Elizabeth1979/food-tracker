@@ -232,6 +232,49 @@ test('a usual food: ＋ adds last time\'s amount; its name opens the amount pick
   assert.equal(await entries('ארוחת צהריים').count(), 0);
 });
 
+test('what fits in what\'s left: today only, the usual things that fit, one tap each', async () => {
+  const ask = button(/^מה נכנס ב־\d+ קק״ל\?$/);
+  // over the goal (2022 of 2000): nothing to ask; taking out snack foods (the saved meal again) until it asks
+  assert.match(await page.getByRole('region', { name: 'סיכום היום' }).innerText(), /חריגה/);
+  assert.equal(await ask.count(), 0);
+  for (let n = 6; !(await ask.count()); n--) {
+    assert.ok(n > 0, 'never asked');
+    await entries('נשנושים ואחר').first().tap();
+    await page.waitForFunction((n) => document.querySelectorAll('[aria-label^="מחק: "]').length === 12 + n - 1, n);
+  }
+  const left = Number((await ask.innerText()).match(/\d+/)[0]);
+  await ask.tap();
+  const fits = dialog().getByRole('region', { name: /^מה נכנס ב־\d+ קק״ל שנותרו$/ });
+  const rows = fits.getByRole('button', { name: /^הוסף: |\(ארוחה שמורה\)/ });
+  await rows.first().waitFor(); // the month loads after opening
+  // each row's calories: the last line of its name button (a food's ＋ is named "הוסף: …" and has no text)
+  const kcal = () => fits.getByRole('button').evaluateAll((bs) => bs.filter((b) => !b.getAttribute('aria-label') && b.innerText.includes('\n'))
+    .map((b) => Number(b.innerText.trim().split('\n').at(-1))));
+  const all = await kcal();
+  assert.ok(all.length > 0 && all.length === await rows.count() && all.length <= 5, `${all}`);
+  assert.ok(all.every((n) => n > 0 && n <= left), `${all} should all fit in ${left}`);
+  assert.ok(await fits.getByText(/קודם מה שעשיר בחלבון/).isVisible()); // protein still under its 50 g
+  // one tap adds it at the usual amount; what's left drops by it, and the row stays to take it back
+  const first = rows.first();
+  await first.tap();
+  await page.waitForFunction(() => document.querySelector('[aria-pressed="true"]'));
+  assert.equal(await first.getAttribute('aria-pressed'), 'true');
+  await fits.getByRole('heading', { name: `מה נכנס ב־${left - all[0]} קק״ל שנותרו` }).waitFor();
+  await first.tap();
+  await fits.getByRole('heading', { name: `מה נכנס ב־${left} קק״ל שנותרו` }).waitFor();
+  // and back to the whole usual list
+  await button('כל הרגילים', fits).tap();
+  assert.ok(await dialog().getByRole('region', { name: 'הרגילים שלך' }).isVisible());
+  await button('סיום', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  // past days don't ask
+  await button('יום קודם').tap();
+  await page.getByText('היום', { exact: true }).waitFor({ state: 'detached' });
+  assert.equal(await button(/^מה נכנס ב־/).count(), 0);
+  await button('יום הבא').tap();
+  await page.getByText('היום', { exact: true }).waitFor();
+});
+
 test('water: a glass at a time on its own line, not under a meal', async () => {
   const water = page.getByRole('group', { name: 'מים' });
   const amount = () => water.getByRole('status').innerText();

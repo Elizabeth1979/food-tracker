@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
+import { goalsLeft, whatFits, type Goals } from './goals';
 import { FileButton, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm, labelFood, saveFood } from './Foods';
 import { ReviewList } from './Review';
@@ -80,8 +81,9 @@ export const unitSaver = (ctx: Ctx, f: Food, then?: (f: Food) => void) => async 
 // can still be moved to another meal from the diary. The phone's back button (or Esc) steps back from the amount
 // or typing view to the list, and from the list closes it.
 // A nutrition label goes straight in: photo, check the name and values, then the amount; the full form only on "עריכה".
+// `left` (what's left of today's goals) opens it on "what fits": the usual things that fit, each still one tap.
 // `fromFoods` (a food tapped in the מזונות page) keeps that page's own look: "חזרה לחיפוש", 100 g.
-export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded, onRemoved, onPhoto, initial }: { ctx: Ctx; meal: MealKey; date: string; fromFoods?: boolean; onClose: () => void; onAdded: (e: Entry[]) => void; onRemoved?: (e: Entry[]) => void; onPhoto?: (p: MealPhoto) => void; initial?: Food }) {
+export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, onAdded, onRemoved, onPhoto, initial }: { ctx: Ctx; meal: MealKey; date: string; fromFoods?: boolean; left?: Goals; onClose: () => void; onAdded: (e: Entry[]) => void; onRemoved?: (e: Entry[]) => void; onPhoto?: (p: MealPhoto) => void; initial?: Food }) {
   const meal = meal0;
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
@@ -97,13 +99,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   // What this visit added, keyed by the row that added it ("m:<saved meal>", "f:<food>", or one-off keys).
   const [done, setDone] = useState<Record<string, Entry[]>>({});
   // The past month, loaded once: the last amount of each food, and what you tend to have at each meal.
-  const [month, setMonth] = useState<Entry[]>([]);
+  const [month, setMonth] = useState<Entry[] | null>(null);
   useEffect(() => { loadEntries(addDays(date, -30), date).then(setMonth); }, [date]);
   const added = Object.values(done).flat();
   // This visit's additions count as the latest, so a row added at another amount shows that amount.
   const last = useMemo(() => {
     const m: Record<string, Entry> = {};
-    for (const e of [...month].sort((a, b) => a.date.localeCompare(b.date)).concat(added)) if (e.foodId) m[e.foodId] = e;
+    for (const e of [...month ?? []].sort((a, b) => a.date.localeCompare(b.date)).concat(added)) if (e.foodId) m[e.foodId] = e;
     return m;
   }, [month, done]);
   const hits = useMemo(() => searchFoods(ctx.foods, q, ctx.recent), [ctx.foods, q, ctx.recent]);
@@ -116,7 +118,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const usual = useMemo(() => {
     const n: Record<string, number> = {};
     const had: Record<string, Set<string>> = {}; // the foods of each meal eaten: "<date>|<meal>"
-    for (const e of month) if (e.foodId) {
+    for (const e of month ?? []) if (e.foodId) {
       n[e.foodId] = (n[e.foodId] ?? 0) + 1;
       (had[`${e.date}|${e.meal}`] ??= new Set()).add(e.foodId);
     }
@@ -131,6 +133,17 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     return byScore([...foods, ...saved]);
   }, [ctx.foods, ctx.meals, order, month]);
   const [more, setMore] = useState(false);
+  // What fits in what's left, at the usual amount (a food never logged has none, so it's out); this visit's additions
+  // count as eaten, and stay in the list to take back.
+  const [fitting, setFitting] = useState(!!left);
+  const leftNow = left && goalsLeft(left, sum(added));
+  const priced = usual.flatMap((r) => {
+    const n = 'm' in r ? sum(r.items) : last[r.f.id];
+    return n ? [{ ...r, kcal: n.kcal, carbs: n.carbs, fat: n.fat, protein: n.protein }] : [];
+  });
+  const fits = leftNow ? whatFits(priced, leftNow, (r) => !!done[r.key]) : [];
+  // Nothing fits: the smallest usual food, whose name opens the amount picker for less of it.
+  const closest = priced.flatMap((r) => ('f' in r ? [r] : [])).sort((a, b) => a.kcal - b.kcal)[0];
   const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
 
   const add = async (key: string, items: Item[]) => {
@@ -210,7 +223,19 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
             {err && <p className="error" role="alert">{err}</p>}
           </>}
           <div className="usual">
-            {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: mealItems(ctx.foods, m) })) : <>
+            {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: mealItems(ctx.foods, m) })) : fitting && leftNow ? (
+              <section aria-labelledby={`${uid}-f`}>
+                <h3 id={`${uid}-f`}>מה נכנס ב־{Math.max(0, Math.round(leftNow.kcal))} קק״ל שנותרו</h3>
+                {month && (fits.length ? <>
+                  <p className="muted small">{leftNow.protein > 0 ? 'מהרגילים שלך, בכמות הרגילה. קודם מה שעשיר בחלבון.' : 'מהרגילים שלך, בכמות הרגילה.'}</p>
+                  {fits.map((r) => ('m' in r ? mealPick(r) : foodPick(r)))}
+                </> : <>
+                  <p className="muted small" role="status">שום דבר מהרגילים שלך לא נכנס בכמות הרגילה.{closest && ' אפשר פחות ממנו: לחצו על השם לבחירת כמות.'}</p>
+                  {closest && foodPick(closest)}
+                </>)}
+                <button className="link" onClick={() => setFitting(false)}>כל הרגילים</button>
+              </section>
+            ) : <>
               {/* Your usual things, one tap each with last time's amount; ignore them and search, photograph or type instead */}
               {usual.length > 0 && (
                 <section aria-labelledby={`${uid}-u`}>

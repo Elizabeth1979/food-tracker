@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: "מה נכנס ב־N קק״ל?": what you can still eat today
+
+**Done:**
+- The owner asked "what can I eat from my usual foods with the 200 calories left?". Today only, while calories are left, the day summary has "מה נכנס ב־N קק״ל?". It opens the ＋ window on up to 5 of the usual foods and saved meals whose usual amount fits the calories and carbs left (carbs are a limit). While protein is under its goal, the most protein per calorie first; otherwise the most logged first. Each is one tap, like the usual list; what's left updates as you add, and "כל הרגילים" goes back to the full list. If nothing fits it says so and offers the smallest usual food, whose name opens the amount picker for less.
+- No AI: same data as the usual list (the past month). Ranking is `whatFits` in `goals.ts` (with `goalsLeft`, used by the day and the window); unit test in `goals.test.ts`. Screen test: hidden while over the goal and on past days; every row fits; a tap lowers what's left and can be taken back.
+
 ## 2026-10-23: the add window: foods and saved meals in one list
 
 **Done:**

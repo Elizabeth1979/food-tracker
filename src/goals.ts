@@ -31,3 +31,17 @@ export function suggestGoals(b: Body): Goals {
   const fat = Math.round((kcal - protein * 4 - carbs * 4) / 9);
   return { kcal, carbs, fat, protein };
 }
+
+// What's left of each goal after what was eaten (negative once over).
+export const goalsLeft = (g: Goals, eaten: Goals): Goals =>
+  ({ kcal: g.kcal - eaten.kcal, carbs: g.carbs - eaten.carbs, fat: g.fat - eaten.fat, protein: g.protein - eaten.protein });
+
+// "What can I still eat?": the usual things whose usual amount fits in the calories and carbs left (carbs are a limit,
+// protein a minimum, fat what's left over). Protein still short → the most protein per calorie first; otherwise the
+// most often eaten first (the order given). `keep` stays in its place whatever it costs: this visit's additions,
+// so a tapped row doesn't vanish from under your finger.
+export function whatFits<T extends Goals>(xs: T[], left: Goals, keep: (x: T) => boolean = () => false, max = 5): T[] {
+  const fits = xs.filter((x) => keep(x) || (x.kcal > 0 && x.kcal <= left.kcal && x.carbs <= Math.max(0, left.carbs)));
+  const ranked = left.protein > 0 ? [...fits].sort((a, b) => b.protein / b.kcal - a.protein / a.kcal) : fits;
+  return ranked.slice(0, max);
+}
