@@ -66,7 +66,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
 
 // ---------- free text: "יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים" ----------
 // grams: a photo's guess of the whole amount's weight, to check its unit against (see unitFor).
-export type Parsed = { text: string; query: string; qty: number | null; unit: string | null; grams?: number };
+// hidden: a fat or sauce the photo inferred but can't show (frying oil, dressing), for the user to confirm.
+export type Parsed = { text: string; query: string; qty: number | null; unit: string | null; grams?: number; hidden?: boolean };
 
 const NUMBERS: Record<string, number> = {
   חצי: 0.5, רבע: 0.25, אחד: 1, אחת: 1, שני: 2, שתי: 2, שניים: 2, שתיים: 2, זוג: 2, שלוש: 3, שלושה: 3, כמה: 3,

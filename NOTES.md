@@ -2,6 +2,14 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: the photo guesses hidden oil and sauce
+
+**Done:**
+- Research (NIH-linked study, July 2026) found photo calorie apps miss 250–345 kcal a meal, mostly fat they can't see. `meal-photo` (v8) now adds the frying oil, dressing, butter or sauce as its own item in spoons with `hidden: true`, under a plain name the database matches ("שמן זית", "חמאה", "טחינה"); not for foods it names as fried, whose oil the database already counts.
+- The review list marks such a row "ניחוש: שמן או רוטב שלא רואים בתמונה…" so the owner fixes the amount or removes it. It's included by default, since leaving fat out is the known error. Test mode's photo answer has a guessed olive oil; the screen test sees the note and removes it.
+
+**Next:** the owner chose "numbers I don't trust" as the main pain. Other ideas from the same research, not built: weekly adaptive calorie target from weigh-ins (no AI cost; asks before changing goals), "what can I still eat" from usual foods.
+
 ## 2026-10-23: a meal's photo moves with its last food
 
 **Done:**

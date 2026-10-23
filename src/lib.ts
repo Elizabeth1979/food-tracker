@@ -141,9 +141,9 @@ async function shrunk(file: File, max: number) {
 }
 const shrink = async (file: File, max = 1024) => (await shrunk(file, max)).toDataURL('image/jpeg', 0.8).split(',')[1];
 export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
-  const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string; grams?: number }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
+  const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string; grams?: number; hidden?: boolean }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
   if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
-  return data.items.map((i) => ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit, grams: i.grams }));
+  return data.items.map((i) => ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit, grams: i.grams, hidden: i.hidden }));
 }
 // Reads a nutrition table (טבלת ערכים תזונתיים) into per-100 g values for the new-food form. The one exception to
 // "calories come from the database": a packaged product the database lacks, checked by the user before saving.

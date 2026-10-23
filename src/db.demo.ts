@@ -91,7 +91,7 @@ export const supabase = {
           error: null,
         };
       return {
-        data: { items: [{ name: 'יוגורט', qty: 1, unit: 'גביע', grams: 150 }, { name: 'ענבים', qty: 10, unit: 'יחידה', grams: 60 }, { name: 'חמאת בוטנים', qty: 1, unit: 'כפית', grams: 10 }, { name: 'גרנולה', qty: 2, unit: 'כף', grams: 20 }] } as D,
+        data: { items: [{ name: 'יוגורט', qty: 1, unit: 'גביע', grams: 150 }, { name: 'ענבים', qty: 10, unit: 'יחידה', grams: 60 }, { name: 'חמאת בוטנים', qty: 1, unit: 'כפית', grams: 10 }, { name: 'גרנולה', qty: 2, unit: 'כף', grams: 20 }, { name: 'שמן זית', qty: 1, unit: 'כף', grams: 10, hidden: true }] } as D,
         error: null,
       };
     },
