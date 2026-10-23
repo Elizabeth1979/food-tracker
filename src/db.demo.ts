@@ -51,13 +51,21 @@ export const hasPending = () => false;
 // A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
 // a meal, or for `mode: 'label'` a granola bar's nutrition table (per 100 g, with a 30 g bar as the serving).
 const session = { user: { id: 'test-user', email: 'מצב בדיקה' } };
-// Meal photos stay in memory for this page only: path → blob URL.
-const files = new Map<string, string>();
+// Meal photos live in localStorage too (path → data URL), so they outlast a restore's reload. `list` gives one
+// level down, files or folders, like Storage.
+const PHOTOS = 'food-tracker-test-photos';
+const files: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem(PHOTOS) ?? '{}'); } catch { return {}; } })();
+const saveFiles = () => localStorage.setItem(PHOTOS, JSON.stringify(files));
+const dataUrl = (b: Blob) => new Promise<string>((ok) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.readAsDataURL(b); });
 const bucket = {
-  upload: async (path: string, blob: Blob) => { files.set(path, URL.createObjectURL(blob)); return { error: null }; },
-  list: async (dir: string) => ({ data: [...files.keys()].filter((p) => p.startsWith(dir + '/')).map((p) => ({ name: p.slice(dir.length + 1) })), error: null }),
-  createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: files.get(path) ?? null })), error: null }),
-  remove: async (paths: string[]) => { paths.forEach((p) => files.delete(p)); return { error: null }; },
+  upload: async (path: string, blob: Blob) => { files[path] = await dataUrl(blob); saveFiles(); return { error: null }; },
+  list: async (dir: string) => ({
+    data: [...new Set(Object.keys(files).filter((p) => p.startsWith(dir + '/')).map((p) => p.slice(dir.length + 1).split('/')[0]))].map((name) => ({ name })),
+    error: null,
+  }),
+  download: async (path: string) => ({ data: await (await fetch(files[path])).blob(), error: null }),
+  createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: files[path] ?? null })), error: null }),
+  remove: async (paths: string[]) => { paths.forEach((p) => delete files[p]); saveFiles(); return { error: null }; },
 };
 export const supabase = {
   storage: { from: (_bucket: string) => bucket },
@@ -65,7 +73,7 @@ export const supabase = {
     getSession: async () => ({ data: { session } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signInWithOtp: async () => ({ error: null }),
-    signOut: async () => { if (confirm('למחוק את כל נתוני הבדיקה?')) { localStorage.removeItem(KEY); location.reload(); } },
+    signOut: async () => { if (confirm('למחוק את כל נתוני הבדיקה?')) { localStorage.removeItem(KEY); localStorage.removeItem(PHOTOS); location.reload(); } },
   },
   functions: {
     invoke: async <D,>(_name: string, opts: { body?: { mode?: string } }): Promise<{ data: D; error: null }> => {

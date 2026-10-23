@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import type { Ctx } from './App';
-import { client, loadMoh, today, type Profile } from './lib';
+import { client, exportPhotos, loadMoh, restorePhotos, today, type Profile } from './lib';
 import { exportAll, restoreAll, supabase } from './db';
 import { APP_VERSION } from './update';
 import { Group } from './ui';
@@ -28,9 +28,12 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
     setEditing(false);
     setMsg('נשמר');
   };
+  // The meal photos ride along under "Photo"; a backup without it (older ones) restores the data and leaves photos be.
   const download = async () => {
+    setMsg('מכין את הגיבוי…');
+    const [data, Photo] = await Promise.all([exportAll(), exportPhotos()]);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(await exportAll())], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ ...data, Photo })], { type: 'application/json' }));
     a.download = `food-tracker-backup-${today()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -41,7 +44,9 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
     e.target.value = ''; // allow picking the same file again
     if (!file || !confirm('השחזור יחליף את כל הנתונים באפליקציה בתוכן הגיבוי. להמשיך?')) return;
     try {
-      await restoreAll(JSON.parse(await file.text()), await loadMoh());
+      const { Photo, ...data } = JSON.parse(await file.text());
+      await restoreAll(data, await loadMoh());
+      if (Array.isArray(Photo)) await restorePhotos(Photo);
       location.reload();
     } catch (err: any) { setMsg('השחזור נכשל: ' + err.message); }
   };
