@@ -44,6 +44,13 @@ const mealTab = (name) => dialog().getByRole('group', { name: 'ארוחה' }).ge
 const meal = (label) => page.getByRole('region', { name: label });
 const entries = (label) => meal(label).getByRole('button', { name: /^מחק: / }); // one delete button per entry
 const openAdd = async () => { await button(/הוספה$/).tap(); await dialog().waitFor(); };
+// The day's vitamins and minerals, folded under one summary; `vitamin(name)` reads a row's amount (opens it if needed).
+const vitamins = () => page.getByRole('group', { name: 'ויטמינים ומינרלים שצרכת היום' });
+const vitaminRows = async () => {
+  if (!(await vitamins().evaluate((d) => d.open))) await vitamins().getByText('ויטמינים ומינרלים שצרכת היום').tap();
+  return (await vitamins().innerText()).replace(/\s+/g, ' ');
+};
+const vitamin = async (name) => Number((await vitaminRows()).match(new RegExp(`${name}(?: ✓ הושג| מעל היעד)? ([\\d.]+) /`))[1]);
 const sampleJpeg = () => page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; return c.toDataURL('image/jpeg').split(',')[1]; });
 
 test('one ＋ opens the add window, with no meal to choose', async () => {
@@ -51,7 +58,7 @@ test('one ＋ opens the add window, with no meal to choose', async () => {
   assert.equal(await dialog().getByRole('group', { name: 'ארוחה' }).count(), 0);
 });
 
-test('search, pick an amount, add', async () => {
+test('search, pick an amount, add; a fruit counts toward vitamin C', async () => {
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('ענבים');
   await button(/^ענבים/, dialog()).first().tap();
   await button('הוסף', dialog()).tap();
@@ -59,6 +66,8 @@ test('search, pick an amount, add', async () => {
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('ארוחת צהריים').count(), 1); // lunchtime: filed under lunch
   assert.equal(await button('שמור כארוחה', meal('ארוחת צהריים')).count(), 0); // one food isn't a saved meal: it's one tap in "הרגילים שלך"
+  assert.ok((await vitamin('ויטמין C')) > 0, 'the grapes, the day\'s only food, give vitamin C (MoH data)');
+  await vitamins().getByText('ויטמינים ומינרלים שצרכת היום').tap();
 });
 
 test('in the evening, a photo goes to the review list', async () => {
@@ -232,6 +241,49 @@ test('a usual food: ＋ adds last time\'s amount; its name opens the amount pick
   assert.equal(await entries('ארוחת צהריים').count(), 0);
 });
 
+test('what fits in what\'s left: today only, the usual things that fit, one tap each', async () => {
+  const ask = button(/^מה נכנס ב־\d+ קק״ל\?$/);
+  // over the goal (2022 of 2000): nothing to ask; taking out snack foods (the saved meal again) until it asks
+  assert.match(await page.getByRole('region', { name: 'סיכום היום' }).innerText(), /חריגה/);
+  assert.equal(await ask.count(), 0);
+  for (let n = 6; !(await ask.count()); n--) {
+    assert.ok(n > 0, 'never asked');
+    await entries('נשנושים ואחר').first().tap();
+    await page.waitForFunction((n) => document.querySelectorAll('[aria-label^="מחק: "]').length === 12 + n - 1, n);
+  }
+  const left = Number((await ask.innerText()).match(/\d+/)[0]);
+  await ask.tap();
+  const fits = dialog().getByRole('region', { name: /^מה נכנס ב־\d+ קק״ל שנותרו$/ });
+  const rows = fits.getByRole('button', { name: /^הוסף: |\(ארוחה שמורה\)/ });
+  await rows.first().waitFor(); // the month loads after opening
+  // each row's calories: the last line of its name button (a food's ＋ is named "הוסף: …" and has no text)
+  const kcal = () => fits.getByRole('button').evaluateAll((bs) => bs.filter((b) => !b.getAttribute('aria-label') && b.innerText.includes('\n'))
+    .map((b) => Number(b.innerText.trim().split('\n').at(-1))));
+  const all = await kcal();
+  assert.ok(all.length > 0 && all.length === await rows.count() && all.length <= 5, `${all}`);
+  assert.ok(all.every((n) => n > 0 && n <= left), `${all} should all fit in ${left}`);
+  assert.ok(await fits.getByText(/קודם מה שעשיר בחלבון/).isVisible()); // protein still under its 50 g
+  // one tap adds it at the usual amount; what's left drops by it, and the row stays to take it back
+  const first = rows.first();
+  await first.tap();
+  await page.waitForFunction(() => document.querySelector('[aria-pressed="true"]'));
+  assert.equal(await first.getAttribute('aria-pressed'), 'true');
+  await fits.getByRole('heading', { name: `מה נכנס ב־${left - all[0]} קק״ל שנותרו` }).waitFor();
+  await first.tap();
+  await fits.getByRole('heading', { name: `מה נכנס ב־${left} קק״ל שנותרו` }).waitFor();
+  // and back to the whole usual list
+  await button('כל הרגילים', fits).tap();
+  assert.ok(await dialog().getByRole('region', { name: 'הרגילים שלך' }).isVisible());
+  await button('סיום', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  // past days don't ask
+  await button('יום קודם').tap();
+  await page.getByText('היום', { exact: true }).waitFor({ state: 'detached' });
+  assert.equal(await button(/^מה נכנס ב־/).count(), 0);
+  await button('יום הבא').tap();
+  await page.getByText('היום', { exact: true }).waitFor();
+});
+
 test('water: a glass at a time on its own line, not under a meal', async () => {
   const water = page.getByRole('group', { name: 'מים' });
   const amount = () => water.getByRole('status').innerText();
@@ -379,6 +431,9 @@ test('the guide, from Settings: an article with its sources; back closes it, bac
 });
 
 test('a supplement from its label: every vitamin per tablet, logged, and summed in the day', async () => {
+  const before = {};
+  for (const name of ['ויטמין D', 'ויטמין C', 'ברזל', 'מגנזיום', 'אבץ']) before[name] = await vitamin(name);
+  await vitamins().getByText('ויטמינים ומינרלים שצרכת היום').tap();
   await openAdd();
   // the label button opens the camera; test mode reads any photo as a multivitamin's label, values per tablet
   await dialog().getByLabel('תווית').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
@@ -403,14 +458,14 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   await button('הוסף', dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
-  // the day's vitamins are folded away until asked for, then a row each against the label's daily value
-  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים שצרכת היום' });
-  assert.doesNotMatch(await vitamins.innerText(), /ויטמין D/);
-  await vitamins.getByText('ויטמינים ומינרלים שצרכת היום').tap();
-  const rows = (await vitamins.innerText()).replace(/\s+/g, ' ');
-  for (const row of [/נתרן מעל היעד \d+ \/ עד 2300 מ״ג/, /B12 ✓ הושג [\d.]+ \/ 2.4 מק״ג/, /ויטמין D ✓ הושג 50 \/ 20 מק״ג/, /ויטמין C ✓ הושג 160 \/ 90 מ״ג/,
-    /ברזל ✓ הושג 28 \/ 18 מ״ג/, /מגנזיום 100 \/ 420 מ״ג/, /אבץ ✓ הושג 20 \/ 11 מ״ג/]) assert.match(rows, row);
+  // the day's vitamins are folded away until asked for, then a row each against the label's daily value,
+  // the 2 tablets added on top of what the food already had
+  assert.doesNotMatch(await vitamins().innerText(), /ויטמין D/);
+  const rows = await vitaminRows();
+  for (const row of [/נתרן מעל היעד \d+ \/ עד 2300 מ״ג/, /B12 ✓ הושג [\d.]+ \/ 2.4 מק״ג/, /ויטמין D ✓ הושג [\d.]+ \/ 20 מק״ג/, /ויטמין C ✓ הושג [\d.]+ \/ 90 מ״ג/,
+    /ברזל ✓ הושג [\d.]+ \/ 18 מ״ג/, /מגנזיום [\d.]+ \/ 420 מ״ג/, /אבץ ✓ הושג [\d.]+ \/ 11 מ״ג/]) assert.match(rows, row);
   assert.match(rows, /ויטמין D[\s\S]*ויטמין C[\s\S]*ברזל[\s\S]*מגנזיום[\s\S]*אבץ/);
+  for (const [name, tablets] of Object.entries(before)) assert.equal(Math.round(((await vitamin(name)) - tablets) * 100) / 100, { 'ויטמין D': 50, 'ויטמין C': 160, 'ברזל': 28, 'מגנזיום': 100, 'אבץ': 20 }[name], name);
   // and a food's own, per tablet, when it is opened in the foods page
   await openFoods();
   const mine = page.getByRole('region', { name: /^המזונות שלי/ });

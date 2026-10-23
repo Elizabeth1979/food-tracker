@@ -21,12 +21,12 @@ The five in-app articles, checked against these. Cloud sessions can't open most 
 ## 2026-10-23: photo apps miss hidden fat (PR #54)
 - **Source:** NIDDK/NIH, presented at NUTRITION 2026 (American Society for Nutrition, July 25–28 2026): 102 meals from a metabolic kitchen, every ingredient weighed, run through MyFitnessPal, Lose It!, Cal AI and Appediet. All four underestimated by about 250–345 kcal and ~30 g fat a meal (about a third); carbs were close; ketogenic meals were worse. A conference abstract, not yet a peer-reviewed paper. Coverage: [ScienceDaily](https://www.sciencedaily.com/releases/2026/07/260726015237.htm), [Newswise](https://www.newswise.com/articles/photo-based-calorie-tracking-apps-may-underestimate-energy-in-meals), [Medscape](https://www.medscape.com/viewarticle/photo-based-meal-apps-underestimate-calories-and-fat-2026a1000qo9).
 - **Changed:** `meal-photo` (v8) adds the oil, dressing, butter or sauce it can't see as its own row in spoons, marked as a guess and included by default. Not for foods named as fried (their oil is in the database). Also the guide article "למה תמונה מפספסת קלוריות".
-- **Not built yet** (same research): a weekly calorie target adapted from weigh-ins; "what can I still eat".
+- **Later, from the same research:** "מה נכנס ב־N קק״ל?" (PR #60). Not built yet: a weekly calorie target adapted from weigh-ins.
 
 ## 2026-10-22: goals from the body (PRs #20, #28, #31)
 - **Sources:** default goals are the FDA nutrition-label Daily Values (2000 kcal, protein 50 g, carbs 275 g, fat 78 g). Resting energy: [Mifflin–St Jeor (1990)](https://pubmed.ncbi.nlm.nih.gov/2305711/). Protein: NAM RDA and the [ISSN 2017 position stand](https://doi.org/10.1186/s12970-017-0177-8). Carbs: the Dietary Guidelines for Americans (45–65% of calories).
 - **Changed:** `goals.ts`: protein 1.8 g/kg counted up to a BMI-25 weight, no protein goal until a weigh-in, carbs a soft limit with low-carb plans (130/100/50 g), fat ≥ 20% of calories. `GoalsInfo` in `ui.tsx` explains them with these sources.
 
 ## Food data: the Ministry of Health's Tzameret database
-- **Source:** משרד הבריאות, מאגר צמרת: 4,624 foods with calories, macros, sodium, calcium, potassium, B12, and piece, spoon and cup weights (`public/foods/moh.json`).
-- **Changed:** all calories in the app come from it or from the user's own foods; a photo only names foods and guesses amounts. Gap: the full file has vitamin C, iron, magnesium and more, not in `moh.json` yet (data.gov.il is blocked from cloud sessions).
+- **Source:** משרד הבריאות, מאגר צמרת: 4,624 foods with calories, macros, vitamins and minerals, and piece, spoon and cup weights (`public/foods/moh.json`; the vitamins added from the data.gov.il API by `scripts/moh-vitamins.ts`, PR #59).
+- **Changed:** all calories in the app come from it or from the user's own foods; a photo only names foods and guesses amounts.
