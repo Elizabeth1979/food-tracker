@@ -2,6 +2,7 @@
 // Decorative: the button or label next to them carries the accessible name.
 const PATHS = {
   plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   x: 'M18 6L6 18M6 6l12 12',
   pencil: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',

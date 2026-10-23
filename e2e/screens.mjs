@@ -186,6 +186,21 @@ test('a usual food: ＋ adds last time\'s amount; its name opens the amount pick
   assert.equal(await entries('ארוחת צהריים').count(), 0);
 });
 
+test('water: a glass at a time on its own line, not under a meal', async () => {
+  const water = page.getByRole('group', { name: 'מים' });
+  const amount = () => water.getByRole('status').innerText();
+  assert.match(await amount(), /^0 \/ 2 ליטר$/);
+  assert.ok(await button('פחות כוס מים', water).isDisabled()); // nothing to take back yet
+  await button('עוד כוס מים', water).tap();
+  await button('עוד כוס מים', water).tap();
+  await water.getByRole('status').filter({ hasText: /^0\.5 \// }).waitFor();
+  assert.equal(await entries('ארוחת צהריים').count(), 0); // logged at lunchtime, but not listed as lunch food
+  await button('פחות כוס מים', water).tap();
+  await water.getByRole('status').filter({ hasText: /^0\.25 \// }).waitFor();
+  await button('פחות כוס מים', water).tap();
+  await water.getByRole('status').filter({ hasText: /^0 \// }).waitFor();
+});
+
 test('moving between days', async () => {
   await button('יום קודם').tap();
   await page.getByText('היום', { exact: true }).waitFor({ state: 'detached' });

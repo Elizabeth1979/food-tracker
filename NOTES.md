@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: water tracking
+
+**Done:**
+- `WaterLine` (in `ui.tsx`) under the macro rows: "מים 0.75 / 2 ליטר" with "פחות כוס מים" / "עוד כוס מים". A glass is a normal entry (`WATER` in `lib.ts`: moh-9593, 250 g, 0 kcal) at the current meal; `isWater` (the plain MoH waters) keeps them off the meal lists and out of "שמור כארוחה". "פחות" deletes the latest glass with the usual undo. Goal fixed at 2 L (`WATER_GOAL_ML`); no database change.
+
 ## 2026-10-23: photos in the backup
 
 **Done:**

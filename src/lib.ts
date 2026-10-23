@@ -16,6 +16,13 @@ export type MicroKey = (typeof MICROS)[number]['key'];
 export type Nut = { kcal: number; carbs: number; fat: number; protein: number } & Partial<Record<MicroKey, number | null>>;
 export type Item = Nut & { foodId?: string | null; name: string; grams: number; qty?: number | null; unit?: string | null };
 
+// Water is logged as ordinary 0-kcal entries, a glass at a time, so it syncs, backs up and undoes like any food.
+// The diary counts the plain waters of the MoH database (also when found by search) on their own line, not under a meal.
+export const WATER: Item = { foodId: 'moh-9593', name: 'מים', grams: 250, qty: 1, unit: 'כוס', kcal: 0, carbs: 0, fat: 0, protein: 0 };
+export const WATER_GOAL_ML = 2000;
+const WATERS = new Set(['moh-9593', 'moh-4949', 'moh-10140', 'moh-4950', 'moh-4951', 'moh-4842']);
+export const isWater = (e: { foodId?: string | null }) => WATERS.has(e.foodId ?? '');
+
 export const MEALS: { key: MealKey; label: string; short: string; icon: IconName }[] = [
   { key: 'breakfast', label: 'ארוחת בוקר', short: 'בוקר', icon: 'sunrise' },
   { key: 'lunch', label: 'ארוחת צהריים', short: 'צהריים', icon: 'sun' },

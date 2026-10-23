@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
-import { MEALS, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
-import { DayGoals, GoalsInfo, Group, Modal, Ring } from './ui';
+import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
+import { DayGoals, GoalsInfo, Group, Modal, Ring, WaterLine } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -34,6 +34,12 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
 
   const list = entries ?? [];
   const tot = sum(list);
+  // Water has its own line in the summary, so the meals list only food.
+  const waters = list.filter(isWater), food = list.filter((e) => !isWater(e));
+  const drink = async () => {
+    const es = await addEntries(date, mealNow(), [WATER]);
+    setEntries((cur) => [...(cur ?? []), ...es]);
+  };
   const goals = goalsOf(ctx.profile), goal = goals.kcal;
 
   // Today, meals before the current one start collapsed; a tap on the header overrides.
@@ -60,7 +66,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
     setViewing(null);
   };
   const saveMeal = async (meal: MealKey) => {
-    const items = list.filter((e) => e.meal === meal).map(pickItem);
+    const items = food.filter((e) => e.meal === meal).map(pickItem);
     const name = items.length && prompt('שם לארוחה השמורה:');
     if (!name) return;
     const { data } = await client.models.SavedMeal.create({ name, items: JSON.stringify(items) });
@@ -91,6 +97,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
           <div className="kcal-line"><span>נצרכו</span><b>{tot.kcal}</b><span className="muted">מתוך {goal} קק״ל</span></div>
           <DayGoals n={tot} goals={goals} />
         </div>
+        <WaterLine ml={waters.reduce((t, e) => t + e.grams, 0)} onAdd={drink} onRemove={waters.length ? () => remove(waters.at(-1)!) : undefined} />
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
         <GoalsInfo goals={goals} />
       </section>
@@ -101,7 +108,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
 
       <Group title="ארוחות" body="">
       {MEALS.map((m) => {
-        const es = list.filter((e) => e.meal === m.key);
+        const es = food.filter((e) => e.meal === m.key);
         const ps = photos.filter((p) => p.meal === m.key);
         const open = isOpen(m.key);
         return (
