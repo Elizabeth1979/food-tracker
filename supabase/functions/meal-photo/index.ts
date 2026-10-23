@@ -17,12 +17,15 @@ const Meal = z.object({
     name: z.string().describe('Short generic Hebrew food name, e.g. "ענבים", "יוגורט 3%", "חמאת בוטנים"'),
     qty: z.number().describe('How many of `unit`'),
     unit: z.enum(UNITS),
+    grams: z.number().describe('Your estimate of the total weight in grams of this item as served, e.g. 4 lettuce leaves ≈ 40'),
   })),
 });
 
 const SYSTEM = `You look at a photo of a meal and list the foods in it for a Hebrew food diary.
 - One item per food, Hebrew names as they appear in the Israeli Ministry of Health food database (צמרת): generic and short ("ענבים", "גבינה לבנה 5%", "לחם מלא"), no brands unless the packaging shows one.
-- Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits.
+- Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): for leaves, slices or chunks of something use grams.
+- Count only what you can see; never assume more is hidden. Judge size against the plate (a dinner plate is about 26 cm): small potatoes weigh about 50 g, not 180. When unsure, guess the smaller amount.
+- Also give each item's total weight in grams (\`grams\`); the app checks the unit against it.
 - The user's note is more reliable than the photo: when it names a food or an amount, use it, and add foods it mentions that the photo hides.
 - If the photo shows no food, return an empty list.`;
 

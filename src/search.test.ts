@@ -87,6 +87,15 @@ test('unitFor: bare numbers, named units and fallbacks', () => {
   assert.equal(unitFor(grapes, { qty: null, unit: GRAMS }).qty, grapes.servingG);
 });
 
+test('unitFor: a photo\'s weight guess overrules a unit far off it', () => {
+  const byId = (id: string) => moh.find((f) => f.id === id)!;
+  const lettuce = byId('moh-3588'), potato = byId('moh-3499'), schnitzel = byId('moh-818');
+  assert.equal(unitFor(lettuce, { qty: 4, unit: 'יחידה', grams: 40 }).unit.n, 'עלה'); // 4 leaves, not 4 heads of 648 g
+  assert.deepEqual(unitFor(potato, { qty: 6, unit: 'יחידה', grams: 300 }), { qty: 300, unit: { n: GRAMS, g: 1 } }); // small ones: no unit fits
+  assert.equal(unitFor(schnitzel, { qty: 2, unit: 'יחידה', grams: 160 }).unit.n, 'יחידה קטנה'); // another size that fits
+  assert.equal(unitFor(schnitzel, { qty: 2, unit: 'יחידה', grams: 300 }).unit.n, 'יחידה בינונית'); // close enough: kept
+});
+
 test('a leading "ו" is dropped when nothing matches, and "X וY" splits in two', () => {
   assert.match(matchFoods(moh, 'וגרנולה', [])[0].name, /גרנולה/);
   assert.deepEqual(splitAnd(moh, parseLine('קפה וגרנולה'), []).map((p) => p.query), ['קפה', 'גרנולה']);

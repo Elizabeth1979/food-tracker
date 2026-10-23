@@ -62,7 +62,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
 }
 
 // ---------- free text: "יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים" ----------
-export type Parsed = { text: string; query: string; qty: number | null; unit: string | null };
+// grams: a photo's guess of the whole amount's weight, to check its unit against (see unitFor).
+export type Parsed = { text: string; query: string; qty: number | null; unit: string | null; grams?: number };
 
 const NUMBERS: Record<string, number> = {
   חצי: 0.5, רבע: 0.25, אחד: 1, אחת: 1, שני: 2, שתי: 2, שניים: 2, שתיים: 2, זוג: 2, שלוש: 3, שלושה: 3, כמה: 3,
@@ -113,8 +114,21 @@ export function parseLine(text: string): Parsed[] {
   return out;
 }
 
-// Picks the food's unit for a parsed amount. Bare numbers: 20+ means grams, smaller means pieces.
-export function unitFor(food: Food, p: Pick<Parsed, 'qty' | 'unit'>): { qty: number; unit: Unit } {
+// Picks the food's unit for a parsed amount. A photo's weight guess overrules a unit far off it:
+// "4 יחידה" of lettuce meant 4 leaves, not 4 heads of 648 g. Then the food's unit that fits that count is used, else grams.
+export function unitFor(food: Food, p: Pick<Parsed, 'qty' | 'unit' | 'grams'>): { qty: number; unit: Unit } {
+  const a = unitByName(food, p);
+  const g = p.grams;
+  if (!g || off(a.qty * a.unit.g, g) < OFF) return a;
+  const best = unitsOf(food).slice(1).sort((x, y) => off(a.qty * x.g, g) - off(a.qty * y.g, g))[0];
+  return best && off(a.qty * best.g, g) < OFF ? { qty: a.qty, unit: best } : { qty: Math.round(g), unit: unitsOf(food)[0] };
+}
+// How many times apart two weights are; under OFF counts as the same amount.
+const off = (a: number, b: number) => Math.max(a, b) / Math.min(a, b);
+const OFF = 1.6;
+
+// Bare numbers: 20+ means grams, smaller means pieces.
+function unitByName(food: Food, p: Pick<Parsed, 'qty' | 'unit'>): { qty: number; unit: Unit } {
   const units = unitsOf(food);
   const grams = units[0];
   const piece = ['יחידה בינונית', 'יחידה', 'פרוסה', 'פרוסה בינונית', 'גביע', 'מנה בינונית', 'מנה', 'ספל', 'כוס'].map((n) => units.find((u) => u.n === n)).find(Boolean);
