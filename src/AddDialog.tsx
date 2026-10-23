@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
+import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
 import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
@@ -81,7 +81,7 @@ export const unitSaver = (ctx: Ctx, f: Food, then?: (f: Food) => void) => async 
 // From a meal's ＋ in the diary: the title names the meal, with no meal buttons or back links; the phone's back
 // button (or Esc) steps back from the amount or typing view to the list, and from the list closes it.
 // `fromFoods` (a food tapped in the מזונות tab) keeps that tab's own look: meal buttons, "חזרה לחיפוש", 100 g.
-export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded, onRemoved, initial }: { ctx: Ctx; meal: MealKey; date: string; fromFoods?: boolean; onClose: () => void; onAdded: (e: Entry[]) => void; onRemoved?: (e: Entry[]) => void; initial?: Food }) {
+export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded, onRemoved, onPhoto, initial }: { ctx: Ctx; meal: MealKey; date: string; fromFoods?: boolean; onClose: () => void; onAdded: (e: Entry[]) => void; onRemoved?: (e: Entry[]) => void; onPhoto?: (p: MealPhoto) => void; initial?: Food }) {
   const [meal, setMeal] = useState(meal0);
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
@@ -176,7 +176,10 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
         </div>
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} file={photo} cta={`הוסף ל${label}`} onAdd={(items) => add(`w:${Date.now()}`, items)} />
+          <TextOrPhoto ctx={ctx} file={photo} cta={`הוסף ל${label}`} onAdd={(items, shot) => {
+            add(`w:${Date.now()}`, items);
+            if (shot) void savePhoto(shot, date, meal).then(onPhoto); // a failure shows in the app's error banner
+          }} />
         </>
       ) : (
         <>
@@ -270,23 +273,25 @@ function PhotoNote({ file, note, setNote, onRead, onCancel }: { file: File; note
 }
 
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
-function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[]) => void }) {
+// `shot` is the photo the list came from, so it can be kept with the meal.
+function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[], shot: File | null) => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
   const [reading, setReading] = useState<File | null>(null); // the photo being recognised
+  const [shot, setShot] = useState<File | null>(null);
   const [err, setErr] = useState('');
   const why = useId();
   const [picked, setPicked] = useState<File | null>(null); // a photo waiting for its note before it's read
   const [note, setNote] = useState('');
   const photo = async (file: File) => {
     setErr(''); setPicked(null); setReading(file);
-    try { setParsed(await readPhoto(file, note || text)); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
+    try { setParsed(await readPhoto(file, note || text)); setShot(file); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
   };
   useEffect(() => { if (file) setPicked(file); }, [file]); // a photo taken on the list screen
   if (parsed)
     return (
       <>
-        <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={onAdd} />
+        <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={(items) => onAdd(items, shot)} />
       </>
     );
   if (picked)

@@ -84,6 +84,16 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   await dialog().waitFor({ state: 'detached' });
 });
 
+test('the meal photo is kept with the meal: open it, then delete it', async () => {
+  const photo = button('תמונה 1: ארוחת ערב', meal('ארוחת ערב'));
+  await photo.tap();
+  assert.ok(await dialog().getByRole('img', { name: 'הארוחה שצולמה' }).isVisible());
+  page.once('dialog', (d) => d.accept());
+  await button('מחק תמונה', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.equal(await photo.count(), 0);
+});
+
 test('the diary shows them under the right meals, with a total', async () => {
   assert.equal(await entries('ארוחת צהריים').count(), 1);
   assert.equal(await entries('ארוחת ערב').count(), 5); // 4 from the sample photo + the pita

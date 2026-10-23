@@ -100,14 +100,15 @@ export { store } from './store';
 // ---------- photo ----------
 // Shrinks the photo on the device (cost and upload time follow the pixel count, recognition doesn't need more),
 // then asks the meal-photo Edge Function which foods it shows. The answer is the same shape typed text parses to.
-async function shrink(file: File, max = 1024): Promise<string> {
+async function shrunk(file: File, max: number) {
   const img = await createImageBitmap(file);
   const s = Math.min(1, max / Math.max(img.width, img.height));
   const c = document.createElement('canvas');
   c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
   c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.8).split(',')[1];
+  return c;
 }
+const shrink = async (file: File, max = 1024) => (await shrunk(file, max)).toDataURL('image/jpeg', 0.8).split(',')[1];
 export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
   const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
   if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
@@ -121,6 +122,38 @@ export async function readLabel(file: File): Promise<Label> {
   const { data, error } = await supabase.functions.invoke<{ label?: Label; error?: string }>('meal-photo', { body: { image: await shrink(file, 1568), mode: 'label' } });
   if (error || !data?.label) throw new Error(data?.error ?? 'קריאת הטבלה לא זמינה כרגע. אפשר למלא את הערכים ידנית.');
   return data.label;
+}
+
+// ---------- meal photos ----------
+// A meal photo is kept so the diary can show it: in the private Storage bucket meal-photos, at
+// <user>/<date>/<meal>.<id>.jpg (Storage policies allow only the user's own folder). The path says where it
+// belongs, so there is no table. Photos need a connection: offline, saving fails and the diary shows none.
+export type MealPhoto = { path: string; meal: MealKey; url: string };
+const photos = () => supabase.storage.from('meal-photos');
+const userId = async () => (await supabase.auth.getSession()).data.session!.user.id;
+async function signed(paths: string[]): Promise<MealPhoto[]> {
+  const { data, error } = await photos().createSignedUrls(paths, 3600);
+  if (error) throw error;
+  return data.flatMap((d) => (d.path && d.signedUrl ? [{ path: d.path, meal: d.path.split('/')[2].split('.')[0] as MealKey, url: d.signedUrl }] : []));
+}
+export async function savePhoto(file: File, date: string, meal: MealKey): Promise<MealPhoto> {
+  const c = await shrunk(file, 1024);
+  const jpeg = await new Promise<Blob>((ok) => c.toBlob((b) => ok(b!), 'image/jpeg', 0.8));
+  const path = `${await userId()}/${date}/${meal}.${crypto.randomUUID()}.jpg`;
+  const { error } = await photos().upload(path, jpeg, { contentType: 'image/jpeg' });
+  if (error) throw error;
+  return (await signed([path]))[0];
+}
+export async function listPhotos(date: string): Promise<MealPhoto[]> {
+  if (!navigator.onLine) return [];
+  const dir = `${await userId()}/${date}`;
+  const { data, error } = await photos().list(dir, { sortBy: { column: 'created_at', order: 'asc' } });
+  if (error) throw error;
+  return data.length ? signed(data.map((f) => `${dir}/${f.name}`)) : [];
+}
+export async function deletePhoto(p: MealPhoto) {
+  const { error } = await photos().remove([p.path]);
+  if (error) throw error;
 }
 
 // One weigh-in a day: a second one that day replaces it. Returns the new list, oldest first.

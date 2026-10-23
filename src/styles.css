@@ -118,6 +118,11 @@ main button.banner { width: 100%; }
 .meal + .meal { border-top: 1px solid var(--line); }
 .meal header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
 .meal .row { border: 0; padding-block: 6px; padding-inline-start: 58px; }
+/* a meal's photos: small squares above its foods; tapping one opens it whole */
+.meal-photos { display: flex; gap: 8px; overflow-x: auto; padding: 4px 14px 8px; padding-inline-start: 58px; }
+.meal-photos button { flex: none; width: 64px; height: 64px; border-radius: var(--r-sm); overflow: hidden; }
+.meal-photos img { width: 100%; height: 100%; object-fit: cover; }
+.modal-body > img { width: 100%; border-radius: var(--r); }
 .meal .empty { margin: 0; padding: 0 14px 12px; padding-inline-start: 58px; font-size: 14px; color: var(--faint); }
 .meal-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--card2); color: var(--muted); }
 .meal-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; }
