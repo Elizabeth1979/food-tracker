@@ -4,11 +4,12 @@ import { client, exportPhotos, loadMoh, restorePhotos, today, type Profile } fro
 import { exportAll, restoreAll, supabase } from './db';
 import { APP_VERSION } from './update';
 import { Group, confirmIt } from './ui';
+import { Icon } from './icons';
 import { goalsOf } from './goals';
 import { Tailor } from './Tailor';
 
 const GOALS = [['kcal', 'קלוריות'], ['carbs', 'פחמימות (ג׳)'], ['fat', 'שומן (ג׳)'], ['protein', 'חלבון (ג׳)']] as const;
-export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
+export default function Settings({ ctx, email, onFoods }: { ctx: Ctx; email: string; onFoods: () => void }) {
   const p = ctx.profile;
   const goalForm = (g: Partial<Profile> | null) => Object.fromEntries(GOALS.map(([k]) => [k, String(goalsOf(g)[k])]));
   const [v, setV] = useState<Record<string, string>>(() => goalForm(p));
@@ -75,6 +76,10 @@ export default function Settings({ ctx, email }: { ctx: Ctx; email: string }) {
         </>}
       </Group>
       {tailoring && <Tailor ctx={ctx} onClose={() => setTailoring(false)} onDone={(m) => { setTailoring(false); setMsg(m); }} />}
+      <Group title="מזונות" body="pad form">
+        <p className="muted small">עריכה, הסתרה ומחיקה של מזונות שהוספת וארוחות ששמרת, וחיפוש בערכים של כל מזון.</p>
+        <button className="btn" onClick={onFoods}><Icon name="utensils" />המזונות והארוחות שלי</button>
+      </Group>
       <Group title="גיבוי" body="pad form">
         <p className="muted small">הנתונים נשמרים בחשבון שלך ומסונכרנים בין המכשירים. אפשר להוריד עותק כקובץ, ושחזור מקובץ מחליף את כל הנתונים בחשבון.</p>
         <button className="btn primary" onClick={download}>הורדת גיבוי</button>

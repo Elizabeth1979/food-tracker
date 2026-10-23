@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
-import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type Label, type SavedMeal, type Unit } from './lib';
 import { Group, FoodSummary, MicroLine, Modal, PhotoPick, confirmIt, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
@@ -10,6 +10,13 @@ const FIELDS = [
   ['kcal', 'קלוריות', true], ['carbs', 'פחמימות (ג׳)', true], ['fat', 'שומן (ג׳)', true], ['protein', 'חלבון (ג׳)', true],
   ['sodium', 'נתרן (מ״ג)', false], ['calcium', 'סידן (מ״ג)', false], ['potassium', 'אשלגן (מ״ג)', false], ['b12', 'B12 (מק״ג)', false],
 ] as const;
+
+// A read nutrition label as a food of your own: values per 100 g (per piece for a supplement), the serving as a unit.
+export const labelFood = (l: Label): Partial<Food> => ({
+  name: l.name, servingG: l.basisG, kcal: l.kcal, carbs: l.carbs, fat: l.fat, protein: l.protein,
+  sodium: l.sodium, calcium: l.calcium, potassium: l.potassium, b12: l.b12, extra: l.extra ?? null,
+  units: JSON.stringify(l.unit ? [l.unit] : []),
+});
 
 export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: Food) => void }) {
   const [v, setV] = useState<Record<string, string>>(() =>
@@ -33,7 +40,8 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     setErr(''); setReading(file);
     try {
       const l = await readLabel(file);
-      const vals = Object.fromEntries(FIELDS.map(([k]) => [k, l[k] == null ? '' : String(l[k])]));
+      const f = labelFood(l);
+      const vals = Object.fromEntries(FIELDS.map(([k]) => [k, f[k] == null ? '' : String(f[k])]));
       setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: String(l.basisG) }));
       setExtra((x) => ({ ...x, ...Object.fromEntries(Object.entries(l.extra ?? {}).map(([k, n]) => [k, String(n)])) }));
       if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), draftOf(l.unit!)]);

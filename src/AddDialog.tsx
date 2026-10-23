@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
+import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
-import { FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
-import { FoodForm } from './Foods';
+import { FileButton, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
+import { FoodForm, labelFood } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
 
@@ -76,16 +76,21 @@ export const unitSaver = (ctx: Ctx, f: Food, then?: (f: Food) => void) => async 
 // One tap on ＋ adds, a second takes it back out, and the dialog stays open until "סיום", so a whole meal is a few taps.
 // Tapping a food's name opens the amount picker on last time's amount, for a different amount this time.
 // Search, typing and photos are for the less usual things; those go through the amount picker.
-// From a meal's ＋ in the diary: the title names the meal, with no meal buttons or back links; the phone's back
-// button (or Esc) steps back from the amount or typing view to the list, and from the list closes it.
-// `fromFoods` (a food tapped in the מזונות tab) keeps that tab's own look: meal buttons, "חזרה לחיפוש", 100 g.
+// No meal buttons: what's added goes to the meal of the time of day (the owner doesn't care which), and an entry
+// can still be moved to another meal from the diary. The phone's back button (or Esc) steps back from the amount
+// or typing view to the list, and from the list closes it.
+// A nutrition label goes straight in: photo, check the name and values, then the amount; the full form only on "עריכה".
+// `fromFoods` (a food tapped in the מזונות page) keeps that page's own look: "חזרה לחיפוש", 100 g.
 export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded, onRemoved, onPhoto, initial }: { ctx: Ctx; meal: MealKey; date: string; fromFoods?: boolean; onClose: () => void; onAdded: (e: Entry[]) => void; onRemoved?: (e: Entry[]) => void; onPhoto?: (p: MealPhoto) => void; initial?: Food }) {
-  const [meal, setMeal] = useState(meal0);
+  const meal = meal0;
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null); // taken from the list screen: goes straight to recognition
   const [sel, setSel] = useState<Food | null>(initial ?? null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<Partial<Food> | null>(null); // the full new-food form, with what's known
+  const [labelShot, setLabelShot] = useState<File | null>(null); // a label photo being read
+  const [checking, setChecking] = useState<Partial<Food> | null>(null); // a read label, to check before logging
+  const [err, setErr] = useState('');
   const uid = useId();
   const [busy, setBusy] = useState(false);
   // What this visit added, keyed by the row that added it ("m:<saved meal>", "f:<food>", or one-off keys).
@@ -120,7 +125,6 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     return [byScore(saved), byScore(foods).slice(0, 12)];
   }, [ctx.foods, ctx.meals, order, month]);
   const [more, setMore] = useState(false);
-  const label = MEALS.find((m) => m.key === meal)!.label;
   const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
 
   const add = async (key: string, items: Item[]) => {
@@ -133,6 +137,16 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
     } finally { setBusy(false); }
     if (initial) onClose(); // opened on one food from the מזונות tab
     setSel(null); setWriting(false); setPhoto(null); setQ('');
+  };
+  const readShot = async (file: File) => {
+    setErr(''); setLabelShot(file);
+    try { setChecking(labelFood(await readLabel(file))); } catch (x: any) { setErr(x.message); } finally { setLabelShot(null); }
+  };
+  const created = (f: Food) => { ctx.setFoods([...ctx.foods, f]); setCreating(null); setChecking(null); setSel(f); };
+  const saveLabel = async (f: Partial<Food>) => {
+    const { data, errors } = await client.models.Food.create({ ...f, source: 'user' } as Food);
+    if (errors) return setErr(errors[0].message);
+    created(data!);
   };
   const takeBack = async (key: string) => {
     const es = done[key];
@@ -157,24 +171,24 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
 
   if (creating)
     return (
-      <Modal title="מזון חדש" onClose={() => setCreating(false)}>
-        <FoodForm init={{ name: q }} onSaved={(f) => { ctx.setFoods([...ctx.foods, f]); setCreating(false); setSel(f); }} />
+      <Modal title="מזון חדש" onClose={() => setCreating(null)}>
+        <FoodForm init={creating} onSaved={created} />
       </Modal>
     );
   return (
     <Modal title={`הוספה ליומן${day}`} onClose={onClose}
-      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } return false; }}>
-      {/* The meal starts at the time of day's; one tap changes it, on every step (list, amount, photo review) */}
-      <MealSeg meal={meal} onChange={setMeal} />
+      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } if (checking) { setChecking(null); return true; } return false; }}>
       {sel ? (
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}><Icon name="arrow-right" />חזרה לחיפוש</button>}
           <h3>{sel.name}</h3>
-          <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta={fromFoods ? 'הוסף' : `הוסף ל${label}`} onAddUnit={unitSaver(ctx, sel, setSel)} />
+          <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta="הוסף" onAddUnit={unitSaver(ctx, sel, setSel)} />
         </div>
+      ) : checking ? (
+        <LabelCheck food={checking} onSave={saveLabel} onEdit={(f) => setCreating(f)} />
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} file={photo} cta={`הוסף ל${label}`} onAdd={(items, shot) => {
+          <TextOrPhoto ctx={ctx} file={photo} cta="הוסף" onAdd={(items, shot) => {
             add(`w:${Date.now()}`, items);
             if (shot) void savePhoto(shot, date, meal).then(onPhoto); // a failure shows in the app's error banner
           }} />
@@ -182,13 +196,14 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
       ) : (
         <>
           <input className="search" type="search" aria-label="חיפוש" placeholder="חיפוש מזון…" value={q} onChange={(e) => setQ(e.target.value)} />
-          {/* The two other ways in, big and up front: a photo (camera or gallery) or typing the meal */}
+          {/* The other ways in, big and up front: a meal photo (camera or gallery), typing the meal, or a package's
+              nutrition label (the camera opens at once; the label becomes a food of your own, then you log it) */}
           {!q && <>
-            <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" onFile={(f) => { setPhoto(f); setWriting(true); }}>
+            <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" reading={labelShot} busyText="קורא את התווית…" onFile={(f) => { setPhoto(f); setWriting(true); }}>
               <button className="btn big-choice" onClick={() => setWriting(true)}><Icon name="pencil" />כתיבה</button>
+              <FileButton camera className="btn big-choice" onFile={readShot}><Icon name="tag" />תווית</FileButton>
             </PhotoPick>
-            {/* A package or a supplement the database lacks: its label becomes a food of your own, then you log it */}
-            <button className="link start" onClick={() => setCreating(true)}><Icon name="pill" />מוצר ארוז או תוסף? צילום התווית</button>
+            {err && <p className="error" role="alert">{err}</p>}
           </>}
           <div className="usual">
             {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : <>
@@ -214,19 +229,41 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
               </button>
             ))}
             {!q && !usualFoods.length && !usualMeals.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
-            {q && <button className="row muted" onClick={() => setCreating(true)}><Icon name="plus" />מזון חדש: ״{q}״</button>}
+            {q && <button className="row muted" onClick={() => setCreating({ name: q })}><Icon name="plus" />מזון חדש: ״{q}״</button>}
           </div>
         </>
       )}
       {/* Always there, so the sheet doesn't grow and shift the rows on the first tap. */}
-      {!sel && !writing && (
-        <button className="btn primary done" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} ל${label} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>
+      {!sel && !writing && !checking && (
+        <button className="btn primary done" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>
       )}
     </Modal>
   );
 }
 
 const USUAL_SHOWN = 5;
+
+// A nutrition label just read: the product's name and values to check against the package, then on to the amount.
+// "עריכה" opens the full form with everything filled in (vitamins, units), for what the label got wrong.
+function LabelCheck({ food, onSave, onEdit }: { food: Partial<Food>; onSave: (f: Partial<Food>) => void; onEdit: (f: Partial<Food>) => void }) {
+  const [name, setName] = useState(food.name ?? '');
+  const why = useId();
+  const unit = json<Unit[]>(food.units, [])[0];
+  const per = food.servingG === 100 ? '100 גרם' : unit ? `${unit.n} אחת` : `${food.servingG} גרם`;
+  return (
+    <div className="form">
+      <p className="muted small" role="status">נקרא מהתווית. כדאי לבדוק מול האריזה.</p>
+      <label><span>שם המוצר</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
+      <p className="muted small">הערכים ל{per}:</p>
+      <NutLine n={food as Nut} />
+      <div className="grid2">
+        <button className="btn" onClick={() => onEdit({ ...food, name })}><Icon name="pencil" />עריכה</button>
+        <button className="btn primary" disabled={!name.trim()} aria-describedby={name.trim() ? undefined : why} onClick={() => onSave({ ...food, name: name.trim() })}>המשך</button>
+      </div>
+      {!name.trim() && <Why id={why}>כתבו את שם המוצר כדי להמשיך</Why>}
+    </div>
+  );
+}
 
 // Which meal an entry goes to: four tabs, the chosen one pressed.
 const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => void }) => (
