@@ -120,7 +120,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
         {/* The day's vitamins and minerals, from food and supplements, folded: a row each would crowd the summary */}
         <details aria-label="ויטמינים ומינרלים שצרכת היום">
           <summary><Icon name="chevron-down" />ויטמינים ומינרלים שצרכת היום</summary>
-          <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון. מהאוכל נספרים רק נתרן, סידן, אשלגן ו־B12, כי רק אותם האפליקציה יודעת על כל מזון. שאר הוויטמינים, כמו C וברזל, נספרים רק מתוספים ומתוויות שצילמת.</p>
+          <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון. ערכי המזון ממאגר משרד הבריאות; ביוטין ויוד רק מתוספים ומתוויות שצילמת.</p>
           <MicroGoals n={tot} />
         </details>
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
