@@ -10,7 +10,7 @@ export const MICROS = [
   { key: 'sodium', label: 'נתרן', unit: 'מ״ג', dp: 0 },
   { key: 'calcium', label: 'סידן', unit: 'מ״ג', dp: 0 },
   { key: 'potassium', label: 'אשלגן', unit: 'מ״ג', dp: 0 },
-  { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2, rda: 2.4 },
+  { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2 },
 ] as const;
 export type MicroKey = (typeof MICROS)[number]['key'];
 // Vitamins and minerals beyond the four columns above, mostly from supplement labels: { "ויטמין D (מק״ג)": 25, … }.
@@ -21,6 +21,9 @@ export const VITAMINS = [
   'ברזל (מ״ג)', 'מגנזיום (מ״ג)', 'אבץ (מ״ג)', 'סלניום (מק״ג)', 'יוד (מק״ג)', 'נחושת (מ״ג)', 'מנגן (מ״ג)', 'כרום (מק״ג)', 'מוליבדן (מק״ג)',
   'זרחן (מ״ג)', 'כולין (מ״ג)', 'אומגה 3 (מ״ג)',
 ];
+// The ones every MoH food carries (scripts/moh-vitamins.ts), shown in the day even at 0. The rest come from labels only.
+const LABEL_ONLY = ['ביוטין (מק״ג)', 'יוד (מק״ג)', 'כרום (מק״ג)', 'מוליבדן (מק״ג)', 'אומגה 3 (מ״ג)'];
+export const FOOD_VITAMINS = VITAMINS.filter((k) => !LABEL_ONLY.includes(k));
 export type Extra = Record<string, number>;
 export type Nut = { kcal: number; carbs: number; fat: number; protein: number; extra?: Extra | null } & Partial<Record<MicroKey, number | null>>;
 export type Item = Nut & { foodId?: string | null; name: string; grams: number; qty?: number | null; unit?: string | null };
@@ -87,11 +90,19 @@ export const pickItem = (e: Item): Item => {
   const { foodId, name, grams, qty, unit, kcal, carbs, fat, protein } = e;
   return { foodId, name, grams, qty, unit, kcal, carbs, fat, protein, ...Object.fromEntries(MICROS.map((m) => [m.key, e[m.key] ?? null])), extra: e.extra ?? null };
 };
-// The extras for display, in VITAMINS order then the rest: "ויטמין D 25 מק״ג".
-export const extraParts = (x: Extra | null | undefined) => Object.entries(x ?? {})
-  .filter(([, v]) => v)
+// The extras that have a value, in VITAMINS order then the rest, split into name and unit: "ויטמין D (מק״ג)" → ויטמין D, מק״ג.
+const extraList = (x: Extra | null | undefined, zeros = false) => Object.entries(x ?? {})
+  .filter(([, v]) => zeros || v)
   .sort(([a], [b]) => ((VITAMINS.indexOf(a) + 1 || 99) - (VITAMINS.indexOf(b) + 1 || 99)))
-  .map(([k, v]) => { const [, name, unit] = k.match(/^(.*?)\s*\((.+)\)$/) ?? [, k, '']; return `${name} ${v}${unit ? ` ${unit}` : ''}`; });
+  .map(([key, v]) => { const [, name, unit] = key.match(/^(.*?)\s*\((.+)\)$/) ?? [, key, '']; return { key, name, unit, v }; });
+// For display in one line: "ויטמין D 25 מק״ג".
+export const extraParts = (x: Extra | null | undefined) => extraList(x).map((m) => `${m.name} ${m.v}${m.unit ? ` ${m.unit}` : ''}`);
+// Every vitamin and mineral, one each, keyed "name (unit)" like VITAMINS: the four columns and FOOD_VITAMINS even at 0
+// (food carries them), then any other a label added.
+export const microAmounts = (n: Nut) => [
+  ...MICROS.map((m) => ({ key: `${m.label} (${m.unit})`, name: m.label as string, unit: m.unit as string, v: n[m.key] ?? 0 })),
+  ...extraList({ ...Object.fromEntries(FOOD_VITAMINS.map((k) => [k, 0])), ...n.extra }, true),
+];
 export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };
@@ -115,7 +126,8 @@ export const loadMoh = (): Promise<Food[]> =>
 export async function loadFoods(): Promise<Food[]> {
   const [base, { data: local }] = await Promise.all([loadMoh(), client.models.Food.list()]);
   const own = new Map(local.map((f) => [f.id, f]));
-  const merged = base.map((f) => (own.has(f.id) ? { ...f, ...own.get(f.id) } : f));
+  // a row saved before MoH foods had vitamins keeps them from the file
+  const merged = base.map((f) => { const o = own.get(f.id); return o ? { ...f, ...o, extra: o.extra ?? f.extra } : f; });
   const ids = new Set(base.map((f) => f.id));
   return [...merged, ...local.filter((f) => !ids.has(f.id) && f.name)];
 }

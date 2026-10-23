@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { MACROS, MICROS, WATER_GOAL_ML, extraParts, isFFQ, type Nut, type Unit } from './lib';
+import { MACROS, MICROS, WATER_GOAL_ML, extraParts, isFFQ, microAmounts, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
-import { DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
+import { DAILY_VALUES, DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -173,24 +173,40 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
   );
 }
 
-// The diary's goals: protein is a minimum to reach, carbs a soft limit to stay under. Micros are in Reports.
+// One amount against its goal, with a bar: a minimum ('min', green ✓ once reached), a soft limit ('max', green under it,
+// amber "מעל היעד" over), or for reference only ('ref': no green or amber).
+type GoalKind = 'min' | 'max' | 'ref';
+function GoalRow({ label, value, goal, unit, kind, word = '', color }: { label: string; value: number; goal?: number; unit: string; kind: GoalKind; word?: string; color?: string }) {
+  const state = !goal ? '' : kind === 'min' ? (value >= goal ? 'done' : '') : kind === 'max' ? (value > goal ? 'high' : 'done') : '';
+  return (
+    <div className="legend-row">
+      <div className="legend-line">
+        <span className="grow">{label}{state === 'done' && kind === 'min' && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
+        <span><b>{value}</b><span className="muted">{goal ? ` / ${word}${goal}` : ''} {unit}</span></span>
+      </div>
+      {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (value / goal) * 100)}%`, background: state || !color ? undefined : color }} /></div> : null}
+    </div>
+  );
+}
+
+// The diary's goals: protein is a minimum to reach, carbs a soft limit to stay under.
 // Fat is shown for reference only: no green or amber, since too little is as unhealthy as too much.
 const DAY_GOALS = [{ key: 'protein', label: 'חלבון', word: 'לפחות ', kind: 'min' }, { key: 'carbs', label: 'פחמימות', word: 'עד ', kind: 'max' }, { key: 'fat', label: 'שומן', word: '', kind: 'ref' }] as const;
 export function DayGoals({ n, goals }: { n: Nut; goals: Goals }) {
   return (
     <div className="legend">
-      {DAY_GOALS.map((d) => {
-        const g = n[d.key], goal = goals[d.key];
-        const state = d.kind === 'min' ? (g >= goal ? 'done' : '') : d.kind === 'max' ? (g > goal ? 'high' : 'done') : '';
-        return (
-          <div key={d.key} className="legend-row">
-            <div className="legend-line">
-              <span className="grow">{d.label}{state === 'done' && d.kind === 'min' && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
-              <span><b>{g}</b><span className="muted">{goal ? ` / ${d.word}${goal}` : ''} ג׳</span></span>
-            </div>
-            {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (g / goal) * 100)}%`, background: state ? undefined : `var(--${d.key})` }} /></div> : null}
-          </div>
-        );
+      {DAY_GOALS.map((d) => <GoalRow key={d.key} label={d.label} value={n[d.key]} goal={goals[d.key]} unit="ג׳" kind={d.kind} word={d.word} color={`var(--${d.key})`} />)}
+    </div>
+  );
+}
+
+// Vitamins and minerals against the label's Daily Values, a row each like the macros. Sodium is a limit.
+export function MicroGoals({ n }: { n: Nut }) {
+  return (
+    <div className="legend">
+      {microAmounts(n).map((m) => {
+        const sodium = m.key === 'נתרן (מ״ג)';
+        return <GoalRow key={m.key} label={m.name} value={m.v} goal={DAILY_VALUES[m.key]} unit={m.unit} kind={sodium ? 'max' : 'min'} word={sodium ? 'עד ' : ''} />;
       })}
     </div>
   );
@@ -249,23 +265,10 @@ export function GoalsInfo({ goals }: { goals: Goals }) {
   );
 }
 
-// Micronutrients; values the food doesn't have are omitted, and so are zeros except in the day summary
-// (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need. Other vitamins follow.
-// With a `label` it folds away under it (the day summary), saying why some vitamins may be missing.
-export function MicroLine({ n, rda, label }: { n: Nut; rda?: boolean; label?: string }) {
-  const parts = [
-    ...MICROS.filter((m) => n[m.key] != null && (rda || n[m.key] !== 0)).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`),
-    ...extraParts(n.extra),
-  ];
-  if (!parts.length) return null;
-  const line = <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div>;
-  return label ? (
-    <details aria-label={label}>
-      <summary><Icon name="chevron-down" />{label}</summary>
-      {line}
-      <p className="muted small">רק מה שידוע: ממאגר משרד הבריאות נתרן, סידן, אשלגן ו־B12, ומתוויות שצילמת כל מה שכתוב בהן.</p>
-    </details>
-  ) : line;
+// A food's vitamins and minerals in one line, those it has. The day's and a period's are rows (MicroGoals).
+export function MicroLine({ n }: { n: Nut }) {
+  const parts = [...MICROS.filter((m) => n[m.key]).map((m) => `${m.label} ${n[m.key]} ${m.unit}`), ...extraParts(n.extra)];
+  return parts.length ? <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div> : null;
 }
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.

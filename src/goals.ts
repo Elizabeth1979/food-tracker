@@ -45,3 +45,15 @@ export function whatFits<T extends Goals>(xs: T[], left: Goals, keep: (x: T) => 
   const ranked = left.protein > 0 ? [...fits].sort((a, b) => b.protein / b.kcal - a.protein / a.kcal) : fits;
   return ranked.slice(0, max);
 }
+
+// Vitamins and minerals: the nutrition-label Daily Values (FDA, adults), the same basis as DEFAULT_GOALS.
+// Keyed "name (unit)" like VITAMINS in lib.ts. Sodium is a limit; the rest are amounts to reach. Omega 3 has none.
+export const SODIUM_MAX = 2300;
+export const DAILY_VALUES: Record<string, number> = {
+  'נתרן (מ״ג)': SODIUM_MAX, 'סידן (מ״ג)': 1300, 'אשלגן (מ״ג)': 4700, 'B12 (מק״ג)': 2.4,
+  'ויטמין A (מק״ג)': 900, 'ויטמין D (מק״ג)': 20, 'ויטמין E (מ״ג)': 15, 'ויטמין K (מק״ג)': 120, 'ויטמין C (מ״ג)': 90,
+  'ויטמין B1 (מ״ג)': 1.2, 'ויטמין B2 (מ״ג)': 1.3, 'ויטמין B3 (מ״ג)': 16, 'ויטמין B5 (מ״ג)': 5, 'ויטמין B6 (מ״ג)': 1.7,
+  'ביוטין (מק״ג)': 30, 'חומצה פולית (מק״ג)': 400, 'ברזל (מ״ג)': 18, 'מגנזיום (מ״ג)': 420, 'אבץ (מ״ג)': 11,
+  'סלניום (מק״ג)': 55, 'יוד (מק״ג)': 150, 'נחושת (מ״ג)': 0.9, 'מנגן (מ״ג)': 2.3, 'כרום (מק״ג)': 35, 'מוליבדן (מק״ג)': 45,
+  'זרחן (מ״ג)': 1250, 'כולין (מ״ג)': 550,
+};

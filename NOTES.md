@@ -8,6 +8,23 @@ What was done in each work session and what's next. Newest first.
 - The owner asked "what can I eat from my usual foods with the 200 calories left?". Today only, while calories are left, the day summary has "מה נכנס ב־N קק״ל?". It opens the ＋ window on up to 5 of the usual foods and saved meals whose usual amount fits the calories and carbs left (carbs are a limit). While protein is under its goal, the most protein per calorie first; otherwise the most logged first. Each is one tap, like the usual list; what's left updates as you add, and "כל הרגילים" goes back to the full list. If nothing fits it says so and offers the smallest usual food, whose name opens the amount picker for less.
 - No AI: same data as the usual list (the past month). Ranking is `whatFits` in `goals.ts` (with `goalsLeft`, used by the day and the window); unit test in `goals.test.ts`. Screen test: hidden while over the goal and on past days; every row fits; a tap lowers what's left and can be taken back.
 
+## 2026-10-23: MoH vitamins and minerals for every food
+
+**Done:**
+- The owner opened the environment's network to data.gov.il. `scripts/moh-vitamins.ts` reads the Tzameret table from the data.gov.il API (the CSV download is blocked by its CDN) and adds 19 vitamins and minerals per 100 g to each food in `moh.json` as `extra` (A as RAE, D, E, K, C, B1–B6, folate, iron, magnesium, zinc, selenium, copper, manganese, phosphorus, choline; zeros and unknowns left out). Biotin and iodine are missing for most foods, so they stay label-only. All 4,624 foods matched. `moh.json` is 3.6 MB (456 KB gzipped, was 246 KB).
+- `loadFoods`: a food's own row (an added unit, hidden) saved before this keeps the file's vitamins (`extra: o.extra ?? f.extra`).
+- The day's rows show every vitamin food carries (`FOOD_VITAMINS`), even at 0. One mandarin = 23 mg vitamin C of 90.
+- Entries logged before this carry their own copy of the nutrients, so they have no vitamins; only new ones count.
+- Screen test: grapes alone give vitamin C; the supplement adds exactly its 2 tablets on top of the food's. Fails with the old `moh.json`.
+
+## 2026-10-23: vitamins and minerals as rows with daily values
+
+**Done:**
+- The owner couldn't tell what the day's vitamin line was, and wanted it like the macros, with targets. "ויטמינים ומינרלים שצרכת היום" (still folded) now says what it counts and lists a row each: amount / label Daily Value, a bar, "✓ הושג" once reached; sodium is a limit ("עד 2300", "מעל היעד"). Reports has the same rows (a day's or the average) in their own card. One `GoalRow` in `ui.tsx` draws the macro rows and these; `microAmounts` in `lib.ts` lists the nutrients, `DAILY_VALUES` in `goals.ts` the targets (FDA label values, same basis as the default goals).
+- Screen test: the multivitamin's rows against their values, ✓ where reached, sodium over its limit.
+
+**Next:** done in the entry above.
+
 ## 2026-10-23: the add window: foods and saved meals in one list
 
 **Done:**

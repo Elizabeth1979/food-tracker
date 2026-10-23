@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { goalsLeft, goalsOf, type Goals } from './goals';
 import type { Ctx } from './App';
 import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, movePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
-import { DayGoals, GoalsInfo, Group, MicroLine, Modal, Ring, WaterLine, confirmIt, promptIt } from './ui';
+import { DayGoals, GoalsInfo, Group, MicroGoals, Modal, Ring, WaterLine, confirmIt, promptIt } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -121,8 +121,12 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
           <DayGoals n={tot} goals={goals} />
         </div>
         <WaterLine ml={waters.reduce((t, e) => t + e.grams, 0)} onAdd={drink} onRemove={waters.length ? () => remove(waters.at(-1)!) : undefined} />
-        {/* The day's vitamins and minerals, from food and supplements, once it has any */}
-        <MicroLine n={tot} label="ויטמינים ומינרלים היום" />
+        {/* The day's vitamins and minerals, from food and supplements, folded: a row each would crowd the summary */}
+        <details aria-label="ויטמינים ומינרלים שצרכת היום">
+          <summary><Icon name="chevron-down" />ויטמינים ומינרלים שצרכת היום</summary>
+          <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון. ערכי המזון ממאגר משרד הבריאות; ביוטין ויוד רק מתוספים ומתוויות שצילמת.</p>
+          <MicroGoals n={tot} />
+        </details>
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
         <GoalsInfo goals={goals} />
       </section>
