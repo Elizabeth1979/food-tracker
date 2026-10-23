@@ -61,6 +61,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
               <small className="muted grow">״{r.p.text}״</small>
               <button className="icon del" aria-label={`הסר: ${r.p.text}`} onClick={() => setRows(rows.filter((x) => x.id !== r.id))}><Icon name="x" /></button>
             </div>
+            {r.p.hidden && <p className="muted small">ניחוש: שמן או רוטב שלא רואים בתמונה. היה? תקנו את הכמות. לא היה? הסירו.</p>}
             {r.q !== undefined ? (
               <div className="form">
                 <div className="amount-row">

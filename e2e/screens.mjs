@@ -73,6 +73,11 @@ test('switch the meal, then a photo goes to the review list', async () => {
 });
 
 test('add what the photo missed, then add all to the chosen meal', async () => {
+  // a fat the photo can only guess is marked as a guess; this meal had none, so it's removed
+  const oil = dialog().getByText(/^ניחוש: שמן או רוטב/);
+  assert.equal(await oil.count(), 1);
+  await button('הסר: שמן זית, 1 כף', dialog()).tap();
+  assert.equal(await oil.count(), 0);
   const foods = dialog().getByRole('combobox', { name: 'מזון' });
   const rows = await foods.count();
   // the photo got a food wrong and the matches don't have it: search the whole database instead

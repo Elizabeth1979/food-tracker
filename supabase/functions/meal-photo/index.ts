@@ -18,6 +18,7 @@ const Meal = z.object({
     qty: z.number().describe('How many of `unit`'),
     unit: z.enum(UNITS),
     grams: z.number().describe('Your estimate of the total weight in grams of this item as served, e.g. 4 lettuce leaves ≈ 40'),
+    hidden: z.boolean().describe('true for a fat or sauce you infer from how the food looks cooked or dressed but cannot clearly see'),
   })),
 });
 
@@ -27,6 +28,7 @@ const SYSTEM = `You look at a photo of a meal and list the foods in it for a Heb
 - Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): for leaves, slices or chunks of something use grams.
 - Count only what you can see; never assume more is hidden. Judge size against the plate (a dinner plate is about 26 cm): small potatoes weigh about 50 g, not 180. When unsure, guess the smaller amount.
 - Also give each item's total weight in grams (\`grams\`); the app checks the unit against it.
+- Fat is what photos miss most. When food looks sautéed, roasted or fried in a pan, a salad looks dressed, bread looks buttered, or there is sauce, add the fat as its own item with \`hidden\` true, in spoons, under a plain name ("שמן זית", "שמן קנולה", "חמאה", "טחינה", "מיונז"). A food you name as fried ("שניצל מטוגן", "צ׳יפס") already counts its frying oil: don't add oil for it. Every other item has \`hidden\` false.
 - The user's note is more reliable than the photo: when it names a food or an amount, use it, and add foods it mentions that the photo hides.
 - If the photo shows no food, return an empty list.`;
 
