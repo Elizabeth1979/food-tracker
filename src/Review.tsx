@@ -24,9 +24,11 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
   const [more, setMore] = useState('');
   const why = useId();
   // Something the photo missed: typed like a meal line ("2 פיתות, טחינה"), matched the same way, added as rows.
-  const addMore = () => {
+  // `food`: picked from the list under the field for the last item typed.
+  const addMore = (food?: Food) => {
     const next = Math.max(-1, ...rows.map((r) => r.id)) + 1;
-    setRows([...rows, ...splitAnd(ctx.foods, parseLine(more), ctx.recent).map((p, i) => rowFor(ctx, p, next + i))]);
+    const ps = splitAnd(ctx.foods, parseLine(more), ctx.recent);
+    setRows([...rows, ...ps.map((p, i) => rowFor(ctx, p, next + i, i === ps.length - 1 ? food : undefined))]);
     setMore('');
   };
   const set = (id: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -65,7 +67,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
                   <input type="search" autoFocus aria-label="חיפוש מזון אחר" placeholder="חיפוש מזון…" value={r.q} onChange={(e) => set(r.id, { q: e.target.value })} />
                   <button className="btn" onClick={() => set(r.id, { q: undefined })}>ביטול</button>
                 </div>
-                {r.q.trim() && searchFoods(ctx.foods, r.q, ctx.recent).slice(0, 5).map((f) => <button key={f.id} className="row" onClick={() => pick(r, f)}>{f.name}</button>)}
+                <FoodHits ctx={ctx} q={r.q} onPick={(f) => pick(r, f)} />
               </div>
             ) : r.options.length ? (
               <select value={r.food?.id} aria-label="מזון" onChange={(e) => choose(r, e.target.value)}>
@@ -96,10 +98,16 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
         <input aria-label="הוספת מזון לרשימה" placeholder="שכחתי משהו? למשל: פיתה, 2 כפות טחינה" value={more} onChange={(e) => setMore(e.target.value)} />
         <button className="btn" disabled={!more.trim()}>הוסף</button>
       </form>
+      <FoodHits ctx={ctx} q={parseLine(more).at(-1)?.query ?? ''} onPick={addMore} />
       {items.length > 0 && <NutLine n={sum(items)} />}
       {missing > 0 && <p className="muted small">{missing === 1 ? 'פריט אחד בלי התאמה לא יתווסף.' : `${missing} פריטים בלי התאמה לא יתווספו.`}</p>}
       <button className="btn primary" disabled={!items.length} aria-describedby={items.length ? undefined : why} onClick={() => onAdd(items)}>{cta} ({items.length})</button>
       {!items.length && <Why id={why}>אין עדיין מזון עם כמות להוספה</Why>}
     </div>
   );
+}
+
+// Up to five foods matching a typed name, each a button that picks it.
+function FoodHits({ ctx, q, onPick }: { ctx: Ctx; q: string; onPick: (f: Food) => void }) {
+  return <>{q.trim() && searchFoods(ctx.foods, q, ctx.recent).slice(0, 5).map((f) => <button key={f.id} type="button" className="row" onClick={() => onPick(f)}>{f.name}</button>)}</>;
 }

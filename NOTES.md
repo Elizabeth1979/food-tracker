@@ -2,6 +2,11 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: "שכחתי משהו?" offers foods as you type
+
+**Done:**
+- In the photo/typed review list, typing in "שכחתי משהו?" now lists up to 5 matching foods under the field (for the last item typed); tapping one adds it with the amount typed ("2 עגבני" → 2 tomatoes). "הוסף" still adds a whole typed line. `FoodHits` in `Review.tsx` is shared with the row's "חיפוש מזון אחר…". The owner typed "עגבני" and had no list to choose from.
+
 ## 2026-10-23: photo amounts no longer blown up
 
 **Done:**

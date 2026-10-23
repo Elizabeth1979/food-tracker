@@ -80,6 +80,14 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   await button('הוסף', dialog()).tap();
   assert.equal(await foods.count(), rows + 1);
   assert.match(await foods.last().evaluate((s) => s.selectedOptions[0].text), /^פיתה, פיתה ביס/);
+  // typing shows matching foods to pick from, keeping the amount typed
+  await dialog().getByRole('textbox', { name: 'הוספת מזון לרשימה' }).fill('2 עגבני');
+  await button('עגבניה, טריה', dialog()).tap();
+  assert.equal(await foods.count(), rows + 2);
+  assert.equal(await foods.last().evaluate((s) => s.selectedOptions[0].text), 'עגבניה, טריה');
+  assert.equal(await dialog().getByRole('spinbutton', { name: 'כמות' }).last().inputValue(), '2');
+  assert.equal(await dialog().getByRole('textbox', { name: 'הוספת מזון לרשימה' }).inputValue(), '');
+  await button('הסר: 2 עגבני', dialog()).tap();
   await button(`הוסף לארוחת ערב (${rows + 1})`, dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
