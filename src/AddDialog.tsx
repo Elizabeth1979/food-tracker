@@ -2,16 +2,14 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, parseLine, pickItem, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
-import { FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
+import { FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
 
+// Calories and macros only: vitamins are for looking closer (a food's details, the day's summary), not for adding.
 export const NutLine = ({ n }: { n: Nut }) => (
-  <div>
-    <div className="nutline"><b>{n.kcal} קק״ל</b><span>פחמימות {n.carbs} ג׳</span><span>שומן {n.fat} ג׳</span><span>חלבון {n.protein} ג׳</span></div>
-    <MicroLine n={n} />
-  </div>
+  <div className="nutline"><b>{n.kcal} קק״ל</b><span>פחמימות {n.carbs} ג׳</span><span>שומן {n.fat} ג׳</span><span>חלבון {n.protein} ג׳</span></div>
 );
 
 const PREFERRED = ['יחידה בינונית', 'יחידה', 'פרוסה', 'פרוסה בינונית', 'מנה בינונית'];

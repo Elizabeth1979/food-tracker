@@ -220,17 +220,21 @@ export function GoalsInfo({ goals }: { goals: Goals }) {
 
 // Micronutrients; values the food doesn't have are omitted, and so are zeros except in the day summary
 // (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need. Other vitamins follow.
-// A `label` is shown first and also names the group.
+// With a `label` it folds away under it (the day summary), saying why some vitamins may be missing.
 export function MicroLine({ n, rda, label }: { n: Nut; rda?: boolean; label?: string }) {
   const parts = [
     ...MICROS.filter((m) => n[m.key] != null && (rda || n[m.key] !== 0)).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`),
     ...extraParts(n.extra),
   ];
-  return parts.length ? (
-    <div className="micro muted" role={label ? 'group' : undefined} aria-label={label}>
-      {label && <b>{label}</b>}{parts.map((p) => <span key={p}>{p}</span>)}
-    </div>
-  ) : null;
+  if (!parts.length) return null;
+  const line = <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div>;
+  return label ? (
+    <details aria-label={label}>
+      <summary><Icon name="chevron-down" />{label}</summary>
+      {line}
+      <p className="muted small">רק מה שידוע: ממאגר משרד הבריאות נתרן, סידן, אשלגן ו־B12, ומתוויות שצילמת כל מה שכתוב בהן.</p>
+    </details>
+  ) : line;
 }
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.

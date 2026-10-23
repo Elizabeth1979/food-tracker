@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
 import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type SavedMeal, type Unit } from './lib';
-import { Group, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
+import { Group, FoodSummary, MicroLine, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 import { Icon } from './icons';
@@ -128,6 +128,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
   const foodRow = (f: Food) => (
     <ItemRow key={f.id} name={f.name} mine={f.source !== 'moh'} onAdd={() => setLogging(f)}>
       <FoodSummary f={f} tags={false} />
+      <MicroLine n={f} />
       <div className="grid2">
         <button className="btn small" aria-label={`עריכה: ${f.name}`} onClick={() => setEdit(f)}><Icon name="pencil" />עריכה</button>
         <button className="btn small" aria-label={`הסתרה: ${f.name}`} onClick={() => hide(f)}><Icon name="trash" />הסתרה</button>

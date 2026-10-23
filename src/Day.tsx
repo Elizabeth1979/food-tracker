@@ -99,7 +99,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
         </div>
         <WaterLine ml={waters.reduce((t, e) => t + e.grams, 0)} onAdd={drink} onRemove={waters.length ? () => remove(waters.at(-1)!) : undefined} />
         {/* The day's vitamins and minerals, from food and supplements, once it has any */}
-        <MicroLine n={tot} label="ויטמינים ומינרלים" />
+        <MicroLine n={tot} label="ויטמינים ומינרלים היום" />
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
         <GoalsInfo goals={goals} />
       </section>
