@@ -256,6 +256,27 @@ test('the foods tab: search first, then my foods and saved meals; the database o
   assert.equal(await entries('ארוחת צהריים').count(), 6); // added once, the second add undone
 });
 
+test('a supplement from its label: every vitamin per tablet, logged, and summed in the day', async () => {
+  await openAdd();
+  await button('מוצר ארוז או תוסף? צילום התווית', dialog()).tap();
+  // test mode reads any photo as a multivitamin's label: no weight printed, so the values are per tablet
+  await dialog().getByLabel('טבלה מהגלריה').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await dialog().getByRole('status').filter({ hasText: 'הערכים מולאו מהתמונה, לטבליה אחת' }).waitFor();
+  assert.equal(await dialog().getByRole('spinbutton', { name: 'ויטמין D (מק״ג)' }).inputValue(), '25');
+  assert.equal(await dialog().getByRole('spinbutton', { name: 'ברזל (מ״ג)' }).inputValue(), '14');
+  // one the label missed can be added by hand
+  await dialog().getByRole('combobox', { name: 'ויטמין או מינרל נוסף' }).selectOption('מגנזיום (מ״ג)');
+  await dialog().getByRole('spinbutton', { name: 'מגנזיום (מ״ג)' }).fill('50');
+  await button('שמור', dialog()).tap();
+  // then straight to the amount: 2 tablets
+  await dialog().getByRole('spinbutton').first().fill('2');
+  await button('הוסף לארוחת צהריים', dialog()).tap();
+  await button(/^סיום/, dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  const vitamins = page.getByRole('group', { name: 'ויטמינים ומינרלים' });
+  assert.match(await vitamins.innerText(), /ויטמין D 50 מק״ג[\s\S]*ויטמין C 160 מ״ג[\s\S]*ברזל 28 מ״ג[\s\S]*מגנזיום 100 מ״ג[\s\S]*אבץ 20 מ״ג/);
+});
+
 
 test('settings show the goals first; tailoring is a few steps; a weigh-in in reports only logs', async () => {
   const spin = (name, scope = page) => scope.getByRole('spinbutton', { name });

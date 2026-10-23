@@ -2,6 +2,16 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: supplements and all their vitamins
+
+**Done:**
+- `foods.extra` / `entries.extra` (jsonb, migration `extra_vitamins`): other vitamins and minerals by "name (unit)", names from `VITAMINS` in `lib.ts`. `scale`, `sum` and `pickItem` carry them, so amounts, day totals, report averages (now `scale(sum, 1/days)`) and CSV columns include them; `MicroLine` lists them after the four columns.
+- Label reading (`meal-photo` v6, deployed): the app sends `names: VITAMINS`; supplement labels with only a per-tablet column and no weight come back per piece (`basisG: 1`, unit טבליה/כמוסה = 1 g) with `extra`. IU converted in the prompt.
+- ＋ window: "מוצר ארוז או תוסף? צילום התווית" opens the new-food form, then the amount. The form shows `extra` fields and a "ויטמין או מינרל נוסף" picker. The day summary has a "ויטמינים ומינרלים" line (`MicroLine` with `label`).
+- Test mode's label answer is now a multivitamin; the screen test reads it, adds magnesium by hand, logs 2 tablets and checks the day line.
+
+**Next:** no daily targets for the new vitamins yet (only B12 has one). Not tried on a real supplement label yet.
+
 ## 2026-10-23: water tracking
 
 **Done:**

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
-import { MEALS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Food, type Item, type SavedMeal, type Unit } from './lib';
+import { MEALS, VITAMINS, addEntries, client, fmtDate, json, mealNow, readLabel, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type SavedMeal, type Unit } from './lib';
 import { Group, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
@@ -15,8 +15,10 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(['name', 'servingG', ...FIELDS.map((f) => f[0])].map((k) => [k, String((init as any)[k] ?? (k === 'servingG' ? 100 : ''))])));
   const [units, setUnits] = useState<UnitDraft[]>(() => json<Unit[]>(init.units, []).map(draftOf));
+  // Other vitamins and minerals, by name with unit; an emptied field is dropped on save.
+  const [extra, setExtra] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(json<Extra>(init.extra, {}) ?? {}).map(([k, x]) => [k, String(x)])));
   const [err, setErr] = useState('');
-  const [label, setLabel] = useState<'done' | 'serving' | ''>('');
+  const [filled, setFilled] = useState(''); // how the photo filled the form, said once it has
   const [reading, setReading] = useState<File | null>(null); // the label photo being read
   const num = (k: string) => (v[k] === '' ? null : Number(v[k]));
   // Supplements (creatine, vitamins): no energy or macros, logged by the serving.
@@ -32,16 +34,19 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
     try {
       const l = await readLabel(file);
       const vals = Object.fromEntries(FIELDS.map(([k]) => [k, l[k] == null ? '' : String(l[k])]));
-      setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: '100' }));
+      setV((v) => ({ ...v, ...vals, name: v.name.trim() || l.name, servingG: String(l.basisG) }));
+      setExtra((x) => ({ ...x, ...Object.fromEntries(Object.entries(l.extra ?? {}).map(([k, n]) => [k, String(n)])) }));
       if (l.unit) setUnits((us) => [...us.filter((u) => u.n && u.n !== l.unit!.n), draftOf(l.unit!)]);
-      setLabel(l.perServing ? 'serving' : 'done');
-    } catch (x: any) { setErr(x.message); setLabel(''); } finally { setReading(null); }
+      setFilled(l.basisG !== 100 && l.unit ? `הערכים מולאו מהתמונה, ל${l.unit.n} אחת` : l.perServing ? 'הערכים מולאו מהתמונה וחושבו ל־100 גרם לפי משקל המנה' : 'הערכים מולאו מהתמונה');
+    } catch (x: any) { setErr(x.message); setFilled(''); } finally { setReading(null); }
   };
   const save = async () => {
     if (!v.name.trim() || FIELDS.some(([k, , req]) => req && num(k) == null)) return setErr('יש למלא שם, קלוריות ומקרו־נוטריינטים');
+    const kept = Object.entries(extra).filter(([, x]) => x !== '').map(([k, x]) => [k, Number(x)]);
     const input = {
       name: v.name.trim(), servingG: num('servingG') || 100, source: 'user', // app edits win over the shipped food files
       kcal: num('kcal')!, carbs: num('carbs')!, fat: num('fat')!, protein: num('protein')!, sodium: num('sodium'), calcium: num('calcium'), potassium: num('potassium'), b12: num('b12'),
+      extra: kept.length ? Object.fromEntries(kept) : null,
       units: JSON.stringify(units.map(unitOf).filter((u) => u.n && u.g > 0)),
     };
     const { data, errors } = init.id ? await client.models.Food.update({ id: init.id, ...input }) : await client.models.Food.create(input);
@@ -54,15 +59,23 @@ export function FoodForm({ init, onSaved }: { init: Partial<Food>; onSaved: (f: 
   return (
     <div className="form">
       <PhotoPick camera="צילום טבלת ערכים" gallery="טבלה מהגלריה" reading={reading} busyText="קורא את הטבלה…" onFile={photo} />
-      {(label === 'done' || label === 'serving') && (
-        <p className="muted small" role="status">
-          הערכים מולאו מהתמונה{label === 'serving' ? ' וחושבו ל־100 גרם לפי משקל המנה' : ''}. כדאי לבדוק אותם מול האריזה לפני השמירה.
-        </p>
-      )}
+      {filled && <p className="muted small" role="status">{filled}. כדאי לבדוק אותם מול האריזה לפני השמירה.</p>}
       {inp('name', 'שם')}
       {inp('servingG', 'הערכים הם עבור (גרם)')}
       <button className="link start" onClick={supplement}><Icon name="pill" />תוסף תזונה / ללא קלוריות: מלא אפסים</button>
-      <div className="grid2">{FIELDS.map(([k, l]) => inp(k, l))}</div>
+      <div className="grid2">
+        {FIELDS.map(([k, l]) => inp(k, l))}
+        {Object.keys(extra).map((k) => (
+          <label key={k}><span>{k}</span><input type="number" inputMode="decimal" step="any" value={extra[k]} onChange={(e) => setExtra({ ...extra, [k]: e.target.value })} /></label>
+        ))}
+      </div>
+      <label>
+        <span>ויטמין או מינרל נוסף</span>
+        <select value="" onChange={(e) => e.target.value && setExtra({ ...extra, [e.target.value]: '' })}>
+          <option value="">בחרו להוספה…</option>
+          {VITAMINS.filter((n) => !(n in extra)).map((n) => <option key={n}>{n}</option>)}
+        </select>
+      </label>
       <h4>יחידות (אופציונלי)</h4>
       <p className="muted small">{UNIT_HINT}</p>
       {units.map((u, i) => (

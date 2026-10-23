@@ -185,11 +185,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
         <>
           <input className="search" type="search" aria-label="חיפוש" placeholder="חיפוש מזון…" value={q} onChange={(e) => setQ(e.target.value)} />
           {/* The two other ways in, big and up front: a photo (camera or gallery) or typing the meal */}
-          {!q && (
+          {!q && <>
             <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" onFile={(f) => { setPhoto(f); setWriting(true); }}>
               <button className="btn big-choice" onClick={() => setWriting(true)}><Icon name="pencil" />כתיבה</button>
             </PhotoPick>
-          )}
+            {/* A package or a supplement the database lacks: its label becomes a food of your own, then you log it */}
+            <button className="link start" onClick={() => setCreating(true)}><Icon name="pill" />מוצר ארוז או תוסף? צילום התווית</button>
+          </>}
           <div className="usual">
             {q ? meals.map((m) => mealPick({ key: `m:${m.id}`, m, items: json<Item[]>(m.items, []) })) : <>
               {/* Your usual things, one tap each with last time's amount; ignore them and search, photograph or type instead */}

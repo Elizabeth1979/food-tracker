@@ -49,7 +49,7 @@ export const syncPending = async () => {};
 export const hasPending = () => false;
 
 // A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
-// a meal, or for `mode: 'label'` a granola bar's nutrition table (per 100 g, with a 30 g bar as the serving).
+// a meal, or for `mode: 'label'` a multivitamin's label (per tablet, with vitamins beyond the four columns in `extra`).
 const session = { user: { id: 'test-user', email: 'מצב בדיקה' } };
 // Meal photos live in localStorage too (path → data URL), so they outlast a restore's reload. `list` gives one
 // level down, files or folders, like Storage.
@@ -80,7 +80,13 @@ export const supabase = {
       await new Promise((r) => setTimeout(r, 800));
       if (opts.body?.mode === 'label')
         return {
-          data: { label: { name: 'חטיף גרנולה שוקולד', kcal: 433, carbs: 63.3, fat: 16.7, protein: 6.7, sodium: 233, calcium: 50, potassium: null, b12: null, unit: { n: 'מנה', g: 30 }, perServing: false } } as D,
+          data: {
+            label: {
+              name: 'מולטי ויטמין', kcal: 0, carbs: 0, fat: 0, protein: 0, sodium: null, calcium: 200, potassium: null, b12: 6,
+              extra: { 'ויטמין D (מק״ג)': 25, 'ויטמין C (מ״ג)': 80, 'ברזל (מ״ג)': 14, 'אבץ (מ״ג)': 10 },
+              unit: { n: 'טבליה', g: 1 }, perServing: true, basisG: 1,
+            },
+          } as D,
           error: null,
         };
       return {
