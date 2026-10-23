@@ -109,6 +109,12 @@ test('a food that exists only as a dish ingredient falls back to the plain food'
   assert.match(matchFoods(moh, 'חזה עוף', [])[0].name, /^בשר עוף, חזה/); // "חזה" is in the name, not the head: unchanged
 });
 
+test('a photo\'s potato: boiled is plain boiled, mashed is פירה, an unknown word is dropped', () => {
+  assert.match(matchFoods(moh, 'תפוח אדמה מבושל', [])[0].name, /מבושלים.*ללא תוספת שומן/); // not fried, not with oil
+  assert.match(matchFoods(moh, 'תפוח אדמה מעוך', [])[0].name, /פירה/);
+  assert.match(matchFoods(moh, 'תפוח אדמה מבושל בתנור', [])[0].name, /^תפוחי אדמה/);
+});
+
 test('staples find the plain everyday version', () => {
   assert.match(first('פיתה'), /^פיתה, פיתה ביס/); // not toasted ("קלויה") or a brand's
   assert.match(first('פיתות'), /^פיתה, פיתה ביס/);

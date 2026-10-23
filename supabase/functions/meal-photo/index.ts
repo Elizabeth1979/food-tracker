@@ -22,7 +22,8 @@ const Meal = z.object({
 });
 
 const SYSTEM = `You look at a photo of a meal and list the foods in it for a Hebrew food diary.
-- One item per food, Hebrew names as they appear in the Israeli Ministry of Health food database (צמרת): generic and short ("ענבים", "גבינה לבנה 5%", "לחם מלא"), no brands unless the packaging shows one.
+- One item per food, Hebrew names as they appear in the Israeli Ministry of Health food database (צמרת): generic and short ("ענבים", "גבינה לבנה 5%", "לחם מלא"), no brands unless the packaging shows one. Mashed potato is "פירה".
+- Each food once: a potato that is cut, peeled or partly squashed is still one item, not "boiled" plus "mashed".
 - Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): for leaves, slices or chunks of something use grams.
 - Count only what you can see; never assume more is hidden. Judge size against the plate (a dinner plate is about 26 cm): small potatoes weigh about 50 g, not 180. When unsure, guess the smaller amount.
 - Also give each item's total weight in grams (\`grams\`); the app checks the unit against it.
