@@ -37,27 +37,32 @@ after(async () => {
 const button = (name, scope = page) => scope.getByRole('button', { name, exact: typeof name === 'string' });
 const dialog = () => page.getByRole('dialog');
 const asked = (title) => page.getByRole('dialog', { name: title }); // the app's own confirm/prompt, over another window
+// The ＋ window adds to the meal of the time of day, so a test picks the meal by setting the clock (same day).
+const at = (time) => page.clock.setFixedTime(new Date(`2026-10-21T${time}:00`));
+const openFoods = async () => { await button(/הגדרות/).tap(); await button(/המזונות והארוחות שלי/).tap(); };
 const mealTab = (name) => dialog().getByRole('group', { name: 'ארוחה' }).getByRole('button', { name: new RegExp(name) });
 const meal = (label) => page.getByRole('region', { name: label });
 const entries = (label) => meal(label).getByRole('button', { name: /^מחק: / }); // one delete button per entry
 const openAdd = async () => { await button(/הוספה$/).tap(); await dialog().waitFor(); };
 const sampleJpeg = () => page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; return c.toDataURL('image/jpeg').split(',')[1]; });
 
-test('one ＋ opens the add window on the meal of the time of day', async () => {
+test('one ＋ opens the add window, with no meal to choose', async () => {
   await openAdd();
-  assert.equal(await mealTab('צהריים').getAttribute('aria-pressed'), 'true');
+  assert.equal(await dialog().getByRole('group', { name: 'ארוחה' }).count(), 0);
 });
 
 test('search, pick an amount, add', async () => {
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('ענבים');
   await button(/^ענבים/, dialog()).first().tap();
-  await button('הוסף לארוחת צהריים', dialog()).tap();
-  await button(/^סיום · נוספו 1/, dialog()).waitFor();
+  await button('הוסף', dialog()).tap();
+  await button(/^סיום · נוספו 1/, dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.equal(await entries('ארוחת צהריים').count(), 1); // lunchtime: filed under lunch
 });
 
-test('switch the meal, then a photo goes to the review list', async () => {
-  await mealTab('ערב').tap();
-  assert.equal(await mealTab('ערב').getAttribute('aria-pressed'), 'true');
+test('in the evening, a photo goes to the review list', async () => {
+  await at('19:00');
+  await openAdd();
   // any real image will do: test mode answers every photo with the same sample meal
   assert.ok(await dialog().getByLabel('צילום', { exact: true }).count()); // the camera has its own button
   await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
@@ -97,7 +102,8 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   assert.equal(await dialog().getByRole('spinbutton', { name: 'כמות' }).last().inputValue(), '2');
   assert.equal(await dialog().getByRole('textbox', { name: 'הוספת מזון לרשימה' }).inputValue(), '');
   await button('הסר: 2 עגבני', dialog()).tap();
-  await button(`הוסף לארוחת ערב (${rows + 1})`, dialog()).tap();
+  await button(`הוסף (${rows + 1})`, dialog()).tap();
+  await at('13:00'); // back to lunchtime, when the diary shows every meal unfolded
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
 });
@@ -177,24 +183,20 @@ test('save a meal, then add it again in one tap', async () => {
   await button('שמור', asked('שמירה כארוחה')).tap();
   await page.getByText('"ערב קבוע" נשמרה').waitFor();
   // a food logged once, just now, at breakfast: the newest, but grapes (twice) has been logged more
+  await at('08:00');
   await openAdd();
-  await mealTab('בוקר').tap();
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('מלפפון');
   await button(/^מלפפון/, dialog()).first().tap();
-  await button('הוסף לארוחת בוקר', dialog()).tap();
+  await button('הוסף', dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
+  await at('22:00');
   await openAdd();
-  // the usual foods are one list whatever the meal, the most logged first, not the newest or this meal's
+  // the usual foods are one list, the most logged first, not the newest
   const usual = dialog().getByRole('region', { name: 'הרגילים שלך' });
   const picks = usual.getByRole('button', { name: /^הוסף: / });
   const names = () => picks.evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')));
   for (let i = 0; !(await names())[0]?.includes('ענבים'); i++) { assert.ok(i < 50, 'grapes never came first'); await page.waitForTimeout(100); } // the month loads after opening
-  const atLunch = await names();
-  for (const m of ['בוקר', 'ערב', 'נשנושים']) { // breakfast has only the cucumber, dinner the most history
-    await mealTab(m).tap();
-    assert.deepEqual(await names(), atLunch, m);
-  }
   // saved meals have their own titled group; the usual foods show up to 5, the rest behind "עוד"
   await button(/^ערב קבוע/, dialog().getByRole('region', { name: 'ארוחות שמורות' })).tap();
   assert.equal(await picks.count(), 5); // 6 foods logged so far: 5 shown, the last behind "עוד"
@@ -203,6 +205,7 @@ test('save a meal, then add it again in one tap', async () => {
   await button(/^סיום · נוספו 6/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('נשנושים ואחר').count(), 6);
+  await at('13:00');
 });
 
 test('a usual food: ＋ adds last time\'s amount; its name opens the amount picker, filled with it', async () => {
@@ -215,7 +218,7 @@ test('a usual food: ＋ adds last time\'s amount; its name opens the amount pick
   const qty = dialog().getByRole('spinbutton');
   assert.equal(await qty.inputValue(), last);
   await qty.fill(String(Number(last) * 2));
-  await button('הוסף לארוחת צהריים', dialog()).tap();
+  await button('הוסף', dialog()).tap();
   const plus = button(/^הוסף: ענבים/, usual);
   assert.equal(await plus.getAttribute('aria-pressed'), 'true'); // back on the list, marked as added
   assert.equal(await amount(), String(Number(last) * 2)); // showing the amount just added
@@ -255,7 +258,7 @@ test('deleting a meal\'s last food takes its photo too, and undo brings both bac
   await openAdd();
   await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
   await button('זהה מזונות', dialog()).tap();
-  await button(/^הוסף לארוחת צהריים/, dialog()).tap();
+  await button(/^הוסף \(/, dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   const photo = button('תמונה 1: ארוחת צהריים', meal('ארוחת צהריים'));
   await photo.waitFor();
@@ -282,7 +285,7 @@ test('moving a meal\'s last food to another meal takes its photo along', async (
   await openAdd();
   await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
   await button('זהה מזונות', dialog()).tap();
-  await button(/^הוסף לארוחת צהריים/, dialog()).tap();
+  await button(/^הוסף \(/, dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   const atLunch = button('תמונה 1: ארוחת צהריים', meal('ארוחת צהריים'));
   const atDinner = button('תמונה 1: ארוחת ערב', meal('ארוחת ערב'));
@@ -315,8 +318,9 @@ test('the phone back button closes a window, and returns from the reports tab to
   await button(/הוספה$/).waitFor();
 });
 
-test('the foods tab: search first, then my foods and saved meals; the database only through search', async () => {
-  await button(/מזונות/).tap();
+test('the foods page, from Settings: search first, then my foods and saved meals; the database only through search', async () => {
+  assert.equal(await page.getByRole('navigation').getByRole('button', { name: /מזונות/ }).count(), 0); // not in the bar
+  await openFoods();
   const mine = page.getByRole('region', { name: /^המזונות שלי/ });
   assert.ok(await mine.getByText('מזונות שתוסיפו או תערכו יופיעו כאן.').isVisible());
   assert.ok(await page.getByRole('region', { name: /^ארוחות שמורות/ }).getByText('ערב קבוע').isVisible());
@@ -353,10 +357,17 @@ test('the foods tab: search first, then my foods and saved meals; the database o
 
 test('a supplement from its label: every vitamin per tablet, logged, and summed in the day', async () => {
   await openAdd();
-  await button('מוצר ארוז או תוסף? צילום התווית', dialog()).tap();
-  // test mode reads any photo as a multivitamin's label: no weight printed, so the values are per tablet
-  await dialog().getByLabel('טבלה מהגלריה').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
-  await dialog().getByRole('status').filter({ hasText: 'הערכים מולאו מהתמונה, לטבליה אחת' }).waitFor();
+  // the label button opens the camera; test mode reads any photo as a multivitamin's label, values per tablet
+  await dialog().getByLabel('תווית').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await dialog().getByRole('status').filter({ hasText: 'נקרא מהתווית' }).waitFor();
+  assert.equal(await dialog().getByRole('textbox', { name: 'שם המוצר' }).inputValue(), 'מולטי ויטמין');
+  assert.ok(await dialog().getByText('הערכים לטבליה אחת:').isVisible());
+  // "עריכה" opens the full form, filled in; closing it comes back to the check
+  await button('עריכה', dialog()).tap();
+  assert.equal(await dialog().getByRole('spinbutton', { name: 'ויטמין D (מק״ג)' }).inputValue(), '25');
+  await page.keyboard.press('Escape');
+  await button('המשך', dialog()).waitFor();
+  await button('עריכה', dialog()).tap();
   assert.equal(await dialog().getByRole('spinbutton', { name: 'ויטמין D (מק״ג)' }).inputValue(), '25');
   assert.equal(await dialog().getByRole('spinbutton', { name: 'ברזל (מ״ג)' }).inputValue(), '14');
   // one the label missed can be added by hand
@@ -366,7 +377,7 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   // then straight to the amount, 2 tablets: calories and macros only, no vitamins while adding
   await dialog().getByRole('spinbutton').first().fill('2');
   assert.doesNotMatch(await dialog().innerText(), /ויטמין D/);
-  await button('הוסף לארוחת צהריים', dialog()).tap();
+  await button('הוסף', dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   // the day's vitamins are folded away until asked for
@@ -374,8 +385,8 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   assert.doesNotMatch(await vitamins.innerText(), /ויטמין D/);
   await vitamins.getByText('ויטמינים ומינרלים היום').tap();
   assert.match(await vitamins.innerText(), /ויטמין D 50 מק״ג[\s\S]*ויטמין C 160 מ״ג[\s\S]*ברזל 28 מ״ג[\s\S]*מגנזיום 100 מ״ג[\s\S]*אבץ 20 מ״ג/);
-  // and a food's own, per tablet, when it is opened in the foods tab
-  await button(/מזונות/).tap();
+  // and a food's own, per tablet, when it is opened in the foods page
+  await openFoods();
   const mine = page.getByRole('region', { name: /^המזונות שלי/ });
   await mine.getByText('מולטי ויטמין').tap();
   await mine.getByText('ויטמין D 25 מק״ג').waitFor();

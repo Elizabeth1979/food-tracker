@@ -50,24 +50,28 @@ export function AskHost() {
 // Two ways in: Android's file picker no longer offers the camera, so the camera gets its own button (capture).
 // `children` is one more choice in the same row (the add window's "כתיבה").
 export function PhotoPick({ camera, gallery, reading, busyText = '', onFile, className = 'btn', children }: { camera: string; gallery: string; reading?: File | null; busyText?: string; onFile: (f: File) => void; className?: string; children?: ReactNode }) {
+  if (reading) return <Reading file={reading} text={busyText} />;
+  return (
+    <div className={children ? 'choices' : 'grid2'}>
+      <FileButton camera className={className} onFile={onFile}><Icon name="camera" />{camera}</FileButton>
+      <FileButton className={className} onFile={onFile}><Icon name="image" />{gallery}</FileButton>
+      {children}
+    </div>
+  );
+}
+
+// A button that picks a photo: with `camera`, the phone opens its camera straight away; otherwise the gallery.
+export function FileButton({ camera, className, onFile, children }: { camera?: boolean; className: string; onFile: (f: File) => void; children: ReactNode }) {
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (file) onFile(file);
   };
-  if (reading) return <Reading file={reading} text={busyText} />;
   return (
-    <div className={children ? 'grid3' : 'grid2'}>
-      <label className={className}>
-        <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
-        <Icon name="camera" />{camera}
-      </label>
-      <label className={className}>
-        <input type="file" accept="image/*" className="sr-only" onChange={pick} />
-        <Icon name="image" />{gallery}
-      </label>
+    <label className={className}>
+      <input type="file" accept="image/*" capture={camera ? 'environment' : undefined} className="sr-only" onChange={pick} />
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -78,7 +82,7 @@ export function usePhotoUrl(file: File) {
   return src;
 }
 
-function Reading({ file, text }: { file: File; text: string }) {
+export function Reading({ file, text }: { file: File; text: string }) {
   const src = usePhotoUrl(file);
   return (
     <figure className="reading" role="status">
