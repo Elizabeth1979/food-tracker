@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { MACROS, MICROS, WATER_GOAL_ML, isFFQ, type Nut, type Unit } from './lib';
+import { MACROS, MICROS, WATER_GOAL_ML, extraParts, isFFQ, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
 import { DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
 
@@ -219,10 +219,18 @@ export function GoalsInfo({ goals }: { goals: Goals }) {
 }
 
 // Micronutrients; values the food doesn't have are omitted, and so are zeros except in the day summary
-// (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need.
-export function MicroLine({ n, rda }: { n: Nut; rda?: boolean }) {
-  const parts = MICROS.filter((m) => n[m.key] != null && (rda || n[m.key] !== 0)).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`);
-  return parts.length ? <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div> : null;
+// (`rda`), where "B12 0 / 2.4" is the point. `rda` shows B12 against its daily need. Other vitamins follow.
+// A `label` is shown first and also names the group.
+export function MicroLine({ n, rda, label }: { n: Nut; rda?: boolean; label?: string }) {
+  const parts = [
+    ...MICROS.filter((m) => n[m.key] != null && (rda || n[m.key] !== 0)).map((m) => `${m.label} ${n[m.key]}${rda && 'rda' in m ? ` / ${m.rda}` : ''} ${m.unit}`),
+    ...extraParts(n.extra),
+  ];
+  return parts.length ? (
+    <div className="micro muted" role={label ? 'group' : undefined} aria-label={label}>
+      {label && <b>{label}</b>}{parts.map((p) => <span key={p}>{p}</span>)}
+    </div>
+  ) : null;
 }
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.

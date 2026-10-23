@@ -13,7 +13,16 @@ export const MICROS = [
   { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2, rda: 2.4 },
 ] as const;
 export type MicroKey = (typeof MICROS)[number]['key'];
-export type Nut = { kcal: number; carbs: number; fat: number; protein: number } & Partial<Record<MicroKey, number | null>>;
+// Vitamins and minerals beyond the four columns above, mostly from supplement labels: { "ויטמין D (מק״ג)": 25, … }.
+// The label reader is given these names, so one nutrient adds up across foods; anything else keeps its printed name and unit.
+export const VITAMINS = [
+  'ויטמין A (מק״ג)', 'ויטמין D (מק״ג)', 'ויטמין E (מ״ג)', 'ויטמין K (מק״ג)', 'ויטמין C (מ״ג)',
+  'ויטמין B1 (מ״ג)', 'ויטמין B2 (מ״ג)', 'ויטמין B3 (מ״ג)', 'ויטמין B5 (מ״ג)', 'ויטמין B6 (מ״ג)', 'ביוטין (מק״ג)', 'חומצה פולית (מק״ג)',
+  'ברזל (מ״ג)', 'מגנזיום (מ״ג)', 'אבץ (מ״ג)', 'סלניום (מק״ג)', 'יוד (מק״ג)', 'נחושת (מ״ג)', 'מנגן (מ״ג)', 'כרום (מק״ג)', 'מוליבדן (מק״ג)',
+  'זרחן (מ״ג)', 'כולין (מ״ג)', 'אומגה 3 (מ״ג)',
+];
+export type Extra = Record<string, number>;
+export type Nut = { kcal: number; carbs: number; fat: number; protein: number; extra?: Extra | null } & Partial<Record<MicroKey, number | null>>;
 export type Item = Nut & { foodId?: string | null; name: string; grams: number; qty?: number | null; unit?: string | null };
 
 // Water is logged as ordinary 0-kcal entries, a glass at a time, so it syncs, backs up and undoes like any food.
@@ -54,20 +63,35 @@ export const daysBetween = (a: string, b: string) => {
 // ---------- nutrition math ----------
 const round = (x: number, dp: number) => Math.round(x * 10 ** dp) / 10 ** dp;
 const r1 = (x: number) => round(x, 1);
+const r2 = (x: number) => round(x, 2);
+const scaleExtra = (x: Extra | null | undefined, f: number) => (x ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, r2(v * f)])) : x);
+const addExtra = (a: Extra | null | undefined, b: Extra | null | undefined) => {
+  if (!b) return a;
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = r2((out[k] ?? 0) + v);
+  return out;
+};
 export const scale = (n: Nut, f: number): Nut => ({
   kcal: Math.round(n.kcal * f), carbs: r1(n.carbs * f), fat: r1(n.fat * f), protein: r1(n.protein * f),
   ...Object.fromEntries(MICROS.map((m) => [m.key, n[m.key] == null ? null : round(n[m.key]! * f, m.dp)])),
+  extra: scaleExtra(n.extra, f),
 });
 export const sum = (xs: Nut[]): Nut =>
   xs.reduce<Nut>((a, x) => ({
     kcal: a.kcal + x.kcal, carbs: r1(a.carbs + x.carbs), fat: r1(a.fat + x.fat), protein: r1(a.protein + x.protein),
     ...Object.fromEntries(MICROS.map((m) => [m.key, round((a[m.key] ?? 0) + (x[m.key] ?? 0), m.dp)])),
+    extra: addExtra(a.extra, x.extra),
   }), { kcal: 0, carbs: 0, fat: 0, protein: 0, ...Object.fromEntries(MICROS.map((m) => [m.key, 0])) });
 // the fields an Entry / saved-meal item carries (strips ids, dates, owner…)
 export const pickItem = (e: Item): Item => {
   const { foodId, name, grams, qty, unit, kcal, carbs, fat, protein } = e;
-  return { foodId, name, grams, qty, unit, kcal, carbs, fat, protein, ...Object.fromEntries(MICROS.map((m) => [m.key, e[m.key] ?? null])) };
+  return { foodId, name, grams, qty, unit, kcal, carbs, fat, protein, ...Object.fromEntries(MICROS.map((m) => [m.key, e[m.key] ?? null])), extra: e.extra ?? null };
 };
+// The extras for display, in VITAMINS order then the rest: "ויטמין D 25 מק״ג".
+export const extraParts = (x: Extra | null | undefined) => Object.entries(x ?? {})
+  .filter(([, v]) => v)
+  .sort(([a], [b]) => ((VITAMINS.indexOf(a) + 1 || 99) - (VITAMINS.indexOf(b) + 1 || 99)))
+  .map(([k, v]) => { const [, name, unit] = k.match(/^(.*?)\s*\((.+)\)$/) ?? [, k, '']; return `${name} ${v}${unit ? ` ${unit}` : ''}`; });
 export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };
@@ -123,10 +147,11 @@ export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
 }
 // Reads a nutrition table (טבלת ערכים תזונתיים) into per-100 g values for the new-food form. The one exception to
 // "calories come from the database": a packaged product the database lacks, checked by the user before saving.
+// A supplement label that gives no weight comes back per piece instead (basisG 1, unit "טבליה" = 1 g).
 // Labels have small print, so the photo is kept larger than for a meal.
-export type Label = Nut & { name: string; unit: Unit | null; perServing: boolean };
+export type Label = Nut & { name: string; unit: Unit | null; perServing: boolean; basisG: number };
 export async function readLabel(file: File): Promise<Label> {
-  const { data, error } = await supabase.functions.invoke<{ label?: Label; error?: string }>('meal-photo', { body: { image: await shrink(file, 1568), mode: 'label' } });
+  const { data, error } = await supabase.functions.invoke<{ label?: Label; error?: string }>('meal-photo', { body: { image: await shrink(file, 1568), mode: 'label', names: VITAMINS } });
   if (error || !data?.label) throw new Error(data?.error ?? 'קריאת הטבלה לא זמינה כרגע. אפשר למלא את הערכים ידנית.');
   return data.label;
 }

@@ -6,7 +6,8 @@ import type { MealKey } from './lib';
 import { store } from './store';
 
 type Micros = { sodium?: number | null; calcium?: number | null; potassium?: number | null; b12?: number | null };
-type Nutrients = { kcal: number; carbs: number; fat: number; protein: number } & Micros;
+// extra: other vitamins and minerals by name with unit, { "ויטמין D (מק״ג)": 25 } (see VITAMINS in lib.ts)
+type Nutrients = { kcal: number; carbs: number; fat: number; protein: number; extra?: Record<string, number> | null } & Micros;
 
 // Nutrients are per `servingG` grams. units: [{ n: name, g: grams }] (array or JSON string)
 export type Food = Nutrients & { id: string; name: string; nameEn?: string | null; source?: string | null; hidden?: boolean | null; servingG: number; units?: unknown };
@@ -34,7 +35,7 @@ if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PU
 export const supabase = createClient(url, key, { auth: { flowType: 'implicit' } });
 
 const TABLE: Record<TableName, string> = { Food: 'foods', Entry: 'entries', SavedMeal: 'saved_meals', Profile: 'profiles', Weight: 'weights' };
-const NUTS = ['kcal', 'carbs', 'fat', 'protein', 'sodium', 'calcium', 'potassium', 'b12'];
+const NUTS = ['kcal', 'carbs', 'fat', 'protein', 'sodium', 'calcium', 'potassium', 'b12', 'extra'];
 // The columns the app writes. Rows from the UI or a backup can carry extras (user_id, created_at, Amplify's owner…).
 const COLS: Record<TableName, string[]> = {
   Food: ['id', 'name', 'nameEn', 'source', 'hidden', 'servingG', 'units', ...NUTS],
@@ -43,7 +44,7 @@ const COLS: Record<TableName, string[]> = {
   Profile: ['id', 'kcal', 'carbs', 'fat', 'protein', 'recent', 'body'],
   Weight: ['id', 'date', 'kg', 'waist'],
 };
-const JSON_COLS = new Set(['units', 'items', 'body']);
+const JSON_COLS = new Set(['units', 'items', 'body', 'extra']);
 // Foods are keyed per user, so a user can override a shipped MoH food under its own id.
 const CONFLICT: Record<TableName, string> = { Food: 'user_id,id', Entry: 'id', SavedMeal: 'id', Profile: 'id', Weight: 'id' };
 // Entries keep the order they were logged in, weights go by date; the rest sort by name.

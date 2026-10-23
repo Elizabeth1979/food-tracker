@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
 import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, deletePhoto, fmtDate, isWater, listPhotos, loadEntries, mealNow, sum, today, type Entry, type MealKey, type MealPhoto } from './lib';
-import { DayGoals, GoalsInfo, Group, Modal, Ring, WaterLine } from './ui';
+import { DayGoals, GoalsInfo, Group, MicroLine, Modal, Ring, WaterLine } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
 
@@ -98,6 +98,8 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
           <DayGoals n={tot} goals={goals} />
         </div>
         <WaterLine ml={waters.reduce((t, e) => t + e.grams, 0)} onAdd={drink} onRemove={waters.length ? () => remove(waters.at(-1)!) : undefined} />
+        {/* The day's vitamins and minerals, from food and supplements, once it has any */}
+        <MicroLine n={tot} label="ויטמינים ומינרלים" />
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
         <GoalsInfo goals={goals} />
       </section>

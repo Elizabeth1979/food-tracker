@@ -14,6 +14,7 @@ create table foods (
   units jsonb,
   kcal real not null, carbs real not null, fat real not null, protein real not null,
   sodium real, calcium real, potassium real, b12 real,
+  extra jsonb, -- other vitamins and minerals by name with unit, { "ויטמין D (מק״ג)": 25 } (VITAMINS in src/lib.ts)
   primary key (user_id, id)
 );
 
@@ -30,6 +31,7 @@ create table entries (
   unit text,
   kcal real not null, carbs real not null, fat real not null, protein real not null,
   sodium real, calcium real, potassium real, b12 real,
+  extra jsonb, -- other vitamins and minerals by name with unit, { "ויטמין D (מק״ג)": 25 } (VITAMINS in src/lib.ts)
   created_at timestamptz not null default now() -- keeps items in the order they were logged
 );
 create index entries_user_date on entries (user_id, date);
