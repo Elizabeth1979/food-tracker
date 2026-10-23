@@ -72,7 +72,7 @@ export const unitSaver = (ctx: Ctx, f: Food, then?: (f: Food) => void) => async 
   then?.(nf);
 };
 
-// Opens on what you usually eat at this meal, saved meals and single foods, each at the amount you had last time.
+// Opens on what you usually eat, saved meals and single foods, each at the amount you had last time.
 // One tap on ＋ adds, a second takes it back out, and the dialog stays open until "סיום", so a whole meal is a few taps.
 // Tapping a food's name opens the amount picker on last time's amount, for a different amount this time.
 // Search, typing and photos are for the less usual things; those go through the amount picker.
@@ -104,22 +104,22 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const meals = q ? ctx.meals.filter((m) => norm(m.name).includes(norm(q))) : ctx.meals;
   // Order fixed when the dialog opens: adding moves a food up in "recent", and rows mustn't jump under your finger.
   const [order] = useState(ctx.recent);
-  // Saved meals and single foods, each list ordered by how often you've had them at this meal
-  // (a saved meal by how often its foods were), then by the most recent.
+  // Saved meals and single foods, each list ordered by how often you've had them this past month, at any meal
+  // (a saved meal by how often its foods were), then by the most recent. The same list whatever the meal:
+  // the owner wants it to stay put, with what she logs most at the top.
   const [usualMeals, usualFoods] = useMemo(() => {
     const n: Record<string, number> = {};
-    for (const e of month) if (e.foodId && e.meal === meal) n[e.foodId] = (n[e.foodId] ?? 0) + 1;
+    for (const e of month) if (e.foodId) n[e.foodId] = (n[e.foodId] ?? 0) + 1;
     const byScore = <T extends { score: number; i: number }>(xs: T[]) => xs.sort((a, b) => b.score - a.score || a.i - b.i);
     const saved = ctx.meals.map((m, i) => {
       const items = json<Item[]>(m.items, []);
       const score = items.reduce((t, it) => t + (n[it.foodId ?? ''] ?? 0), 0) / (items.length || 1);
       return { key: `m:${m.id}`, m, items, score, i };
     });
-    const foods = searchFoods(ctx.foods, '', order).slice(0, 12).map((f, i) => ({ key: `f:${f.id}`, f, score: n[f.id] ?? 0, i }));
-    return [byScore(saved), byScore(foods)];
-  }, [ctx.foods, ctx.meals, order, month, meal]);
+    const foods = searchFoods(ctx.foods, '', order).map((f, i) => ({ key: `f:${f.id}`, f, score: n[f.id] ?? 0, i }));
+    return [byScore(saved), byScore(foods).slice(0, 12)];
+  }, [ctx.foods, ctx.meals, order, month]);
   const [more, setMore] = useState(false);
-  const short = MEALS.find((m) => m.key === meal)!.short;
   const label = MEALS.find((m) => m.key === meal)!.label;
   const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
 
@@ -195,7 +195,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
               {/* Your usual things, one tap each with last time's amount; ignore them and search, photograph or type instead */}
               {usualFoods.length > 0 && (
                 <section aria-labelledby={`${uid}-u`}>
-                  <h3 id={`${uid}-u`}>הרגילים שלך ב{short}</h3>
+                  <h3 id={`${uid}-u`}>הרגילים שלך</h3>
                   <p className="muted small">לחיצה על ＋ מוסיפה בכמות של הפעם הקודמת. לכמות אחרת, לחצו על השם.</p>
                   {(more ? usualFoods : usualFoods.slice(0, USUAL_SHOWN)).map(foodPick)}
                   {!more && usualFoods.length > USUAL_SHOWN && <button className="link" onClick={() => setMore(true)}>עוד {usualFoods.length - USUAL_SHOWN}</button>}

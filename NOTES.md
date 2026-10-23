@@ -2,6 +2,12 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-23: the add window's usual foods: one list at every meal
+
+**Done:**
+- The owner wants the meal picked from the time of day, but the list itself fixed: "הרגילים שלך" (was "…בצהריים") now ranks foods and saved meals by how often they were logged this past month at any meal, then by recency. Switching the meal no longer reorders it. Top 12 by that count (was: 12 most recent, re-sorted).
+- Screen test: a cucumber logged once at breakfast; the list is identical at lunch, breakfast, dinner and snacks, grapes (logged most) first. Fails with the old per-meal count.
+
 ## 2026-10-23: the app's own confirm and prompt windows
 
 **Done:**
