@@ -129,12 +129,33 @@ test('save a meal, then add it again in one tap', async () => {
   // saved meals have their own titled group; the usual foods show up to 5, the rest behind "עוד"
   await button(/^ערב קבוע/, dialog().getByRole('region', { name: 'ארוחות שמורות' })).tap();
   const usual = dialog().getByRole('region', { name: 'הרגילים שלך בנשנושים' });
-  const picks = usual.getByRole('button', { name: /^(?!עוד)/ });
+  const picks = usual.getByRole('button', { name: /^הוסף: / });
   assert.equal(await picks.count(), 5); // the 5 foods logged so far: all shown, so no "עוד"
   assert.equal(await button(/^עוד \d/, usual).count(), 0);
   await button(/^סיום · נוספו 6/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
   assert.equal(await entries('נשנושים ואחר').count(), 6);
+});
+
+test('a usual food: ＋ adds last time\'s amount; its name opens the amount picker, filled with it', async () => {
+  await openAdd();
+  const usual = dialog().getByRole('region', { name: /^הרגילים שלך/ });
+  const grapes = button(/^ענבים/, usual);
+  const amount = async () => (await grapes.innerText()).split('\n')[1].split(' ')[0]; // the amount line under the name
+  const last = await amount();
+  await grapes.tap();
+  const qty = dialog().getByRole('spinbutton');
+  assert.equal(await qty.inputValue(), last);
+  await qty.fill(String(Number(last) * 2));
+  await button('הוסף לארוחת צהריים', dialog()).tap();
+  const plus = button(/^הוסף: ענבים/, usual);
+  assert.equal(await plus.getAttribute('aria-pressed'), 'true'); // back on the list, marked as added
+  assert.equal(await amount(), String(Number(last) * 2)); // showing the amount just added
+  await plus.tap(); // a second tap takes it back out
+  await page.waitForFunction(() => document.querySelector('[aria-label^="הוסף: ענבים"]')?.getAttribute('aria-pressed') === 'false');
+  await button('סיום', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+  assert.equal(await entries('ארוחת צהריים').count(), 0);
 });
 
 test('moving between days', async () => {

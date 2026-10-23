@@ -75,7 +75,8 @@ export const unitSaver = (ctx: Ctx, f: Food, then?: (f: Food) => void) => async 
 };
 
 // Opens on what you usually eat at this meal, saved meals and single foods, each at the amount you had last time.
-// One tap adds, a second tap takes it back out, and the dialog stays open until "סיום", so a whole meal is a few taps.
+// One tap on ＋ adds, a second takes it back out, and the dialog stays open until "סיום", so a whole meal is a few taps.
+// Tapping a food's name opens the amount picker on last time's amount, for a different amount this time.
 // Search, typing and photos are for the less usual things; those go through the amount picker.
 // From a meal's ＋ in the diary: the title names the meal, with no meal buttons or back links; the phone's back
 // button (or Esc) steps back from the amount or typing view to the list, and from the list closes it.
@@ -94,11 +95,13 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   // The past month, loaded once: the last amount of each food, and what you tend to have at each meal.
   const [month, setMonth] = useState<Entry[]>([]);
   useEffect(() => { loadEntries(addDays(date, -30), date).then(setMonth); }, [date]);
+  const added = Object.values(done).flat();
+  // This visit's additions count as the latest, so a row added at another amount shows that amount.
   const last = useMemo(() => {
     const m: Record<string, Entry> = {};
-    for (const e of [...month].sort((a, b) => a.date.localeCompare(b.date))) if (e.foodId) m[e.foodId] = e;
+    for (const e of [...month].sort((a, b) => a.date.localeCompare(b.date)).concat(added)) if (e.foodId) m[e.foodId] = e;
     return m;
-  }, [month]);
+  }, [month, done]);
   const hits = useMemo(() => searchFoods(ctx.foods, q, ctx.recent), [ctx.foods, q, ctx.recent]);
   const meals = q ? ctx.meals.filter((m) => norm(m.name).includes(norm(q))) : ctx.meals;
   // Order fixed when the dialog opens: adding moves a food up in "recent", and rows mustn't jump under your finger.
@@ -121,7 +124,6 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const short = MEALS.find((m) => m.key === meal)!.short;
   const label = MEALS.find((m) => m.key === meal)!.label;
   const day = date === today() ? '' : ` · ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })}`;
-  const added = Object.values(done).flat();
 
   const add = async (key: string, items: Item[]) => {
     setBusy(true);
@@ -152,7 +154,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
   const foodPick = (r: { key: string; f: Food }) => {
     const e = last[r.f.id];
     return <Pick key={r.key} on={!!done[r.key]} name={r.f.name} detail={e ? amountLabel(e) : undefined}
-      kcal={e?.kcal} onClick={() => toggle(r.key, () => (e ? [pickItem(e)] : null), r.f)} />;
+      kcal={e?.kcal} onClick={() => toggle(r.key, () => (e ? [pickItem(e)] : null), r.f)} onOpen={() => !busy && setSel(r.f)} />;
   };
 
   if (creating)
@@ -191,7 +193,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, onClose, onAdded,
               {usualFoods.length > 0 && (
                 <section aria-labelledby={`${uid}-u`}>
                   <h3 id={`${uid}-u`}>הרגילים שלך ב{short}</h3>
-                  <p className="muted small">לחיצה מוסיפה בכמות של הפעם הקודמת.</p>
+                  <p className="muted small">לחיצה על ＋ מוסיפה בכמות של הפעם הקודמת. לכמות אחרת, לחצו על השם.</p>
                   {(more ? usualFoods : usualFoods.slice(0, USUAL_SHOWN)).map(foodPick)}
                   {!more && usualFoods.length > USUAL_SHOWN && <button className="link" onClick={() => setMore(true)}>עוד {usualFoods.length - USUAL_SHOWN}</button>}
                 </section>
@@ -230,17 +232,22 @@ const MealSeg = ({ meal, onChange }: { meal: MealKey; onChange: (m: MealKey) => 
   </div>
 );
 
-// A usual thing: tap adds it, tap again takes it out.
-function Pick({ name, detail, kcal, on, onClick }: { name: string; detail?: string; kcal?: number; on: boolean; onClick: () => void }) {
+// A usual thing: tap adds it, tap again takes it out. With onOpen, only ＋ does that, and the name opens the amount picker.
+function Pick({ name, detail, kcal, on, onClick, onOpen }: { name: string; detail?: string; kcal?: number; on: boolean; onClick: () => void; onOpen?: () => void }) {
+  const body = <>
+    <div className="grow">
+      <div>{name}</div>
+      {detail && <small className="muted">{detail}</small>}
+    </div>
+    {kcal != null && <span className="kcal">{kcal}</span>}
+  </>;
+  const mark = <span className="mark"><Icon name={on ? 'check' : 'plus'} /></span>;
+  if (!onOpen) return <button className={`row pick${on ? ' on' : ''}`} aria-pressed={on} onClick={onClick}>{body}{mark}</button>;
   return (
-    <button className={`row pick${on ? ' on' : ''}`} aria-pressed={on} onClick={onClick}>
-      <div className="grow">
-        <div>{name}</div>
-        {detail && <small className="muted">{detail}</small>}
-      </div>
-      {kcal != null && <span className="kcal">{kcal}</span>}
-      <span className="mark"><Icon name={on ? 'check' : 'plus'} /></span>
-    </button>
+    <div className={`row static pick${on ? ' on' : ''}`}>
+      <button className="grow" onClick={onOpen}>{body}</button>
+      <button className="icon" aria-label={`הוסף: ${name}`} aria-pressed={on} onClick={onClick}>{mark}</button>
+    </div>
   );
 }
 
