@@ -279,7 +279,7 @@ type FoodLike = Nut & { name: string; servingG: number; source?: string | null }
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.
 // Micronutrients show once a food is picked (NutLine). Own foods and FFQ group averages get a tag.
-export const MINE_HINT = '״שלי״: מזון שהוספת או ערכת. השאר ממאגר משרד הבריאות.';
+export const MINE_HINT = '״שלי״ = הוספת או ערכת; השאר: משרד הבריאות.';
 export function FoodSummary({ f, tags = true, kcal = true }: { f: FoodLike; tags?: boolean; kcal?: boolean }) {
   return (
     <small className="muted food-sum">

@@ -74,7 +74,7 @@ test('search, pick an amount, add; a fruit counts toward vitamin C', async () =>
   const hit = button(/^ענבים/, dialog()).first();
   const [name, kcal] = await Promise.all([hit.getByText(/^ענבים/).boundingBox(), hit.getByText(/^\d+ קק״ל$/).boundingBox()]);
   assert.ok(Math.abs(kcal.y + kcal.height / 2 - (name.y + name.height / 2)) < name.height / 2, 'calories level with the name');
-  await dialog().getByText(/״שלי״: .* השאר ממאגר משרד הבריאות/).waitFor(); // the owner asked which results are hers
+  await dialog().getByText(/״שלי״ = .* השאר: משרד הבריאות/).waitFor(); // the owner asked which results are hers
   await keyboardOpen(async () => { // the owner's bug: results scrolled under "סיום" and a cut-off row peeked out below it
     const [done, sheet] = await Promise.all([button('סיום', dialog()).boundingBox(), dialog().boundingBox()]);
     const under = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '',
