@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: two more guide articles: daily values, carbs
+
+**Done:**
+- "ויטמינים ומינרלים: מה זה ערך יומי" (what the vitamin rows mean, why a DV is set high, sodium sources disagree, upper limits the app doesn't warn about) and "פחמימות: 130 גרם, דל פחמימות וקטו" (where 130 comes from, the definitions, why keto says "בליווי רופא"). Sources in `docs/research.md`.
+
+**Next:** the owner's call: the potassium target is the label's 4700 mg; the 2019 recommendation is 2600 (women) / 3400 (men). Switching would need sex from the profile.
+
 ## 2026-10-23: a guide ("מדריך") and a research log
 
 **Done:**
