@@ -21,6 +21,13 @@ test('plain foods come before processed ones', () => {
   assert.match(first('אננס מיובש'), /מיובש/);
 });
 
+test('a soup finds a cooked soup, not a packet one, unless typed', () => {
+  // the owner's restaurant corn soup came back as Knorr's instant packet
+  for (const q of ['מרק תירס', 'מרק עוף', 'מרק אפונה', 'מרק שעועית']) assert.doesNotMatch(first(q), /מאבק|נמס/, q);
+  assert.match(matchFoods(moh, 'מרק תירס', [])[0].name, /^מרק תירס/);
+  assert.match(first('מרק תירס נמס'), /נמס בכוס/);
+});
+
 test('a meat finds the meat, not a dish, an organ or its fat', () => {
   assert.match(first('עוף'), /^בשר עוף,/); // was "פאי עוף", then "שומן עוף"
   assert.match(first('בקר'), /^בשר בקר,/);
