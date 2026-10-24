@@ -181,6 +181,8 @@ main button.banner { width: 100%; }
 .usual .grow .i { margin-inline-end: 6px; color: var(--accent); } /* a saved meal's mark */
 .btn.done { position: sticky; bottom: 0; box-shadow: 0 -12px 16px var(--bg); }
 .amount { display: flex; flex-direction: column; gap: 12px; }
+.amount > header { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
+.amount > header b { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .amount-row { display: flex; gap: 8px; align-items: end; }
 .amount-row input[type=number] { max-width: 120px; }
 .food-sum .kcal { color: var(--text); font-weight: 500; }

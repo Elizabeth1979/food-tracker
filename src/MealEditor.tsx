@@ -39,8 +39,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
       {sel ? (
         <div className="picked">
           <button className="link" onClick={() => { setSel(null); setEdit(null); }}><Icon name="arrow-right" />חזרה לחיפוש</button>
-          <h3>{sel.name}</h3>
-          <Amount key={edit ?? sel.id} food={sel} init={edit === null ? undefined : itemInit(items[edit])} cta={edit === null ? 'הוסף לארוחה' : 'עדכן כמות'}
+          <Amount named key={edit ?? sel.id} food={sel} init={edit === null ? undefined : itemInit(items[edit])} cta={edit === null ? 'הוסף לארוחה' : 'עדכן כמות'}
             onPick={(it) => { setItems(edit === null ? [...items, it] : items.map((x, j) => (j === edit ? it : x))); setSel(null); setEdit(null); setQ(''); }}
             onAddUnit={edit === null ? unitSaver(ctx, sel, setSel) : real && unitSaver(ctx, real)} />
         </div>
