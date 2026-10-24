@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Ctx } from './App';
 import { amountLabel, client, mealItems, searchFoods, sum, type Food, type Item, type SavedMeal } from './lib';
-import { FoodSummary, Modal } from './ui';
+import { FoodHit, Modal } from './ui';
 import { Amount, NutLine, itemFood, itemInit, unitSaver } from './AddDialog';
 import { Icon } from './icons';
 
@@ -50,9 +50,7 @@ export function MealEditor({ ctx, meal, onClose }: { ctx: Ctx; meal?: SavedMeal;
           {q && (
             <div className="list">
               {hits.map((f) => (
-                <button key={f.id} className="row" onClick={() => setSel(f)}>
-                  <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
-                </button>
+                <FoodHit key={f.id} f={f} onClick={() => setSel(f)} />
               ))}
             </div>
           )}

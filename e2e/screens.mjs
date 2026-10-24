@@ -70,7 +70,11 @@ test('one ＋ opens the add window, with no meal to choose', async () => {
 
 test('search, pick an amount, add; a fruit counts toward vitamin C', async () => {
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('ענבים');
-  await button(/^ענבים/, dialog()).first().tap();
+  // the owner's ask: a result's calories on the name's line, like the usual foods, not under it
+  const hit = button(/^ענבים/, dialog()).first();
+  const [name, kcal] = await Promise.all([hit.getByText(/^ענבים/).boundingBox(), hit.getByText(/^\d+ קק״ל$/).boundingBox()]);
+  assert.ok(Math.abs(kcal.y + kcal.height / 2 - (name.y + name.height / 2)) < name.height / 2, 'calories level with the name');
+  await hit.tap();
   await keyboardOpen(async () => { // the owner's bug: the amount's keyboard hid "הוסף" until it was closed
     const box = await button('הוסף', dialog()).boundingBox();
     assert.ok(box.y + box.height <= page.viewportSize().height, '"הוסף" shows above the keyboard');
