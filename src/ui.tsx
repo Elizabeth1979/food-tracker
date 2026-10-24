@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { MACROS, MICROS, WATER_GOAL_ML, extraParts, isFFQ, microAmounts, type Nut, type Unit } from './lib';
+import { MACROS, MICROS, WATER_GOAL_ML, extraParts, isFFQ, microAmounts, microSources, type Item, type MicroAmount, type Nut, type Unit } from './lib';
 import { Icon } from './icons';
-import { DAILY_VALUES, DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals';
+import { DAILY_VALUES, DEFAULT_GOALS, DV_WHY, MICRO_INFO, PROTEIN_PER_KG, SALT_PER_SODIUM, SODIUM_MAX, type Goals } from './goals';
 
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
@@ -181,16 +181,18 @@ export function MacroLegend({ n, goals }: { n: Nut; goals?: Partial<Record<'carb
 // One amount against its goal, with a bar: a minimum ('min', green ✓ once reached), a soft limit ('max', green under it,
 // amber "מעל היעד" over), or for reference only ('ref': no green or amber).
 type GoalKind = 'min' | 'max' | 'ref';
-function GoalRow({ label, value, goal, unit, kind, word = '', color }: { label: string; value: number; goal?: number; unit: string; kind: GoalKind; word?: string; color?: string }) {
+// With `onClick` the row is a button that opens more about it (spans inside: a button holds phrasing content only).
+function GoalRow({ label, value, goal, unit, kind, word = '', color, onClick }: { label: string; value: number; goal?: number; unit: string; kind: GoalKind; word?: string; color?: string; onClick?: () => void }) {
   const state = !goal ? '' : kind === 'min' ? (value >= goal ? 'done' : '') : kind === 'max' ? (value > goal ? 'high' : 'done') : '';
+  const Row = onClick ? 'button' : 'div';
   return (
-    <div className="legend-row">
-      <div className="legend-line">
+    <Row className="legend-row" onClick={onClick} aria-haspopup={onClick && 'dialog'}>
+      <span className="legend-line">
         <span className="grow">{label}{state === 'done' && kind === 'min' && <span className="ok"> ✓ הושג</span>}{state === 'high' && <span className="high"> מעל היעד</span>}</span>
         <span><b>{value}</b><span className="muted">{goal ? ` / ${word}${goal}` : ''} {unit}</span></span>
-      </div>
-      {goal ? <div className="bar"><i className={state} style={{ width: `${Math.min(100, (value / goal) * 100)}%`, background: state || !color ? undefined : color }} /></div> : null}
-    </div>
+      </span>
+      {goal ? <span className="bar"><i className={state} style={{ width: `${Math.min(100, (value / goal) * 100)}%`, background: state || !color ? undefined : color }} /></span> : null}
+    </Row>
   );
 }
 
@@ -206,14 +208,42 @@ export function DayGoals({ n, goals }: { n: Nut; goals: Goals }) {
 }
 
 // Vitamins and minerals against the label's Daily Values, a row each like the macros. Sodium is a limit.
-export function MicroGoals({ n }: { n: Nut }) {
+// Given `from` (the foods logged, and "היום" or "בתקופה"), a row opens what it does, how its goal was set and which
+// foods gave it; `more` goes in that window too (the article on daily values: Guide imports this file, not the other way).
+const SODIUM = 'נתרן (מ״ג)';
+const microGoal = (m: MicroAmount) => ({ label: m.name, value: m.v, goal: DAILY_VALUES[m.key], unit: m.unit, kind: m.key === SODIUM ? 'max' : 'min', word: m.key === SODIUM ? 'עד ' : '' }) as const;
+export function MicroGoals({ n, from, more }: { n: Nut; from?: { items: Item[]; when: string }; more?: ReactNode }) {
+  const [open, setOpen] = useState<MicroAmount | null>(null);
   return (
     <div className="legend">
-      {microAmounts(n).map((m) => {
-        const sodium = m.key === 'נתרן (מ״ג)';
-        return <GoalRow key={m.key} label={m.name} value={m.v} goal={DAILY_VALUES[m.key]} unit={m.unit} kind={sodium ? 'max' : 'min'} word={sodium ? 'עד ' : ''} />;
-      })}
+      {microAmounts(n).map((m) => <GoalRow key={m.key} {...microGoal(m)} onClick={from && (() => setOpen(m))} />)}
+      {open && from && <MicroInfo m={open} from={from} more={more} onClose={() => setOpen(null)} />}
     </div>
+  );
+}
+
+const pct = (v: number, of: number) => { const p = Math.round((v / of) * 100); return p ? `${p}%` : '<1%'; };
+function MicroInfo({ m, from, more, onClose }: { m: MicroAmount; from: { items: Item[]; when: string }; more?: ReactNode; onClose: () => void }) {
+  const g = microGoal(m), info = MICRO_INFO[m.key];
+  const sources = microSources(from.items, m.key), total = sources.reduce((t, x) => t + x.v, 0);
+  const salt = (mg: number) => Math.round((mg * SALT_PER_SODIUM) / 100) / 10;
+  return (
+    <Modal title={m.name} onClose={onClose}>
+      <GoalRow {...g} />
+      <h3>ממה הגיע {from.when}</h3>
+      {sources.length ? (
+        <table className="tbl">
+          <thead><tr><th scope="col">מזון</th><th scope="col">{m.unit}</th><th scope="col">חלק</th></tr></thead>
+          <tbody>{sources.map((x) => <tr key={x.name}><td>{x.name}</td><td>{x.v}</td><td>{pct(x.v, total)}</td></tr>)}</tbody>
+        </table>
+      ) : <p className="muted">שום דבר שנרשם {from.when} לא הכיל {m.name}.</p>}
+      {info && <><h3>למה זה חשוב</h3><p>{info.why}</p></>}
+      <h3>איך נקבע היעד</h3>
+      <p>{g.goal ? `${g.word}${g.goal} ${m.unit} ליום: ${info?.goal ?? DV_WHY}` : 'אין לו ערך יומי רשמי.'}</p>
+      {m.key === SODIUM && <p>במלח: {m.v} מ״ג נתרן הם כ־{salt(m.v)} ג׳ מלח, והגבול, {SODIUM_MAX} מ״ג, הוא כ־{salt(SODIUM_MAX)} ג׳, בערך כפית.</p>}
+      {more}
+      <p className="muted small">מידע כללי, לא ייעוץ רפואי.</p>
+    </Modal>
   );
 }
 

@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: each vitamin row opens: which foods, what it does, how its goal was set
+
+**Done:**
+- The owner asked where the day's vitamins came from, how their goals were set and what each is for (sodium: she knew there's a daily limit). Each row in "ויטמינים ומינרלים שצרכת היום" is now a button that opens a window: the foods that gave it today (amount and share, the same food added up), "למה זה חשוב" (one or two lines from the NIH fact sheets, `MICRO_INFO` in `goals.ts`), "איך נקבע היעד" (the label value, or why not: sodium, potassium, calcium, iron), and for sodium the same in grams of salt (× 2.54). The article link sits in it too.
+- Reports' vitamins card does the same over the range ("ממה הגיע בתקופה").
+- Tests: `goals.test.ts` (every nutrient with a daily value has a line), screen test (vitamin D's window lists the multivitamin; sodium says it in salt).
+
+**Next:** the "why" lines are general; no per-person upper-limit warnings yet.
+
 ## 2026-10-24: "זיהוי חכם": the AI picks from the database, asks, and breaks down dishes
 
 **Done:**

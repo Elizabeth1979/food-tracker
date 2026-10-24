@@ -13,6 +13,8 @@ export const MICROS = [
   { key: 'b12', label: 'B12', unit: 'מק״ג', dp: 2 },
 ] as const;
 export type MicroKey = (typeof MICROS)[number]['key'];
+// A column's "name (unit)" key, the same shape as VITAMINS: "נתרן (מ״ג)".
+export const microKey = (m: (typeof MICROS)[number]) => `${m.label} (${m.unit})`;
 // Vitamins and minerals beyond the four columns above, mostly from supplement labels: { "ויטמין D (מק״ג)": 25, … }.
 // The label reader is given these names, so one nutrient adds up across foods; anything else keeps its printed name and unit.
 export const VITAMINS = [
@@ -100,9 +102,18 @@ export const extraParts = (x: Extra | null | undefined) => extraList(x).map((m) 
 // Every vitamin and mineral, one each, keyed "name (unit)" like VITAMINS: the four columns and FOOD_VITAMINS even at 0
 // (food carries them), then any other a label added.
 export const microAmounts = (n: Nut) => [
-  ...MICROS.map((m) => ({ key: `${m.label} (${m.unit})`, name: m.label as string, unit: m.unit as string, v: n[m.key] ?? 0 })),
+  ...MICROS.map((m) => ({ key: microKey(m), name: m.label as string, unit: m.unit as string, v: n[m.key] ?? 0 })),
   ...extraList({ ...Object.fromEntries(FOOD_VITAMINS.map((k) => [k, 0])), ...n.extra }, true),
 ];
+export type MicroAmount = ReturnType<typeof microAmounts>[number];
+// One vitamin or mineral of a food or a day by its "name (unit)" key: one of the four columns, or from extra.
+export const microOf = (n: Nut, key: string) => { const m = MICROS.find((x) => microKey(x) === key); return (m ? n[m.key] : n.extra?.[key]) ?? 0; };
+// Where a vitamin or mineral came from: the foods that have it, the same food logged twice added up, most first.
+export const microSources = (items: Item[], key: string) => {
+  const by = new Map<string, number>();
+  for (const e of items) { const v = microOf(e, key); if (v) by.set(e.name, (by.get(e.name) ?? 0) + v); }
+  return [...by].map(([name, v]) => ({ name, v: r2(v) })).sort((a, b) => b.v - a.v);
+};
 export const itemFor = (f: Food, qty: number, unit: Unit): Item => {
   const grams = r1(qty * unit.g);
   return { foodId: f.id, name: f.name, grams, qty, unit: unit.n, ...scale(f as Nut, grams / f.servingG) };

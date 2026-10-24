@@ -3,6 +3,10 @@
 Every study or source the app relies on: what it found, and what we changed because of it. Newest first.
 Add an entry when research changes the app or the guide (`src/articles/`). Say how sure we are: a conference abstract is not a peer-reviewed paper.
 
+## 2026-10-24: what each vitamin and mineral does (the row's window)
+- **Source:** the [NIH Office of Dietary Supplements fact sheets](https://ods.od.nih.gov/factsheets/list-all/) (health-professional versions), one per nutrient: function and main food sources. Iodine in Israel: low intake is common, partly because desalinated water has almost none (Israel's first national iodine survey, Ovadia et al., Thyroid 2017; link not checked this session). Biotin supplements can skew lab tests (FDA safety communication, 2017, updated 2019). Salt = sodium × 2.54 (molar masses, NaCl / Na).
+- **Changed:** `MICRO_INFO` in `goals.ts`: a "why" line per nutrient, and the goal's reason where it isn't the plain label value (reasons as in the 2026-10-24 daily-values entry below). Written from those sheets without re-opening each one this session; recheck a line against its sheet before relying on a detail.
+
 ## 2026-10-24: recommendations are averages, not daily quotas
 - **Source:** the DRIs define an RDA/AI as an average daily intake over time ([NIH ODS, e.g. vitamin D](https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/)). Fat-soluble vitamins (A, D, E, K) and B12 are stored; C and most B vitamins much less.
 - **Changed:** no new view: Reports already shows a week's or month's average per logged day against the same values. The vitamins article now says so, and why a weekly supplement looks huge on its day and absent on the others.

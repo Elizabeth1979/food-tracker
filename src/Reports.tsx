@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { goalsOf } from './goals';
 import type { Ctx } from './App';
-import { MEALS, MICROS, addDays, amountLabel, daysBetween, fmtDate, loadEntries, saveWeight, scale, sum, today, type Entry, type Nut } from './lib';
+import { MEALS, MICROS, addDays, microKey, amountLabel, daysBetween, fmtDate, loadEntries, saveWeight, scale, sum, today, type Entry, type Nut } from './lib';
 import { Group, Donut, MacroLegend, MicroGoals } from './ui';
 import { Icon } from './icons';
+import { ArticleLink } from './Guide';
 
 const PRESETS: [string, number][] = [['יום', 0], ['שבוע', 6], ['חודש', 29]];
 
@@ -24,7 +25,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
 
   const csv = () => {
     const extras = Object.keys(sum(entries ?? []).extra ?? {}); // a column for each other vitamin logged in the range
-    const head = ['תאריך', 'ארוחה', 'מזון', 'כמות', 'יחידה', 'גרם', 'קלוריות', 'פחמימות', 'שומן', 'חלבון', ...MICROS.map((m) => `${m.label} (${m.unit})`), ...extras];
+    const head = ['תאריך', 'ארוחה', 'מזון', 'כמות', 'יחידה', 'גרם', 'קלוריות', 'פחמימות', 'שומן', 'חלבון', ...MICROS.map(microKey), ...extras];
     const rows = (entries ?? []).sort((a, b) => a.date.localeCompare(b.date)).map((e) =>
       [e.date, MEALS.find((m) => m.key === e.meal)!.label, e.name, e.qty ?? e.grams, e.unit ?? 'גרם', e.grams, e.kcal, e.carbs, e.fat, e.protein, ...MICROS.map((m) => e[m.key] ?? ''), ...extras.map((k) => e.extra?.[k] ?? '')]);
     const text = [head, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
@@ -67,7 +68,7 @@ export default function Reports({ ctx, date }: { ctx: Ctx; date: string }) {
           </section>
           <section className="card pad stack">
             <h3>ויטמינים ומינרלים{days.length > 1 ? ' · ממוצע ליום' : ''}</h3>
-            <MicroGoals n={avg} />
+            <MicroGoals n={avg} from={{ items: entries, when: days.length > 1 ? 'בתקופה' : 'ביום הזה' }} more={<ArticleLink slug="6-vitamins">עוד על הערך היומי</ArticleLink>} />
           </section>
           {days.length > 1 && <KcalChart data={byDay.map((x) => ({ d: x.d, v: x.t.kcal }))} goal={goal} />}
           {days.length > 1 && (
