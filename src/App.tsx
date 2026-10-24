@@ -23,10 +23,10 @@ export type Ctx = {
   addRecent: (ids: string[]) => void;
 };
 type Tab = 'day' | 'reports' | 'foods' | 'guide' | 'settings';
-const TABS: [Tab, string, IconName][] = [['day', 'יומן', 'book'], ['reports', 'דוחות', 'chart'], ['foods', 'מזונות', 'utensils'], ['guide', 'מדריך', 'book'], ['settings', 'הגדרות', 'sliders']];
+const TABS: [Tab, string, IconName][] = [['day', 'יומן', 'book'], ['reports', 'דוחות', 'chart'], ['foods', 'מזונות', 'utensils'], ['guide', 'מדריך', 'bulb'], ['settings', 'הגדרות', 'sliders']];
 
-// The foods page and the guide aren't in the bar (logging is all in the ＋ window); they open from Settings.
-const NAV = TABS.filter(([k]) => k !== 'foods' && k !== 'guide');
+// The foods page isn't in the bar (logging is all in the ＋ window); it opens from Settings.
+const NAV = TABS.filter(([k]) => k !== 'foods');
 
 const hashTab = (): Tab => TABS.find(([k]) => `#${k}` === location.hash)?.[0] ?? 'day';
 
@@ -131,7 +131,7 @@ export default function App({ email }: { email: string }) {
         {tab === 'reports' && <Reports ctx={ctx} date={date} />}
         {tab === 'foods' && <Foods ctx={ctx} date={date} />}
         {tab === 'guide' && <Guide />}
-        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} onFoods={() => setTab('foods')} onGuide={() => setTab('guide')} />}
+        {tab === 'settings' && <Settings key={profile?.id} ctx={ctx} email={email} onFoods={() => setTab('foods')} />}
       </main>
       <AskHost />
     </div>

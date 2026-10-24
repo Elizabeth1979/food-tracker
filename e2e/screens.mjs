@@ -112,6 +112,13 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   // a fat the photo can only guess is marked as a guess; this meal had none, so it's removed
   const oil = dialog().getByText(/^ניחוש: שמן או רוטב/);
   assert.equal(await oil.count(), 1);
+  // the guide's article on it opens over the list; back closes only the article
+  await button('למה תמונה מפספסת שמן?', dialog()).tap();
+  const why = page.getByRole('dialog', { name: 'למה תמונה מפספסת קלוריות' });
+  await why.waitFor();
+  await page.keyboard.press('Escape');
+  await why.waitFor({ state: 'detached' });
+  assert.equal(await oil.count(), 1);
   await button('הסר: שמן זית, 1 כף', dialog()).tap();
   assert.equal(await oil.count(), 0);
   const foods = dialog().getByRole('combobox', { name: 'מזון' });
@@ -186,6 +193,11 @@ test('the diary shows them under the right meals, with a total', async () => {
   // where the goals come from, with the guidance tables
   await page.getByText('איך נקבעו היעדים?').tap();
   assert.equal(await summary.getByRole('table').count(), 2);
+  await button('עוד על פחמימות וקטו', summary).tap(); // the guide's article, from where the question comes up
+  const carbs = page.getByRole('dialog', { name: 'פחמימות: 130 גרם, דל פחמימות וקטו' });
+  await carbs.waitFor();
+  await page.keyboard.press('Escape');
+  await carbs.waitFor({ state: 'detached' });
   await page.getByText('איך נקבעו היעדים?').tap();
 });
 
@@ -431,10 +443,15 @@ test('the foods page, from Settings: search first, then my foods and saved meals
   assert.equal(await entries('ארוחת צהריים').count(), 6); // added once, the second add undone
 });
 
-test('the guide, from Settings: an article with its sources; back closes it, back again returns to the diary', async () => {
-  assert.equal(await page.getByRole('navigation').getByRole('button', { name: /מדריך/ }).count(), 0); // not in the bar
-  await button(/הגדרות/).tap();
-  await button(/פתיחת המדריך/).tap();
+test('the guide: a tab in the bar, an article with its sources; back closes it, back again returns to the diary', async () => {
+  // the day's vitamins link to the article on daily values
+  await vitaminRows();
+  await button('מה זה ערך יומי?', vitamins()).tap();
+  const dv = page.getByRole('dialog', { name: 'ויטמינים ומינרלים: מה זה "ערך יומי"' });
+  await dv.waitFor();
+  await page.keyboard.press('Escape');
+  await dv.waitFor({ state: 'detached' });
+  await page.getByRole('navigation').getByRole('button', { name: 'מדריך' }).tap();
   await page.getByRole('heading', { name: 'מדריך', level: 1 }).waitFor();
   await button(/^למה תמונה מפספסת קלוריות/).tap();
   const article = page.getByRole('dialog', { name: 'למה תמונה מפספסת קלוריות' });

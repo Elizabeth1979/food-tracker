@@ -5,6 +5,7 @@ import { Modal, Why } from './ui';
 import { FoodForm } from './Foods';
 import { NutLine } from './AddDialog';
 import { Icon } from './icons';
+import { ArticleLink } from './Guide';
 
 // `q` set: the row is searching the whole database for a different food (the match or the photo got it wrong).
 type Row = { id: number; p: Parsed; options: Food[]; food: Food | null; qty: string; unit: Unit; q?: string };
@@ -61,7 +62,10 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
               <small className="muted grow">״{r.p.text}״</small>
               <button className="icon del" aria-label={`הסר: ${r.p.text}`} onClick={() => setRows(rows.filter((x) => x.id !== r.id))}><Icon name="x" /></button>
             </div>
-            {r.p.hidden && <p className="muted small">ניחוש: שמן או רוטב שלא רואים בתמונה. היה? תקנו את הכמות. לא היה? הסירו.</p>}
+            {r.p.hidden && <>
+              <p className="muted small">ניחוש: שמן או רוטב שלא רואים בתמונה. היה? תקנו את הכמות. לא היה? הסירו.</p>
+              <ArticleLink slug="4-photos">למה תמונה מפספסת שמן?</ArticleLink>
+            </>}
             {r.q !== undefined ? (
               <div className="form">
                 <div className="amount-row">

@@ -11,7 +11,8 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
   useEffect(() => { if (!ref.current!.open) ref.current!.showModal(); }, []);
   return (
     <dialog ref={ref} className="modal" aria-label={title}
-      onCancel={(e) => { e.preventDefault(); if (!onBack?.()) onClose(); }}
+      // React passes a window opened inside this one (a guide article over the review list) its close request too; only our own closes us.
+      onCancel={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); if (!onBack?.()) onClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור"><Icon name="x" /></button></header>
       <div className="modal-body">{children}</div>
@@ -230,7 +231,7 @@ export function WaterLine({ ml, onAdd, onRemove }: { ml: number; onAdd: () => vo
 }
 
 // Where the diary's goals come from, with the general guidance to change them by.
-export function GoalsInfo({ goals }: { goals: Goals }) {
+export function GoalsInfo({ goals, more }: { goals: Goals; more?: ReactNode }) {
   return (
     <details>
       <summary><Icon name="chevron-down" />איך נקבעו היעדים?</summary>
@@ -259,6 +260,7 @@ export function GoalsInfo({ goals }: { goals: Goals }) {
         </table>
         <h4>שומן: {goals.fat} ג׳</h4>
         <p>מוצג לעיון, בלי ירוק או כתום: הוא כבר בתוך הקלוריות. כדאי שלא ירד מתחת ל־20% מהקלוריות (הורמונים, ספיגת ויטמינים A, D, E, K).</p>
+        {more}
         <p className="muted">מקורות: ההמלצות התזונתיות של האקדמיה הלאומית לרפואה בארה״ב (RDA) וההנחיות התזונתיות לאמריקאים; עמדת ISSN על חלבון (2017). מידע כללי, לא ייעוץ רפואי. לשינוי: הגדרות ← התאמת היעדים, או הקלדה ביעדים יומיים.</p>
       </div>
     </details>

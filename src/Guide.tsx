@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { articlesOf, type Article, type Inline } from './guide';
 import { Group, Modal } from './ui';
 import { Icon } from './icons';
@@ -21,7 +21,20 @@ function Read({ a, onClose }: { a: Article; onClose: () => void }) {
   );
 }
 
-// "מדריך": short articles on calories and macros, tied to what the app does. Opened from Settings.
+// One article, opened over the current screen from where its question comes up (the vitamins, the goals, a photo's guessed oil).
+export function ArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const a = ARTICLES.find((x) => x.slug === slug);
+  if (!a) throw new Error(`no guide article "${slug}"`); // a renamed file must not hide its links silently
+  return (
+    <>
+      <button className="link start" onClick={() => setOpen(true)}><Icon name="bulb" />{children}</button>
+      {open && <Read a={a} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// "מדריך": short articles on calories and macros, tied to what the app does. A tab in the bar.
 export default function Guide() {
   const [open, setOpen] = useState<Article | null>(null);
   return (
