@@ -1,6 +1,6 @@
 import { Fragment, useId, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, itemFor, matchFoods, parseLine, searchFoods, splitAnd, sum, unitFor, unitsOf, type Food, type Item, type Parsed, type Unit } from './lib';
+import { GRAMS, dishItem, itemFor, matchFoods, parseLine, searchFoods, splitAnd, sum, unitFor, unitsOf, type Food, type Item, type Parsed, type Unit } from './lib';
 import { Modal, Why } from './ui';
 import { FoodForm } from './Foods';
 import { NutLine } from './AddDialog';
@@ -38,7 +38,10 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
   const pick = (r: Row, f: Food) => { const a = unitFor(f, r.p); set(r.id, { food: f, qty: String(a.qty), unit: a.unit, q: undefined, options: [f, ...r.options.filter((o) => o.id !== f.id)] }); };
   const choose = (r: Row, v: string) => (v === '+' ? setCreating(r) : v === '?' ? set(r.id, { q: '' }) : pick(r, r.options.find((f) => f.id === v)!));
 
-  const items = rows.flatMap((r) => (r.food ? [itemFor(r.food, Number(r.qty) || 0, r.unit)] : [])).filter((it) => it.grams > 0);
+  // A dish's ingredients go in as the dish, where its first ingredient was
+  const picked = rows.flatMap((r) => (r.food ? [{ dish: r.p.dish, it: itemFor(r.food, Number(r.qty) || 0, r.unit) }] : [])).filter((x) => x.it.grams > 0);
+  const items = picked.flatMap((x, i) => (!x.dish ? [x.it]
+    : picked.findIndex((y) => y.dish === x.dish) === i ? [dishItem(x.dish, picked.filter((y) => y.dish === x.dish).map((y) => y.it))] : []));
   const missing = rows.filter((r) => !r.food).length;
 
   if (creating)
@@ -59,7 +62,7 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
         if (r.food && !units.some((u) => u.n === r.unit.n)) units.push(r.unit); // a typical size the food doesn't list ("פרוסה" of apple)
         const it = r.food && itemFor(r.food, Number(r.qty) || 0, r.unit);
         // The first ingredient of a dish the database lacks says so
-        const dish = r.p.dish && r.p.dish !== rows[n - 1]?.p.dish && <p className="muted small">״{r.p.dish}״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד.</p>;
+        const dish = r.p.dish && r.p.dish !== rows[n - 1]?.p.dish && <p className="muted small">״{r.p.dish}״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד; ביומן הוא יופיע בשורה אחת בשמו.</p>;
         return (
           <Fragment key={r.id}>
             {dish}

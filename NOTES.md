@@ -11,6 +11,11 @@ What was done in each work session and what's next. Newest first.
 
 **Next:** the "why" lines are general; no per-person upper-limit warnings yet.
 
+## 2026-10-24: a broken-down dish is one diary line
+
+**Done:**
+- At the owner's ask, a dish the database lacks goes into the diary as one line under its name ("מרק תירס, 167 ג׳"), its values the sum of the ingredients as checked in the review list (`dishItem` in `lib.ts`). No food behind it, so editing its amount scales the whole dish, in grams. No database change. Screen test: added at snack time, one line with the list's total, then deleted.
+
 ## 2026-10-24: "זיהוי חכם": the AI picks from the database, asks, and breaks down dishes
 
 **Done:**
@@ -21,7 +26,7 @@ What was done in each work session and what's next. Newest first.
 - "זיהוי חכם" works with words too: first row of search results, and next to "המשך לבדיקה". The function now takes a meal with no image.
 - If a pick fails, the search's own matches stand. Tests: `search.test.ts` (picks), screen test (search → question → ingredients). Test mode answers a soup with a question and ingredients.
 
-**Next:** the prompts weren't run against the real model before going live (no API key in the cloud session); watch the first few photos. The diary shows a broken-down dish as separate foods (תירס, שמנת…), not under the dish's name.
+**Next:** the prompts weren't run against the real model before going live (no API key in the cloud session); watch the first few photos.
 
 ## 2026-10-24: a photo's cooked rice was raw rice, and 3 spoons became 120 g
 

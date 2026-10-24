@@ -159,7 +159,8 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   await dialog().waitFor({ state: 'detached' });
 });
 
-test('a restaurant dish the search doesn\'t know: a question, then its ingredients', async () => {
+test('a restaurant dish the search doesn\'t know: a question, then its ingredients, logged as the dish', async () => {
+  await at('22:00'); // snack time: a meal no other test uses
   await openAdd();
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('מרק תירס');
   await button('זיהוי חכם: ״מרק תירס״', dialog()).tap();
@@ -171,13 +172,21 @@ test('a restaurant dish the search doesn\'t know: a question, then its ingredien
   assert.equal(await button('צלול', how).getAttribute('aria-pressed'), 'false');
   await button('המשך', dialog()).tap();
   // no database food is that soup, so it comes back as its ingredients, each matched and editable
-  await dialog().getByText('״מרק תירס״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד.').waitFor();
+  await dialog().getByText('״מרק תירס״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד; ביומן הוא יופיע בשורה אחת בשמו.').waitFor();
   const foods = dialog().getByRole('combobox', { name: 'מזון' });
   assert.equal(await foods.count(), 3);
   assert.match(await foods.first().evaluate((s) => s.selectedOptions[0].text), /^תירס/);
-  await page.keyboard.press('Escape'); // back to the list, nothing added
-  await button('סיום', dialog()).tap();
+  const kcal = parseInt(await dialog().getByText(/^\d+ קק״ל$/).last().innerText()); // the list's total
+  // the owner's ask: the ingredients go in as one line under the dish's name, their calories added up
+  await button('הוסף (1)', dialog()).tap();
+  await button(/^סיום/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
+  await at('13:00');
+  const soup = button('מחק: מרק תירס', meal('נשנושים ואחר'));
+  assert.equal(await entries('נשנושים ואחר').count(), 1);
+  assert.match(await meal('נשנושים ואחר').innerText(), new RegExp(`מרק תירס[\\s\\S]*${kcal}`));
+  await soup.tap(); // gone again, so the later tests' days are as before
+  await page.waitForFunction(() => !document.querySelector('[aria-label="מחק: מרק תירס"]'));
 });
 
 test('the meal photo is kept with the meal; a backup carries it; delete, then restore it', async () => {
