@@ -3,7 +3,7 @@ import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
 import { goalsLeft, whatFits, type Goals } from './goals';
-import { FileButton, FoodHit, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
+import { FileButton, FoodHit, MINE_HINT, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm, labelFood, saveFood } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
@@ -197,6 +197,8 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
     );
   return (
     <Modal title={`הוספה ליומן${day}`} onClose={onClose}
+      // Always there, so the sheet doesn't grow and shift the rows on the first tap.
+      footer={!sel && !writing && !checking && <button className="btn primary" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>}
       onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } if (checking) { setChecking(null); return true; } return false; }}>
       {sel ? (
         <div className="picked">
@@ -248,6 +250,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
                 </section>
               )}
             </>}
+            {q && hits.length > 0 && <p className="muted small">{MINE_HINT}</p>}
             {q && hits.map((f) => (
               <FoodHit key={f.id} f={f} onClick={() => setSel(f)} />
             ))}
@@ -255,10 +258,6 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
             {q && <button className="row muted" onClick={() => setCreating({ name: q })}><Icon name="plus" />מזון חדש: ״{q}״</button>}
           </div>
         </>
-      )}
-      {/* Always there, so the sheet doesn't grow and shift the rows on the first tap. */}
-      {!sel && !writing && !checking && (
-        <button className="btn primary done" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>
       )}
     </Modal>
   );

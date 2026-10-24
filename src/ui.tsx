@@ -6,7 +6,8 @@ import { DAILY_VALUES, DEFAULT_GOALS, PROTEIN_PER_KG, type Goals } from './goals
 // A native modal <dialog>: the browser traps focus, closes it on Esc, and on Android closes it with the back
 // button or gesture (close requests, Chrome 120+), so back no longer leaves the app. `onBack` gets that back
 // press first and returns true when it handled it (going back one step inside the dialog) instead of closing.
-export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => boolean; children: ReactNode }) {
+// `footer` stays under the scrolling body, so rows never scroll beneath or past it.
+export function Modal({ title, onClose, onBack, footer, children }: { title: string; onClose: () => void; onBack?: () => boolean; footer?: ReactNode; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (!ref.current!.open) ref.current!.showModal(); }, []);
   return (
@@ -16,6 +17,7 @@ export function Modal({ title, onClose, onBack, children }: { title: string; onC
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <header><h2>{title}</h2><button className="icon" onClick={onClose} aria-label="סגור"><Icon name="x" /></button></header>
       <div className="modal-body">{children}</div>
+      {footer && <footer>{footer}</footer>}
     </dialog>
   );
 }
@@ -277,6 +279,7 @@ type FoodLike = Nut & { name: string; servingG: number; source?: string | null }
 
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.
 // Micronutrients show once a food is picked (NutLine). Own foods and FFQ group averages get a tag.
+export const MINE_HINT = '״שלי״: מזון שהוספת או ערכת. השאר ממאגר משרד הבריאות.';
 export function FoodSummary({ f, tags = true, kcal = true }: { f: FoodLike; tags?: boolean; kcal?: boolean }) {
   return (
     <small className="muted food-sum">
