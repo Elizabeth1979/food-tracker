@@ -11,6 +11,14 @@ What was done in each work session and what's next. Newest first.
 
 **Next:** the photo model is Haiku (`claude-haiku-5-5`, unless the `MEAL_PHOTO_MODEL` secret says otherwise). Amount guesses are its weakest part; a bigger model costs more per photo, the owner's call.
 
+## 2026-10-24: several photos for one meal
+
+**Done:**
+- The owner asked to pick more than one photo when adding a meal from a photo. The gallery now picks several at once, and the note screen shows them with "הסר תמונה" on each and "עוד צילום" / "עוד מהגלריה" to add more (up to 4, `MAX_PHOTOS`). All go to the `meal-photo` function in one request (`images`), so a food two photos show counts once; all are kept with the meal. The function (v11, deployed) still accepts the old single `image`.
+- Screen test: two from the gallery, remove one; a second added on the note screen, both kept with the meal, both go with its last food and come back with undo.
+
+**Next:** each extra photo costs about one more photo's worth of AI tokens per reading, only when used.
+
 ## 2026-10-24: a photo's "מרק תירס" is a soup, not a packet
 
 **Done:**

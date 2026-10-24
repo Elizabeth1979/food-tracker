@@ -52,28 +52,29 @@ export function AskHost() {
 // One button for a photo: without `capture`, the phone offers both the camera and the gallery.
 // While `reading` (the photo being read) is set, it shows that photo dimmed under a spinner instead.
 // Two ways in: Android's file picker no longer offers the camera, so the camera gets its own button (capture).
-// `children` is one more choice in the same row (the add window's "כתיבה").
-export function PhotoPick({ camera, gallery, reading, busyText = '', onFile, className = 'btn', children }: { camera: string; gallery: string; reading?: File | null; busyText?: string; onFile: (f: File) => void; className?: string; children?: ReactNode }) {
+// `children` is one more choice in the same row (the add window's "כתיבה"). `multiple` lets the gallery pick several.
+export function PhotoPick({ camera, gallery, reading, busyText = '', onFile, multiple, className = 'btn', children }: { camera: string; gallery: string; reading?: File | null; busyText?: string; onFile: (f: File) => void; multiple?: boolean; className?: string; children?: ReactNode }) {
   if (reading) return <Reading file={reading} text={busyText} />;
   return (
     <div className={children ? 'choices' : 'grid2'}>
       <FileButton camera className={className} onFile={onFile}><Icon name="camera" />{camera}</FileButton>
-      <FileButton className={className} onFile={onFile}><Icon name="image" />{gallery}</FileButton>
+      <FileButton multiple={multiple} className={className} onFile={onFile}><Icon name="image" />{gallery}</FileButton>
       {children}
     </div>
   );
 }
 
 // A button that picks a photo: with `camera`, the phone opens its camera straight away; otherwise the gallery.
-export function FileButton({ camera, className, onFile, children }: { camera?: boolean; className: string; onFile: (f: File) => void; children: ReactNode }) {
+// With `multiple`, `onFile` is called once for each photo picked.
+export function FileButton({ camera, multiple, className, onFile, children }: { camera?: boolean; multiple?: boolean; className: string; onFile: (f: File) => void; children: ReactNode }) {
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = [...(e.target.files ?? [])];
     e.target.value = '';
-    if (file) onFile(file);
+    files.forEach(onFile);
   };
   return (
     <label className={className}>
-      <input type="file" accept="image/*" capture={camera ? 'environment' : undefined} className="sr-only" onChange={pick} />
+      <input type="file" accept="image/*" capture={camera ? 'environment' : undefined} multiple={multiple} className="sr-only" onChange={pick} />
       {children}
     </label>
   );
