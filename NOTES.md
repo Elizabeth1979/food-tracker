@@ -8,6 +8,13 @@ What was done in each work session and what's next. Newest first.
 - The owner couldn't find how to log eggs that were mostly whites. The database has them ("ביצה חלבון", one white 38 g, 20 kcal; "ביצה חלמון", one yolk 19 g), but "חלבונים" and "חלבוני ביצה" found nothing: a cut-off plural ("חלבונ") didn't match a singular ending in a final letter ("חלבון"). `forms` in `search.ts` now tries the final letter too (also "לימונים"), and "חלבונים" means egg whites (`SAME`); "חלבון" alone still lists protein powder first. Test in `search.test.ts`.
 - The owner's lunch today still has 2 "ביצה או חביתה מטוגנת ללא שמן" (100 g, 162 kcal, 14.2 g protein); not edited, that's their call.
 
+## 2026-10-24: the keyboard no longer hides "הוסף"
+
+**Done:**
+- The owner reported: typing an amount, the phone keyboard covered the "הוסף" button until it was closed. Android's default is to lay the keyboard over the page; `index.html`'s viewport now asks for `interactive-widget=resizes-content`, so the page (and every bottom window) shrinks to the space above the keyboard. Screen test: at a keyboard-open height, "הוסף" is on screen.
+
+**Next:** side effect: on pages with a text field (Settings, Reports) the bottom tab bar now rides above the keyboard too. iPhone Safari ignores the setting (not needed for the owner's Android).
+
 ## 2026-10-24: two more guide articles: daily values, carbs
 
 **Done:**
