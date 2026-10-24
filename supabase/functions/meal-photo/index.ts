@@ -186,10 +186,12 @@ Deno.serve(async (req) => {
       }],
     });
     if (res.stop_reason === 'refusal' || !res.parsed_output) return reply({ error: 'לא הצלחתי לזהות מזונות. אפשר לכתוב את הארוחה במקום.' });
-    const found = res.parsed_output.items.filter((i) => i.name.trim() && i.qty > 0);
+    const keep = res.parsed_output.items.map((i) => !!i.name.trim() && i.qty > 0);
+    const found = res.parsed_output.items.filter((_, k) => keep[k]);
+    // a question points at its item by index, which dropping empty items shifts
     const questions = res.parsed_output.questions
-      .filter((q) => found[q.item] && q.text.trim() && q.options.length >= 2)
-      .slice(0, 3).map((q) => ({ ...q, options: q.options.slice(0, 4) }));
+      .filter((q) => keep[q.item] && q.text.trim() && q.options.length >= 2)
+      .slice(0, 3).map((q) => ({ ...q, item: keep.slice(0, q.item).filter(Boolean).length, options: q.options.slice(0, 4) }));
     return reply({ items: found, questions });
   } catch (e) {
     console.error(e);
