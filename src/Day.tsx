@@ -134,7 +134,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
       </section>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}
-      {undo && <div className="toast" role="status">״{undo.e.name}״ נמחק{undo.photos.length ? ' עם תמונת הארוחה' : ''} <button onClick={() => restore(undo)}>בטל</button></div>}
+      {undo && <div className="toast" role="status">״{undo.e.name}״ נמחק{undo.photos.length > 1 ? ' עם תמונות הארוחה' : undo.photos.length ? ' עם תמונת הארוחה' : ''} <button onClick={() => restore(undo)}>בטל</button></div>}
       {entries === null && <div className="muted center">טוען…</div>}
 
       <Group title="ארוחות" body="">

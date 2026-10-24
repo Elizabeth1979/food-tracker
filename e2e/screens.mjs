@@ -103,7 +103,13 @@ test('in the evening, a photo goes to the review list', async () => {
   await openAdd();
   // any real image will do: test mode answers every photo with the same sample meal
   assert.ok(await dialog().getByLabel('צילום', { exact: true }).count()); // the camera has its own button
-  await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  // the gallery picks several photos at once; one is taken back
+  const jpeg = Buffer.from(await sampleJpeg(), 'base64');
+  await dialog().getByLabel('מהגלריה').setInputFiles([{ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: jpeg }, { name: 'drink.jpg', mimeType: 'image/jpeg', buffer: jpeg }]);
+  const picked = dialog().getByRole('list', { name: 'התמונות שנבחרו' }).getByRole('img');
+  assert.equal(await picked.count(), 2);
+  await button('הסר תמונה 2', dialog()).tap();
+  assert.equal(await picked.count(), 1);
   // the photo waits for an optional note (what a photo can't tell), then it's read
   await dialog().getByRole('textbox', { name: /^הערה/ }).fill('גבינה בולגרית מגורדת');
   await button('זהה מזונות', dialog()).tap();
@@ -348,22 +354,25 @@ test('moving between days', async () => {
   assert.equal(await entries('ארוחת ערב').count(), 6);
 });
 
-test('deleting a meal\'s last food takes its photo too, and undo brings both back', async () => {
+test('deleting a meal\'s last food takes its photos too (two of them), and undo brings them back', async () => {
   await button('יום קודם').tap();
   await openAdd();
+  // a second photo of the same meal, added on the note screen: both are kept with the meal
   await dialog().getByLabel('מהגלריה').setInputFiles({ name: 'meal.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
+  await dialog().getByLabel('עוד מהגלריה').setInputFiles({ name: 'drink.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(await sampleJpeg(), 'base64') });
   await button('זהה מזונות', dialog()).tap();
   await button(/^הוסף \(/, dialog()).tap();
   await button(/^סיום/, dialog()).tap();
   const photo = button('תמונה 1: ארוחת צהריים', meal('ארוחת צהריים'));
-  await photo.waitFor();
+  const second = button('תמונה 2: ארוחת צהריים', meal('ארוחת צהריים'));
+  await second.waitFor();
   const foods = entries('ארוחת צהריים');
   while (await foods.count() > 1) { await foods.first().tap(); assert.equal(await photo.count(), 1); } // not the last: the photo stays
   await foods.first().tap();
-  await page.getByRole('status').filter({ hasText: 'נמחק עם תמונת הארוחה' }).waitFor();
+  await page.getByRole('status').filter({ hasText: 'נמחק עם תמונות הארוחה' }).waitFor();
   assert.equal(await photo.count(), 0);
   await button('בטל').tap();
-  await photo.waitFor();
+  await second.waitFor();
   assert.equal(await foods.count(), 1);
   // without undo it's gone for good: still gone after a reload
   await foods.first().tap();

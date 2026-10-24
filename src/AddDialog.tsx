@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
+import { GRAMS, MEALS, addDays, addEntries, addUnit, json, MAX_PHOTOS, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
 import { goalsLeft, whatFits, type Goals } from './goals';
 import { FileButton, FoodHit, MINE_HINT, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
@@ -90,7 +90,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
   const meal = meal0;
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
-  const [photo, setPhoto] = useState<File | null>(null); // taken from the list screen: goes straight to recognition
+  const [photos, setPhotos] = useState<File[]>([]); // picked on the list screen: they wait for a note, then recognition
   const [sel, setSel] = useState<Food | null>(initial ?? null);
   const [creating, setCreating] = useState<Partial<Food> | null>(null); // the full new-food form, with what's known
   const [labelShot, setLabelShot] = useState<File | null>(null); // a label photo being read
@@ -158,7 +158,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
       setDone((d) => ({ ...d, [key]: [...(d[key] ?? []), ...es] }));
     } finally { setBusy(false); }
     if (initial) onClose(); // opened on one food from the מזונות tab
-    setSel(null); setWriting(false); setPhoto(null); setQ('');
+    setSel(null); setWriting(false); setPhotos([]); setQ('');
   };
   const readShot = async (file: File) => {
     setErr(''); setLabelShot(file);
@@ -199,7 +199,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
     <Modal title={`הוספה ליומן${day}`} onClose={onClose}
       // Always there, so the sheet doesn't grow and shift the rows on the first tap.
       footer={!sel && !writing && !checking && <button className="btn primary" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>}
-      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhoto(null); return true; } if (checking) { setChecking(null); return true; } return false; }}>
+      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhotos([]); return true; } if (checking) { setChecking(null); return true; } return false; }}>
       {sel ? (
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}><Icon name="arrow-right" />חזרה לחיפוש</button>}
@@ -209,9 +209,9 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
         <LabelCheck food={checking} onSave={saveLabel} onEdit={(f) => setCreating(f)} />
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} file={photo} cta="הוסף" onAdd={(items, shot) => {
+          <TextOrPhoto ctx={ctx} files={photos} cta="הוסף" onAdd={(items, shots) => {
             add(`w:${Date.now()}`, items);
-            if (shot) void savePhoto(shot, date, meal).then(onPhoto); // a failure shows in the app's error banner
+            shots.forEach((s) => void savePhoto(s, date, meal).then(onPhoto)); // a failure shows in the app's error banner
           }} />
         </>
       ) : (
@@ -220,7 +220,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
           {/* The other ways in, big and up front: a meal photo (camera or gallery), typing the meal, or a package's
               nutrition label (the camera opens at once; the label becomes a food of your own, then you log it) */}
           {!q && <>
-            <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" reading={labelShot} busyText="קורא את התווית…" onFile={(f) => { setPhoto(f); setWriting(true); }}>
+            <PhotoPick camera="צילום" gallery="מהגלריה" className="btn big-choice" reading={labelShot} busyText="קורא את התווית…" multiple onFile={(f) => { setPhotos((cur) => [...cur, f].slice(0, MAX_PHOTOS)); setWriting(true); }}>
               <button className="btn big-choice" onClick={() => setWriting(true)}><Icon name="pencil" />כתיבה</button>
               <FileButton camera className="btn big-choice" onFile={readShot}><Icon name="tag" />תווית</FileButton>
             </PhotoPick>
@@ -315,56 +315,65 @@ function Pick({ name, detail, kcal, on, saved, onClick, onOpen }: { name: string
   );
 }
 
-// The picked photo with a note for what a photo can't tell (the cheese, the pasta, what's inside), then read.
-function PhotoNote({ file, note, setNote, onRead, onCancel }: { file: File; note: string; setNote: (s: string) => void; onRead: () => void; onCancel: () => void }) {
-  const src = usePhotoUrl(file);
+// The picked photos (more can be added: another angle, the drink) with a note for what a photo can't tell
+// (the cheese, the pasta, what's inside), then read together.
+function PhotoNote({ files, setFiles, note, setNote, onRead }: { files: File[]; setFiles: (f: File[]) => void; note: string; setNote: (s: string) => void; onRead: () => void }) {
   return (
     <div className="form">
-      <figure className="reading">{src && <img src={src} alt="התמונה שנבחרה" />}</figure>
+      <ul className="thumbs" aria-label="התמונות שנבחרו">
+        {files.map((f, i) => <Thumb key={`${i}:${f.name}`} file={f} n={i + 1} onRemove={() => setFiles(files.filter((x) => x !== f))} />)}
+      </ul>
+      {files.length < MAX_PHOTOS && <PhotoPick camera="עוד צילום" gallery="עוד מהגלריה" multiple onFile={(f) => setFiles([...files, f].slice(0, MAX_PHOTOS))} />}
       <label>
         <span>הערה (לא חובה): מה לא רואים או קשה לזהות</span>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="גבינה בולגרית מגורדת, פסטה רגילה, כף שמן" />
       </label>
-      <div className="grid2">
-        <button className="btn" onClick={onCancel}>תמונה אחרת</button>
-        <button className="btn primary" onClick={onRead}>זהה מזונות</button>
-      </div>
+      <button className="btn primary" onClick={onRead}>זהה מזונות</button>
     </div>
   );
 }
 
+function Thumb({ file, n, onRemove }: { file: File; n: number; onRemove: () => void }) {
+  const src = usePhotoUrl(file);
+  return (
+    <li>
+      {src && <img src={src} alt={`תמונה ${n}`} />}
+      <button className="icon" aria-label={`הסר תמונה ${n}`} onClick={onRemove}><Icon name="x" /></button>
+    </li>
+  );
+}
+
 // A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
-// `shot` is the photo the list came from, so it can be kept with the meal.
-function TextOrPhoto({ ctx, file, cta, onAdd }: { ctx: Ctx; file?: File | null; cta: string; onAdd: (items: Item[], shot: File | null) => void }) {
+// `shots` are the photos the list came from, so they can be kept with the meal.
+function TextOrPhoto({ ctx, files = [], cta, onAdd }: { ctx: Ctx; files?: File[]; cta: string; onAdd: (items: Item[], shots: File[]) => void }) {
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
   const [reading, setReading] = useState<File | null>(null); // the photo being recognised
-  const [shot, setShot] = useState<File | null>(null);
+  const [shots, setShots] = useState<File[]>([]);
   const [err, setErr] = useState('');
   const why = useId();
-  const [picked, setPicked] = useState<File | null>(null); // a photo waiting for its note before it's read
+  const [picked, setPicked] = useState(files); // photos waiting for their note before they're read (from the list screen too)
   const [note, setNote] = useState('');
-  const photo = async (file: File) => {
-    setErr(''); setPicked(null); setReading(file);
-    try { setParsed(await readPhoto(file, note || text)); setShot(file); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
+  const read = async (fs: File[]) => {
+    setErr(''); setPicked([]); setReading(fs[0]);
+    try { setParsed(await readPhoto(fs, note || text)); setShots(fs); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
   };
-  useEffect(() => { if (file) setPicked(file); }, [file]); // a photo taken on the list screen
   if (parsed)
     return (
       <>
-        <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={(items) => onAdd(items, shot)} />
+        <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={(items) => onAdd(items, shots)} />
       </>
     );
-  if (picked)
-    return <PhotoNote file={picked} note={note} setNote={setNote} onRead={() => photo(picked)} onCancel={() => setPicked(null)} />;
+  if (picked.length)
+    return <PhotoNote files={picked} setFiles={setPicked} note={note} setNote={setNote} onRead={() => read(picked)} />;
   return (
     <div className="form">
-      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" onFile={setPicked} />
+      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" multiple onFile={(f) => setPicked((cur) => [...cur, f].slice(0, MAX_PHOTOS))} />
       {/* Locked while a photo is being read, so it's clear that something is going on */}
       <fieldset className="form" disabled={!!reading}>
         <label>
           <span>מה אכלת? אפשר עם כמויות, מופרד בפסיקים</span>
-          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!file} />
+          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!files.length} />
         </label>
         <button className="btn primary" disabled={!text.trim()} aria-describedby={text.trim() && !reading ? undefined : why} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
         {(reading || !text.trim()) && <Why id={why}>{reading ? 'אפשר להמשיך כשהזיהוי יסתיים' : 'כתבו מה אכלתם כדי להמשיך'}</Why>}
