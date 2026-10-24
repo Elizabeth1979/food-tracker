@@ -74,7 +74,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
 // ---------- free text: "יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים" ----------
 // grams: a photo's guess of the whole amount's weight, to check its unit against (see unitFor).
 // hidden: a fat or sauce the photo inferred but can't show (frying oil, dressing), for the user to confirm.
-export type Parsed = { text: string; query: string; qty: number | null; unit: string | null; grams?: number; hidden?: boolean };
+// foodId: the database food the AI chose for it. dish: the dish it is one ingredient of (a dish the database lacks).
+export type Parsed = { text: string; query: string; qty: number | null; unit: string | null; grams?: number; hidden?: boolean; foodId?: string; dish?: string };
 
 const NUMBERS: Record<string, number> = {
   חצי: 0.5, רבע: 0.25, אחד: 1, אחת: 1, שני: 2, שתי: 2, שניים: 2, שתיים: 2, זוג: 2, שלוש: 3, שלושה: 3, כמה: 3,
@@ -205,4 +206,30 @@ export function sameFood(foods: Food[], f: Partial<Food>): Food | undefined {
   const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.5, 0.02 * Math.max(a, b));
   const sameNumbers = (x: Food) => !!f.kcal && (['kcal', 'protein', 'fat', 'carbs'] as const).every((k) => close(per(x, k), per(f, k)));
   return foods.find((x) => x.id !== f.id && !x.hidden && (norm(x.name) === norm(f.name ?? '') || (x.source !== 'moh' && sameNumbers(x))));
+}
+
+// ---------- a meal the AI read (a photo or a described dish) ----------
+// First the AI says what it sees (`Seen`), with a question where the answer changes the calories a lot; then, given
+// each item's closest database foods, it picks one (`Picked`), or breaks a dish the database lacks into ingredients.
+// Calories still come from the database either way.
+export type SeenItem = { name: string; qty: number; unit: string; grams?: number; hidden?: boolean; about?: string };
+export type Question = { item: number; text: string; options: string[] };
+export type Picked = { id: string | null; qty: number; unit: string; grams?: number; parts?: SeenItem[] };
+export const CANDIDATES = 10;
+
+export const seenParsed = (i: SeenItem, dish?: string): Parsed =>
+  ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit, grams: i.grams, hidden: i.hidden, dish });
+// The database foods the AI chooses from: the search's best for the name, calories per 100 g so it can judge the kind.
+export const candidatesFor = (foods: Food[], items: SeenItem[], recent: string[]) =>
+  items.map((i) => matchFoods(foods, i.name, recent).slice(0, CANDIDATES));
+export const per100 = (f: Food) => Math.round((f.kcal * 100) / (f.servingG || 100));
+// What the AI picked, as review rows. An id that wasn't offered is ignored; no pick at all falls back to the search's.
+export function pickedParsed(items: SeenItem[], picks: (Picked | undefined)[], cands: Food[][]): Parsed[] {
+  return items.flatMap((i, k) => {
+    const p = picks[k];
+    if (!p) return [seenParsed(i)];
+    if (p.id && cands[k].some((f) => f.id === p.id)) return [{ ...seenParsed({ ...i, qty: p.qty, unit: p.unit, grams: p.grams }), foodId: p.id }];
+    if (p.parts?.length) return p.parts.map((x) => seenParsed(x, i.name));
+    return [seenParsed({ ...i, qty: p.qty, unit: p.unit, grams: p.grams })];
+  });
 }

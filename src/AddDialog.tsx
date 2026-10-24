@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Ctx } from './App';
-import { GRAMS, MEALS, addDays, addEntries, addUnit, json, MAX_PHOTOS, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
+import { GRAMS, MEALS, addDays, addEntries, addUnit, json, MAX_PHOTOS, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, matchMeal, pickItem, readLabel, readMeal, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type Question, type SavedMeal, type Seen, type Unit } from './lib';
 import { norm } from './search';
 import { goalsLeft, whatFits, type Goals } from './goals';
-import { FileButton, FoodHit, MINE_HINT, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
+import { FileButton, FoodHit, MINE_HINT, Modal, PhotoPick, Reading, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm, labelFood, saveFood } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
@@ -91,6 +91,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
   const [q, setQ] = useState('');
   const [writing, setWriting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]); // picked on the list screen: they wait for a note, then recognition
+  const [describe, setDescribe] = useState(''); // a search with no good match, sent to recognition as words
   const [sel, setSel] = useState<Food | null>(initial ?? null);
   const [creating, setCreating] = useState<Partial<Food> | null>(null); // the full new-food form, with what's known
   const [labelShot, setLabelShot] = useState<File | null>(null); // a label photo being read
@@ -158,7 +159,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
       setDone((d) => ({ ...d, [key]: [...(d[key] ?? []), ...es] }));
     } finally { setBusy(false); }
     if (initial) onClose(); // opened on one food from the מזונות tab
-    setSel(null); setWriting(false); setPhotos([]); setQ('');
+    setSel(null); setWriting(false); setPhotos([]); setDescribe(''); setQ('');
   };
   const readShot = async (file: File) => {
     setErr(''); setLabelShot(file);
@@ -199,7 +200,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
     <Modal title={`הוספה ליומן${day}`} onClose={onClose}
       // Always there, so the sheet doesn't grow and shift the rows on the first tap.
       footer={!sel && !writing && !checking && <button className="btn primary" onClick={onClose}>{added.length ? `סיום · נוספו ${added.length} · ${sum(added).kcal} קק״ל` : 'סיום'}</button>}
-      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhotos([]); return true; } if (checking) { setChecking(null); return true; } return false; }}>
+      onBack={() => { if (sel && !initial) { setSel(null); return true; } if (writing) { setWriting(false); setPhotos([]); setDescribe(''); return true; } if (checking) { setChecking(null); return true; } return false; }}>
       {sel ? (
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}><Icon name="arrow-right" />חזרה לחיפוש</button>}
@@ -209,7 +210,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
         <LabelCheck food={checking} onSave={saveLabel} onEdit={(f) => setCreating(f)} />
       ) : writing ? (
         <>
-          <TextOrPhoto ctx={ctx} files={photos} cta="הוסף" onAdd={(items, shots) => {
+          <TextOrPhoto ctx={ctx} files={photos} describe={describe} cta="הוסף" onAdd={(items, shots) => {
             add(`w:${Date.now()}`, items);
             shots.forEach((s) => void savePhoto(s, date, meal).then(onPhoto)); // a failure shows in the app's error banner
           }} />
@@ -250,6 +251,8 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
                 </section>
               )}
             </>}
+            {/* first, so it's seen before scrolling: a restaurant dish the results don't have */}
+            {q && <button className="row muted" onClick={() => { setDescribe(q); setWriting(true); }}><Icon name="bulb" />{SMART}: ״{q}״</button>}
             {q && hits.length > 0 && <p className="muted small">{MINE_HINT}</p>}
             {q && hits.map((f) => (
               <FoodHit key={f.id} f={f} onClick={() => setSel(f)} />
@@ -343,42 +346,83 @@ function Thumb({ file, n, onRemove }: { file: File; n: number; onRemove: () => v
   );
 }
 
-// A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from a photo, then checked in a review list.
-// `shots` are the photos the list came from, so they can be kept with the meal.
-function TextOrPhoto({ ctx, files = [], cta, onAdd }: { ctx: Ctx; files?: File[]; cta: string; onAdd: (items: Item[], shots: File[]) => void }) {
-  const [text, setText] = useState('');
+// A whole meal in one go: typed ("יוגורט 150 גרם, 10 ענבים") or from photos, then checked in a review list.
+// Photos, or words sent to "זיהוי חכם" (a restaurant dish the search doesn't know), go to the AI: it may ask a
+// question or two first, then matches each food to the database, or breaks a dish it lacks into ingredients.
+// `describe`: words from the search, read at once. `shots` are the photos the list came from, kept with the meal.
+type Asking = { seen: Seen; said: string; files: File[] };
+function TextOrPhoto({ ctx, files = [], describe, cta, onAdd }: { ctx: Ctx; files?: File[]; describe?: string; cta: string; onAdd: (items: Item[], shots: File[]) => void }) {
+  const [text, setText] = useState(describe ?? '');
   const [parsed, setParsed] = useState<Parsed[] | null>(null);
-  const [reading, setReading] = useState<File | null>(null); // the photo being recognised
+  const [busy, setBusy] = useState<{ file: File | null; text: string } | null>(null); // being read, with what to show
+  const [ask, setAsk] = useState<Asking | null>(null);
   const [shots, setShots] = useState<File[]>([]);
   const [err, setErr] = useState('');
   const why = useId();
   const [picked, setPicked] = useState(files); // photos waiting for their note before they're read (from the list screen too)
   const [note, setNote] = useState('');
-  const read = async (fs: File[]) => {
-    setErr(''); setPicked([]); setReading(fs[0]);
-    try { setParsed(await readPhoto(fs, note || text)); setShots(fs); } catch (x: any) { setErr(x.message); } finally { setReading(null); }
+  const match = async (a: Asking, answers: (string | undefined)[]) => {
+    setAsk(null); setBusy({ file: a.files[0] ?? null, text: 'מתאים למאגר המזון…' });
+    try { setParsed(await matchMeal(ctx.foods, ctx.recent, a.seen, a.said, answers)); setShots(a.files); } finally { setBusy(null); }
   };
+  const read = async (fs: File[], said: string) => {
+    setErr(''); setPicked([]); setBusy({ file: fs[0] ?? null, text: fs.length ? 'מזהה מזונות בתמונה…' : 'מזהה את המנה…' });
+    try {
+      const seen = await readMeal(fs, said);
+      if (seen.questions.length) setAsk({ seen, said, files: fs });
+      else await match({ seen, said, files: fs }, []);
+    } catch (x: any) { setErr(x.message); } finally { setBusy(null); }
+  };
+  useEffect(() => { if (describe) void read([], describe); }, [describe]);
   if (parsed)
     return (
       <>
         <ReviewList ctx={ctx} parsed={parsed} cta={cta} onAdd={(items) => onAdd(items, shots)} />
       </>
     );
+  if (ask) return <Questions questions={ask.seen.questions} onDone={(answers) => match(ask, answers)} />;
   if (picked.length)
-    return <PhotoNote files={picked} setFiles={setPicked} note={note} setNote={setNote} onRead={() => read(picked)} />;
+    return <PhotoNote files={picked} setFiles={setPicked} note={note} setNote={setNote} onRead={() => read(picked, note || text)} />;
+  const empty = !text.trim();
   return (
     <div className="form">
-      <PhotoPick camera="צילום" gallery="מהגלריה" reading={reading} busyText="מזהה מזונות בתמונה…" multiple onFile={(f) => setPicked((cur) => [...cur, f].slice(0, MAX_PHOTOS))} />
-      {/* Locked while a photo is being read, so it's clear that something is going on */}
-      <fieldset className="form" disabled={!!reading}>
+      {busy ? <Reading file={busy.file} text={busy.text} /> : <PhotoPick camera="צילום" gallery="מהגלריה" multiple onFile={(f) => setPicked((cur) => [...cur, f].slice(0, MAX_PHOTOS))} />}
+      {/* Locked while something is being read, so it's clear that something is going on */}
+      <fieldset className="form" disabled={!!busy}>
         <label>
           <span>מה אכלת? אפשר עם כמויות, מופרד בפסיקים</span>
-          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!files.length} />
+          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="יוגורט 150 גרם, 10 ענבים, כף חמאת בוטנים, 2 כפות גרנולה" autoFocus={!files.length && !describe} />
         </label>
-        <button className="btn primary" disabled={!text.trim()} aria-describedby={text.trim() && !reading ? undefined : why} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
-        {(reading || !text.trim()) && <Why id={why}>{reading ? 'אפשר להמשיך כשהזיהוי יסתיים' : 'כתבו מה אכלתם כדי להמשיך'}</Why>}
+        <div className="grid2">
+          <button className="btn" disabled={empty} aria-describedby={empty || busy ? why : undefined} onClick={() => read([], text)}><Icon name="bulb" />{SMART}</button>
+          <button className="btn primary" disabled={empty} aria-describedby={empty || busy ? why : undefined} onClick={() => setParsed(parseLine(text))}>המשך לבדיקה</button>
+        </div>
+        {(busy || empty) ? <Why id={why}>{busy ? 'אפשר להמשיך כשהזיהוי יסתיים' : 'כתבו מה אכלתם כדי להמשיך'}</Why>
+          : <p className="muted small">{SMART}: למנה ממסעדה או משהו שהחיפוש לא מכיר. שואל אם צריך, ומפרק למרכיבים מה שאין במאגר.</p>}
       </fieldset>
       {err && <p className="error">{err}</p>}
+    </div>
+  );
+}
+const SMART = 'זיהוי חכם';
+
+// The AI's questions, where the answer changes the calories a lot ("creamy or clear?"): one tap each.
+// Unanswered ones are left to its own guess.
+function Questions({ questions, onDone }: { questions: Question[]; onDone: (answers: (string | undefined)[]) => void }) {
+  const [answers, setAnswers] = useState<(string | undefined)[]>([]);
+  const answer = (n: number, a: string) => setAnswers((x) => Object.assign([...x], { [n]: x[n] === a ? undefined : a }));
+  return (
+    <div className="form">
+      <h3>כמה שאלות קצרות, כדי לדייק</h3>
+      {questions.map((q, n) => (
+        <fieldset key={n}>
+          <legend>{q.text}</legend>
+          <div className="seg">
+            {q.options.map((o) => <button key={o} aria-pressed={answers[n] === o} className={answers[n] === o ? 'on' : ''} onClick={() => answer(n, o)}>{o}</button>)}
+          </div>
+        </fieldset>
+      ))}
+      <button className="btn primary" onClick={() => onDone(answers)}>המשך</button>
     </div>
   );
 }

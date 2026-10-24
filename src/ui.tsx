@@ -81,13 +81,14 @@ export function FileButton({ camera, multiple, className, onFile, children }: { 
 }
 
 // A picked photo as an <img> src, released when the photo changes or goes.
-export function usePhotoUrl(file: File) {
+export function usePhotoUrl(file: File | null) {
   const [src, setSrc] = useState('');
-  useEffect(() => { const url = URL.createObjectURL(file); setSrc(url); return () => URL.revokeObjectURL(url); }, [file]);
+  useEffect(() => { if (!file) return setSrc(''); const url = URL.createObjectURL(file); setSrc(url); return () => URL.revokeObjectURL(url); }, [file]);
   return src;
 }
 
-export function Reading({ file, text }: { file: File; text: string }) {
+// Something being read: the photo dimmed under a spinner and what's happening (words alone: no photo).
+export function Reading({ file, text }: { file: File | null; text: string }) {
   const src = usePhotoUrl(file);
   return (
     <figure className="reading" role="status">
