@@ -125,7 +125,7 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
         {/* The day's vitamins and minerals, from food and supplements, folded: a row each would crowd the summary */}
         <details aria-label="ויטמינים ומינרלים שצרכת היום">
           <summary><Icon name="chevron-down" />ויטמינים ומינרלים שצרכת היום</summary>
-          <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון. ערכי המזון ממאגר משרד הבריאות; ביוטין ויוד רק מתוספים ומתוויות שצילמת.</p>
+          <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון (באשלגן: ההמלצה העדכנית לנשים). ערכי המזון ממאגר משרד הבריאות; ביוטין ויוד רק מתוספים ומתוויות שצילמת.</p>
           <MicroGoals n={tot} />
           <ArticleLink slug="6-vitamins">מה זה ערך יומי?</ArticleLink>
         </details>

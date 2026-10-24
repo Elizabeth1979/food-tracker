@@ -22,6 +22,14 @@ What was done in each work session and what's next. Newest first.
 
 **Next:** side effect: on pages with a text field (Settings, Reports) the bottom tab bar now rides above the keyboard too. iPhone Safari ignores the setting (not needed for the owner's Android).
 
+## 2026-10-24: potassium 2600, and "average, not a daily quota"
+
+**Done:**
+- At the owner's request the potassium target is 2600 mg (NASEM 2019, women), not the label's 4700 (`DAILY_VALUES`). The day's vitamin note says so. Screen test: the test day's 3394 mg now reaches it (fails with 4700).
+- The vitamins article has "ממוצע, לא מכסה יומית": recommendations are averages; A, D, E, K and B12 are stored, so a weekly dose is fine; Reports (week or month) shows the true average.
+
+**Next:** asked the owner whether she takes a weekly supplement, to check it's logged and counted right.
+
 ## 2026-10-24: the guide in the bar, and linked from where questions come up
 
 **Done:**
