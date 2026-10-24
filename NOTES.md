@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: the keyboard no longer hides "הוסף"
+
+**Done:**
+- The owner reported: typing an amount, the phone keyboard covered the "הוסף" button until it was closed. Android's default is to lay the keyboard over the page; `index.html`'s viewport now asks for `interactive-widget=resizes-content`, so the page (and every bottom window) shrinks to the space above the keyboard. Screen test: at a keyboard-open height, "הוסף" is on screen.
+
+**Next:** side effect: on pages with a text field (Settings, Reports) the bottom tab bar now rides above the keyboard too. iPhone Safari ignores the setting (not needed for the owner's Android).
+
 ## 2026-10-24: two more guide articles: daily values, carbs
 
 **Done:**

@@ -51,6 +51,16 @@ const vitaminRows = async () => {
   return (await vitamins().innerText()).replace(/\s+/g, ' ');
 };
 const vitamin = async (name) => Number((await vitaminRows()).match(new RegExp(`${name}(?: ✓ הושג| מעל היעד)? ([\\d.]+) /`))[1]);
+// The on-screen keyboard (about half a phone screen). Headless Chromium has none, so the page shrinks to what's left
+// above it, which is what Android does once the page asks for it (interactive-widget=resizes-content); otherwise
+// the keyboard just covers the bottom and nothing moves.
+const keyboardOpen = async (check) => {
+  const full = page.viewportSize();
+  const meta = await page.locator('meta[name=viewport]').getAttribute('content');
+  assert.match(meta, /interactive-widget=resizes-content/, 'the page asks to shrink above the keyboard, not under it');
+  await page.setViewportSize({ ...full, height: 470 });
+  try { await check(); } finally { await page.setViewportSize(full); }
+};
 const sampleJpeg = () => page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; return c.toDataURL('image/jpeg').split(',')[1]; });
 
 test('one ＋ opens the add window, with no meal to choose', async () => {
@@ -61,6 +71,10 @@ test('one ＋ opens the add window, with no meal to choose', async () => {
 test('search, pick an amount, add; a fruit counts toward vitamin C', async () => {
   await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('ענבים');
   await button(/^ענבים/, dialog()).first().tap();
+  await keyboardOpen(async () => { // the owner's bug: the amount's keyboard hid "הוסף" until it was closed
+    const box = await button('הוסף', dialog()).boundingBox();
+    assert.ok(box.y + box.height <= page.viewportSize().height, '"הוסף" shows above the keyboard');
+  });
   await button('הוסף', dialog()).tap();
   await button(/^סיום · נוספו 1/, dialog()).tap();
   await dialog().waitFor({ state: 'detached' });
