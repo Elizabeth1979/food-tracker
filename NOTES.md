@@ -8,12 +8,12 @@ What was done in each work session and what's next. Newest first.
 - The owner couldn't find how to log eggs that were mostly whites. The database has them ("ביצה חלבון", one white 38 g, 20 kcal; "ביצה חלמון", one yolk 19 g), but "חלבונים" and "חלבוני ביצה" found nothing: a cut-off plural ("חלבונ") didn't match a singular ending in a final letter ("חלבון"). `forms` in `search.ts` now tries the final letter too (also "לימונים"), and "חלבונים" means egg whites (`SAME`); "חלבון" alone still lists protein powder first. Test in `search.test.ts`.
 - The owner's lunch today still has 2 "ביצה או חביתה מטוגנת ללא שמן" (100 g, 162 kcal, 14.2 g protein); not edited, that's their call.
 
-## 2026-10-24: search results show calories on the name's line
+## 2026-10-24: calories on the name's line (search results, amount window)
 
 **Done:**
 - The owner asked for calories on the same line as the food while adding, not below. Search results (add window and the saved-meal editor) are now one shared `FoodHit` row: the name with its calories at the end of the line (per the serving shown below, like the usual foods' number), the macros under it. Screen test: the calories are level with the name.
 
-**Next:** the amount window still shows the chosen amount's calories under the amount box (that's the live total for what's typed); ask if the owner meant that one too.
+- Then the amount window too (owner: "yes"): `Amount named` heads it with the food's name and the calories for the typed amount on the same line; the macros stay under the amount box. Used when adding and in the saved-meal editor; editing a logged entry keeps its old line (the window's title is already the name). Screen test: the amount's calories are level with the name.
 
 ## 2026-10-24: the keyboard no longer hides "הוסף"
 

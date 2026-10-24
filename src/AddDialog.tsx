@@ -9,8 +9,8 @@ import { ReviewList } from './Review';
 import { Icon } from './icons';
 
 // Calories and macros only: vitamins are for looking closer (a food's details, the day's summary), not for adding.
-export const NutLine = ({ n }: { n: Nut }) => (
-  <div className="nutline"><b>{n.kcal} קק״ל</b><span>פחמימות {n.carbs} ג׳</span><span>שומן {n.fat} ג׳</span><span>חלבון {n.protein} ג׳</span></div>
+export const NutLine = ({ n, kcal = true }: { n: Nut; kcal?: boolean }) => (
+  <div className="nutline">{kcal && <b>{n.kcal} קק״ל</b>}<span>פחמימות {n.carbs} ג׳</span><span>שומן {n.fat} ג׳</span><span>חלבון {n.protein} ג׳</span></div>
 );
 
 const PREFERRED = ['יחידה בינונית', 'יחידה', 'פרוסה', 'פרוסה בינונית', 'מנה בינונית'];
@@ -24,7 +24,9 @@ export const itemFood = (foods: Food[], it: Item) => {
 export const itemInit = (it: Item) => (it.unit && it.unit !== GRAMS ? { qty: it.qty ?? 1, unit: it.unit } : { qty: it.grams, unit: GRAMS });
 
 // qty + unit picker for a food; returns an Item. With onAddUnit, the unit list ends in "＋ יחידה חדשה".
-export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; init?: { qty: number; unit: string }; onPick: (it: Item) => void; cta: string; onAddUnit?: (u: Unit) => Promise<unknown> }) {
+// `named`: the food's name heads it, with the calories for the amount on the same line (where the window
+// isn't already titled with the name).
+export function Amount({ food, init, onPick, cta, onAddUnit, named }: { food: Food; init?: { qty: number; unit: string }; onPick: (it: Item) => void; cta: string; onAddUnit?: (u: Unit) => Promise<unknown>; named?: boolean }) {
   const [extra, setExtra] = useState<Unit[]>([]);
   const units = [...unitsOf(food), ...extra.filter((u) => !unitsOf(food).some((x) => x.n === u.n))];
   const [unit, setUnit] = useState(() => units.find((u) => u.n === init?.unit)
@@ -41,6 +43,7 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
   };
   return (
     <div className="amount">
+      {named && <header><h3>{food.name}</h3><b>{it.kcal} קק״ל</b></header>}
       <div className="amount-row">
         <input type="number" inputMode="decimal" min="0" step="any" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus onFocus={(e) => e.target.select()} />
         <select value={newUnit ? '+' : unit.n} onChange={(e) => {
@@ -59,7 +62,7 @@ export function Amount({ food, init, onPick, cta, onAddUnit }: { food: Food; ini
           <button className="icon" aria-label="ביטול" onClick={() => setNewUnit(null)}><Icon name="x" /></button>
         </div>
       )}
-      <NutLine n={it} />
+      <NutLine n={it} kcal={!named} />
       <button className="btn primary" disabled={!it.grams} aria-describedby={it.grams ? undefined : why} onClick={() => onPick(it)}>{cta}</button>
       {!it.grams && <Why id={why}>כתבו כמות גדולה מאפס כדי להוסיף</Why>}
     </div>
@@ -198,8 +201,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
       {sel ? (
         <div className="picked">
           {fromFoods && <button className="link" onClick={() => setSel(null)}><Icon name="arrow-right" />חזרה לחיפוש</button>}
-          <h3>{sel.name}</h3>
-          <Amount key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta="הוסף" onAddUnit={unitSaver(ctx, sel, setSel)} />
+          <Amount named key={`${sel.id}:${fromFoods ? '' : last[sel.id]?.id ?? ''}`} food={sel} init={fromFoods ? undefined : last[sel.id] && itemInit(last[sel.id] as Item)} onPick={(it) => add(`f:${sel.id}`, [it])} cta="הוסף" onAddUnit={unitSaver(ctx, sel, setSel)} />
         </div>
       ) : checking ? (
         <LabelCheck food={checking} onSave={saveLabel} onEdit={(f) => setCreating(f)} />

@@ -75,6 +75,9 @@ test('search, pick an amount, add; a fruit counts toward vitamin C', async () =>
   const [name, kcal] = await Promise.all([hit.getByText(/^ענבים/).boundingBox(), hit.getByText(/^\d+ קק״ל$/).boundingBox()]);
   assert.ok(Math.abs(kcal.y + kcal.height / 2 - (name.y + name.height / 2)) < name.height / 2, 'calories level with the name');
   await hit.tap();
+  // and once picked, the amount's calories sit on the name's line too, above the amount box
+  const [title, total] = await Promise.all([dialog().getByRole('heading', { name: /^ענבים/ }).boundingBox(), dialog().getByText(/^\d+ קק״ל$/).boundingBox()]);
+  assert.ok(Math.abs(total.y + total.height / 2 - (title.y + title.height / 2)) < title.height / 2, 'the amount\'s calories level with the name');
   await keyboardOpen(async () => { // the owner's bug: the amount's keyboard hid "הוסף" until it was closed
     const box = await button('הוסף', dialog()).boundingBox();
     assert.ok(box.y + box.height <= page.viewportSize().height, '"הוסף" shows above the keyboard');
