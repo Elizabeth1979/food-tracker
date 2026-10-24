@@ -501,7 +501,7 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
   assert.doesNotMatch(await vitamins().innerText(), /ויטמין D/);
   const rows = await vitaminRows();
   for (const row of [/נתרן מעל היעד \d+ \/ עד 2300 מ״ג/, /B12 ✓ הושג [\d.]+ \/ 2.4 מק״ג/, /ויטמין D ✓ הושג [\d.]+ \/ 20 מק״ג/, /ויטמין C ✓ הושג [\d.]+ \/ 90 מ״ג/,
-    /ברזל ✓ הושג [\d.]+ \/ 18 מ״ג/, /מגנזיום [\d.]+ \/ 420 מ״ג/, /אבץ ✓ הושג [\d.]+ \/ 11 מ״ג/]) assert.match(rows, row);
+    /ברזל ✓ הושג [\d.]+ \/ 18 מ״ג/, /אשלגן ✓ הושג [\d.]+ \/ 2600 מ״ג/, /מגנזיום [\d.]+ \/ 420 מ״ג/, /אבץ ✓ הושג [\d.]+ \/ 11 מ״ג/]) assert.match(rows, row);
   assert.match(rows, /ויטמין D[\s\S]*ויטמין C[\s\S]*ברזל[\s\S]*מגנזיום[\s\S]*אבץ/);
   for (const [name, tablets] of Object.entries(before)) assert.equal(Math.round(((await vitamin(name)) - tablets) * 100) / 100, { 'ויטמין D': 50, 'ויטמין C': 160, 'ברזל': 28, 'מגנזיום': 100, 'אבץ': 20 }[name], name);
   // and a food's own, per tablet, when it is opened in the foods page
