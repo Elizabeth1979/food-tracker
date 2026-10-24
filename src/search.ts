@@ -12,8 +12,9 @@ export const norm = (s: string) => s.toLowerCase().replace(/["'׳״`,.()\-]/g, '
 // Food Frequency Questionnaire groups: averages over several foods ("grapes or raisins"), not real foods.
 export const isFFQ = (f: { name: string }) => f.name.startsWith('FFQ');
 // Forms people rarely mean unless they type the word: "ענבים" should find grapes before grape juice or grape-seed oil,
+// "מרק תירס" a soup before a packet one ("נמס בכוס, מוכן מאבקה"),
 // and "ביצה" a hen's egg before a turkey's.
-const PROCESSED = ['מיץ', 'שמן', 'סירופ', 'בסירופ', 'משומר', 'משומרים', 'משקה', 'אבקה', 'אבקת', 'ממרח', 'חטיף', 'עוגיות', 'מחית', 'רוטב', 'תרכיז',
+const PROCESSED = ['מיץ', 'שמן', 'סירופ', 'בסירופ', 'משומר', 'משומרים', 'משקה', 'אבקה', 'אבקת', 'מאבקה', 'מאבקת', 'נמס', 'ממרח', 'חטיף', 'עוגיות', 'מחית', 'רוטב', 'תרכיז',
   'מיובש', 'מיובשת', 'מיובשים', 'מוס', 'במילוי', 'ברוטב', 'מיונז', 'סוכר', 'מסוכר', 'ממותק', 'אפוי', 'מטוגן', 'מטוגנת', 'מטוגנים', 'צ יפס', 'בבלילה', 'חביתה', 'מתערובת', 'בגריל', 'צלוי', 'צלויה', 'פצפוצי'];
 const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות', 'גמלים', 'כבשים', 'עזים', 'אווז', 'ברווז', 'שליו',
   // organs, odd cuts and fast food: "עוף" means the meat, not its liver, feet or a McDonald's item

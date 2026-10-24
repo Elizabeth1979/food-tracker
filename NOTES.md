@@ -2,6 +2,13 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: a photo's "מרק תירס" is a soup, not a packet
+
+**Done:**
+- The owner photographed a restaurant corn soup with the note "מרק תירס"; it came back as Knorr's instant packet soup. The AI did use the note; the database match was wrong: "מוכן מאבקה" / "נמס בכוס" weren't counted as processed ("אבקה" was, "מאבקה" wasn't), so packet soups beat cooked ones for corn, chicken, pea and bean soup. `PROCESSED` now has "מאבקה", "מאבקת", "נמס"; typing them still finds the packets. Test in `search.test.ts`.
+
+**Next:** "מרק תירס" now opens with the egg-drop one (39 kcal/100 g); a creamy restaurant soup is closer to "עם תפוח אדמה וחמאה, חלבי" (61). The review list lets her pick it.
+
 ## 2026-10-24: nothing peeks out under "סיום"; which results are yours
 
 **Done:**
