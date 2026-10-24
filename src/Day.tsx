@@ -5,6 +5,7 @@ import { MEALS, WATER, pickItem, addDays, addEntries, amountLabel, client, delet
 import { DayGoals, GoalsInfo, Group, MicroGoals, Modal, Ring, WaterLine, confirmIt, promptIt } from './ui';
 import { AddDialog, EntryDialog } from './AddDialog';
 import { Icon } from './icons';
+import { ArticleLink } from './Guide';
 
 export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: Ctx; date: string; setDate: (d: string) => void; onExport: () => void; onTailor: () => void }) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
@@ -126,9 +127,10 @@ export default function Day({ ctx, date, setDate, onExport, onTailor }: { ctx: C
           <summary><Icon name="chevron-down" />ויטמינים ומינרלים שצרכת היום</summary>
           <p className="muted small">כל מה שרשמת היום, אוכל ותוספים, מול הערך היומי שעל תוויות המזון. ערכי המזון ממאגר משרד הבריאות; ביוטין ויוד רק מתוספים ומתוויות שצילמת.</p>
           <MicroGoals n={tot} />
+          <ArticleLink slug="6-vitamins">מה זה ערך יומי?</ArticleLink>
         </details>
         {!ctx.profile?.body && <p className="muted small">יעדים כלליים, לא מותאמים לגוף שלך. <button className="link" onClick={onTailor}>התאמה אישית</button></p>}
-        <GoalsInfo goals={goals} />
+        <GoalsInfo goals={goals} more={<><ArticleLink slug="3-protein">עוד על חלבון</ArticleLink><ArticleLink slug="7-carbs">עוד על פחמימות וקטו</ArticleLink></>} />
       </section>
 
       {msg && <div className="banner" onClick={() => setMsg('')}>{msg}</div>}

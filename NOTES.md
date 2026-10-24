@@ -22,6 +22,13 @@ What was done in each work session and what's next. Newest first.
 
 **Next:** side effect: on pages with a text field (Settings, Reports) the bottom tab bar now rides above the keyboard too. iPhone Safari ignores the setting (not needed for the owner's Android).
 
+## 2026-10-24: the guide in the bar, and linked from where questions come up
+
+**Done:**
+- The owner couldn't find the guide under Settings. "מדריך" is now a tab in the bottom bar (bulb icon); the Settings card is gone. `ArticleLink` in `Guide.tsx` opens one article over the current screen: "מה זה ערך יומי?" under the day's vitamins, "עוד על חלבון" / "עוד על פחמימות וקטו" in "איך נקבעו היעדים?", "למה תמונה מפספסת שמן?" under a photo's guessed oil.
+- Bug found by the new test: back on a window opened inside another (the article over the review list) closed both, losing the list. `Modal` now handles only its own close request (React passed the inner one up).
+- Screen test: the tab, the three kinds of links, back closing only the article.
+
 ## 2026-10-24: two more guide articles: daily values, carbs
 
 **Done:**
