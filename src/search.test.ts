@@ -105,6 +105,15 @@ test('unitFor: a photo\'s weight guess overrules a unit far off it', () => {
   assert.deepEqual(unitFor(potato, { qty: 6, unit: 'יחידה', grams: 300 }), { qty: 300, unit: { n: GRAMS, g: 1 } }); // small ones: no unit fits
   assert.equal(unitFor(schnitzel, { qty: 2, unit: 'יחידה', grams: 160 }).unit.n, 'יחידה קטנה'); // another size that fits
   assert.equal(unitFor(schnitzel, { qty: 2, unit: 'יחידה', grams: 300 }).unit.n, 'יחידה בינונית'); // close enough: kept
+  // the owner's leftover rice came back "3 כף" but 120 g: photos overestimate, so the smaller amount stays
+  assert.deepEqual(unitFor(byId('moh-2721'), { qty: 3, unit: 'כף', grams: 120 }), { qty: 3, unit: { n: 'כף', g: 11 } });
+  assert.equal(unitFor(lettuce, { qty: 3, unit: 'עלה', grams: 40 }).unit.n, 'עלה'); // leaves are a unit of their own
+});
+
+test('a typed word the name negates loses: cooked rice is not "לא מבושל"', () => {
+  for (const q of ['אורז לבן מבושל', 'אורז מבושל']) assert.match(matchFoods(moh, q, [])[0].name, /^אורז לבן, מבושל/);
+  assert.match(matchFoods(moh, 'אורז לא מבושל', [])[0].name, /לא מבושל/);
+  assert.deepEqual(parseLine('3 עלים חסה').map((p) => [p.qty, p.unit]), [[3, 'עלה']]);
 });
 
 test('a leading "ו" is dropped when nothing matches, and "X וY" splits in two', () => {

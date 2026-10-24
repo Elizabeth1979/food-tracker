@@ -11,7 +11,7 @@ import { z } from 'npm:zod@4.6.5';
 const MODEL = Deno.env.get('MEAL_PHOTO_MODEL') ?? 'claude-haiku-5-5';
 const MAX_PHOTOS = 4; // the app's limit too (MAX_PHOTOS in src/lib.ts)
 // The unit words the app's parser and food database understand.
-const UNITS = ['גרם', 'כף', 'כפית', 'כוס', 'ספל', 'יחידה', 'פרוסה', 'גביע', 'מנה', 'חופן'] as const;
+const UNITS = ['גרם', 'כף', 'כפית', 'כוס', 'ספל', 'יחידה', 'פרוסה', 'גביע', 'מנה', 'חופן', 'עלה'] as const;
 
 const Meal = z.object({
   items: z.array(z.object({
@@ -27,7 +27,7 @@ const SYSTEM = `You look at a photo of a meal and list the foods in it for a Heb
 - There may be several photos of the same meal (other angles, another dish, the drink): list each food once across all of them, never twice because two photos show it.
 - One item per food, Hebrew names as they appear in the Israeli Ministry of Health food database (צמרת): generic and short ("ענבים", "גבינה לבנה 5%", "לחם מלא"), no brands unless the packaging shows one. Mashed potato is "פירה".
 - Each food once: a potato that is cut, peeled or partly squashed is still one item, not "boiled" plus "mashed".
-- Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): for leaves, slices or chunks of something use grams.
+- Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): count lettuce or cabbage leaves in עלה, and use grams for slices or chunks of something.
 - Count only what you can see; never assume more is hidden. Judge size against the plate (a dinner plate is about 26 cm): small potatoes weigh about 50 g, not 180. When unsure, guess the smaller amount.
 - Also give each item's total weight in grams (\`grams\`); the app checks the unit against it.
 - Fat is what photos miss most. When food looks sautéed, roasted or fried in a pan, a salad looks dressed, bread looks buttered, or there is sauce, add the fat as its own item with \`hidden\` true, in spoons, under a plain name ("שמן זית", "שמן קנולה", "חמאה", "טחינה", "מיונז"). A food you name as fried ("שניצל מטוגן", "צ׳יפס") already counts its frying oil: don't add oil for it. Every other item has \`hidden\` false.
