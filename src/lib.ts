@@ -85,6 +85,10 @@ export const sum = (xs: Nut[]): Nut =>
     ...Object.fromEntries(MICROS.map((m) => [m.key, round((a[m.key] ?? 0) + (x[m.key] ?? 0), m.dp)])),
     extra: addExtra(a.extra, x.extra),
   }), { kcal: 0, carbs: 0, fat: 0, protein: 0, ...Object.fromEntries(MICROS.map((m) => [m.key, 0])) });
+// A dish the database lacks, logged from its ingredients: one line under the dish's name, its values their sum.
+// No food behind it, so editing the amount scales the whole dish (in grams).
+export const dishItem = (name: string, parts: Item[]): Item =>
+  ({ ...sum(parts), foodId: null, name, grams: r1(parts.reduce((g, p) => g + p.grams, 0)), qty: null, unit: null });
 // the fields an Entry / saved-meal item carries (strips ids, dates, owner…)
 export const pickItem = (e: Item): Item => {
   const { foodId, name, grams, qty, unit, kcal, carbs, fat, protein } = e;
