@@ -550,6 +550,17 @@ test('a supplement from its label: every vitamin per tablet, logged, and summed 
     /ברזל ✓ הושג [\d.]+ \/ 18 מ״ג/, /אשלגן ✓ הושג [\d.]+ \/ 2600 מ״ג/, /מגנזיום [\d.]+ \/ 420 מ״ג/, /אבץ ✓ הושג [\d.]+ \/ 11 מ״ג/]) assert.match(rows, row);
   assert.match(rows, /ויטמין D[\s\S]*ויטמין C[\s\S]*ברזל[\s\S]*מגנזיום[\s\S]*אבץ/);
   for (const [name, tablets] of Object.entries(before)) assert.equal(Math.round(((await vitamin(name)) - tablets) * 100) / 100, { 'ויטמין D': 50, 'ויטמין C': 160, 'ברזל': 28, 'מגנזיום': 100, 'אבץ': 20 }[name], name);
+  // a row opens which foods gave it, what it does and how its goal was set; back closes it
+  await button(/^ויטמין D/, vitamins()).tap();
+  const d = page.getByRole('dialog', { name: 'ויטמין D' });
+  await d.getByRole('row', { name: /מולטי ויטמין 50/ }).waitFor();
+  for (const h of ['ממה הגיע היום', 'למה זה חשוב', 'איך נקבע היעד']) await d.getByRole('heading', { name: h }).waitFor();
+  await page.keyboard.press('Escape');
+  await d.waitFor({ state: 'detached' });
+  // sodium says it in salt, too
+  await button(/^נתרן/, vitamins()).tap();
+  await page.getByRole('dialog', { name: 'נתרן' }).getByText(/מ״ג נתרן הם כ־[\d.]+ ג׳ מלח/).waitFor();
+  await page.keyboard.press('Escape');
   // and a food's own, per tablet, when it is opened in the foods page
   await openFoods();
   const mine = page.getByRole('region', { name: /^המזונות שלי/ });

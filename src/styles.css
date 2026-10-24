@@ -96,13 +96,16 @@ main button.banner { width: 100%; }
 .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .donut-center b { font-size: 24px; font-weight: 600; line-height: 1; } .donut-center small { color: var(--muted); font-size: 13px; margin-top: 2px; }
 .kcal-line { display: flex; gap: 6px; align-items: baseline; margin-bottom: 14px; } .kcal-line b { font-size: 22px; font-weight: 600; }
-.bar { height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; grid-column: 1 / -1; }
+.bar { display: block; height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; grid-column: 1 / -1; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
 .bar i.over { background: var(--danger); }
 .bar i.done { background: var(--ok); } .bar i.high { background: var(--warn); }
 .ok { color: var(--ok); } .high { color: var(--warn); }
 .legend { display: grid; gap: 14px; }
 .legend-row { font-size: 14px; }
+/* a row that opens more (the vitamins): the whole row is the target, grown to 44px into the gap without moving it */
+button.legend-row { display: block; width: 100%; text-align: start; padding-block: 7px; margin-block: -7px; border-radius: var(--r-sm); }
+button.legend-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .legend-line { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; white-space: nowrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .micro { font-size: 14px; margin-top: 14px; display: flex; flex-wrap: wrap; gap: 2px 12px; }

@@ -1,7 +1,7 @@
 // Goals from body measurements. Run: npm test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_GOALS, goalsLeft, goalsOf, suggestGoals, whatFits, type Body } from './goals.ts';
+import { DAILY_VALUES, DEFAULT_GOALS, MICRO_INFO, goalsLeft, goalsOf, suggestGoals, whatFits, type Body } from './goals.ts';
 
 const her: Body = { sex: 'f', age: 45, heightCm: 165, weightKg: 75, activity: 1.375, aim: -0.2, carbsMax: 130 };
 
@@ -49,4 +49,8 @@ test('what fits: only what fits the calories and carbs left; protein first while
   assert.deepEqual(names(whatFits(usual, { ...left, kcal: 50 })), []);
   assert.deepEqual(names(whatFits(usual, { ...left, kcal: 50 }, (r) => r.name === 'עוגה')), ['עוגה']);
   assert.equal(whatFits([...usual, ...usual], left).length, 5);
+});
+
+test('every vitamin and mineral with a daily value says what it does', () => {
+  for (const key of Object.keys(DAILY_VALUES)) assert.ok(MICRO_INFO[key]?.why, key);
 });
