@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Ctx } from './App';
 import { MEALS, VITAMINS, addEntries, client, fmtDate, json, kcalOff, labelPhotoUrl, mealItems, mealNow, readLabel, sameFood, saveLabelPhoto, searchFoods, sum, today, type Entry, type Extra, type Food, type Item, type Label, type SavedMeal, type Unit } from './lib';
-import { Group, FoodSummary, MicroLine, Modal, PhotoPick, confirmIt, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
+import { Group, FoodSummary, MINE_HINT, MicroLine, Modal, PhotoPick, confirmIt, UNIT_HINT, UnitInputs, draftOf, unitOf, type UnitDraft } from './ui';
 import { MealEditor } from './MealEditor';
 import { AddDialog } from './AddDialog';
 import { Icon } from './icons';
@@ -179,7 +179,7 @@ export default function Foods({ ctx, date }: { ctx: Ctx; date: string }) {
       {msg && <button className="banner" onClick={() => setMsg('')}>{msg}</button>}
       {q ? (
         <Group title={`תוצאות (${hits.length})`} action={<button className="btn small primary" onClick={() => setEdit({ name: q })}><Icon name="plus" />מזון חדש</button>}>
-          <p className="muted small">הקשה על שם מציגה את הערכים; ＋ מוסיף ליומן. ״שלי״: מזון שהוספת או ערכת.</p>
+          <p className="muted small">הקשה על שם מציגה את הערכים; ＋ מוסיף ליומן. {MINE_HINT}</p>
           <Fold key={q} items={hits} row={foodRow} />
         </Group>
       ) : <>
