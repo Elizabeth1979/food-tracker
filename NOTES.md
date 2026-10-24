@@ -2,6 +2,18 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: "זיהוי חכם": the AI picks from the database, asks, and breaks down dishes
+
+**Done:**
+- The owner: a sushi-bar corn soup came back as a packet soup, and that's not a one-off; any restaurant dish should work. Three parts, agreed with her (the extra AI call costs a few cents a photo, she OK'd it):
+  1. The AI picks each food's database entry: after a photo is read, the app sends each item's 10 closest search matches (with kcal/100 g) back to `meal-photo` (`mode: 'pick'`, text only), which picks the one that is this food made this way (restaurant, creamy, not instant). Logic in `search.ts` (`candidatesFor`, `pickedParsed`), calls in `lib.ts` (`readMeal`, `matchMeal`).
+  2. A dish the database lacks comes back as ingredients (corn, cream, sugar…), each matched the same way in one more pick round (plain search matched "ציר עוף" to the concentrate). The review list says so above them.
+  3. Up to 3 one-tap questions first, only where the answer changes calories by a quarter or more (`Questions` in `AddDialog.tsx`).
+- "זיהוי חכם" works with words too: first row of search results, and next to "המשך לבדיקה". The function now takes a meal with no image.
+- If a pick fails, the search's own matches stand. Tests: `search.test.ts` (picks), screen test (search → question → ingredients). Test mode answers a soup with a question and ingredients.
+
+**Next:** the prompts weren't run against the real model before going live (no API key in the cloud session); watch the first few photos. The diary shows a broken-down dish as separate foods (תירס, שמנת…), not under the dish's name.
+
 ## 2026-10-24: a photo's cooked rice was raw rice, and 3 spoons became 120 g
 
 **Done:**

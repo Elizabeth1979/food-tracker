@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import type { Ctx } from './App';
 import { GRAMS, itemFor, matchFoods, parseLine, searchFoods, splitAnd, sum, unitFor, unitsOf, type Food, type Item, type Parsed, type Unit } from './lib';
 import { Modal, Why } from './ui';
@@ -10,8 +10,10 @@ import { ArticleLink } from './Guide';
 // `q` set: the row is searching the whole database for a different food (the match or the photo got it wrong).
 type Row = { id: number; p: Parsed; options: Food[]; food: Food | null; qty: string; unit: Unit; q?: string };
 
+// The AI's pick (p.foodId) leads the options, the search's matches follow.
 const rowFor = (ctx: Ctx, p: Parsed, id: number, food?: Food): Row => {
-  const options = food ? [food] : matchFoods(ctx.foods, p.query, ctx.recent).slice(0, 8);
+  const chosen = ctx.foods.find((f) => f.id === p.foodId);
+  const options = food ? [food] : [...(chosen ? [chosen] : []), ...matchFoods(ctx.foods, p.query, ctx.recent).filter((f) => f !== chosen)].slice(0, 8);
   const f = options[0] ?? null;
   const a = f ? unitFor(f, p) : { qty: p.qty ?? 1, unit: { n: GRAMS, g: 1 } };
   return { id, p, options, food: f, qty: String(a.qty), unit: a.unit };
@@ -52,51 +54,56 @@ export function ReviewList({ ctx, parsed, cta, onAdd }: { ctx: Ctx; parsed: Pars
   return (
     <div className="review">
       {!rows.length && <p className="muted">לא זוהו מזונות. נסו לכתוב למשל ״2 ביצים, פרוסת לחם״.</p>}
-      {rows.map((r) => {
+      {rows.map((r, n) => {
         const units = r.food ? unitsOf(r.food) : [];
         if (r.food && !units.some((u) => u.n === r.unit.n)) units.push(r.unit); // a typical size the food doesn't list ("פרוסה" of apple)
         const it = r.food && itemFor(r.food, Number(r.qty) || 0, r.unit);
+        // The first ingredient of a dish the database lacks says so
+        const dish = r.p.dish && r.p.dish !== rows[n - 1]?.p.dish && <p className="muted small">״{r.p.dish}״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד.</p>;
         return (
-          <div key={r.id} className="review-row">
-            <div className="amount-row">
-              <small className="muted grow">״{r.p.text}״</small>
-              <button className="icon del" aria-label={`הסר: ${r.p.text}`} onClick={() => setRows(rows.filter((x) => x.id !== r.id))}><Icon name="x" /></button>
-            </div>
-            {r.p.hidden && <>
-              <p className="muted small">ניחוש: שמן או רוטב שלא רואים בתמונה. היה? תקנו את הכמות. לא היה? הסירו.</p>
-              <ArticleLink slug="4-photos">למה תמונה מפספסת שמן?</ArticleLink>
-            </>}
-            {r.q !== undefined ? (
-              <div className="form">
-                <div className="amount-row">
-                  <input type="search" autoFocus aria-label="חיפוש מזון אחר" placeholder="חיפוש מזון…" value={r.q} onChange={(e) => set(r.id, { q: e.target.value })} />
-                  <button className="btn" onClick={() => set(r.id, { q: undefined })}>ביטול</button>
+          <Fragment key={r.id}>
+            {dish}
+            <div className="review-row">
+              <div className="amount-row">
+                <small className="muted grow">״{r.p.text}״</small>
+                <button className="icon del" aria-label={`הסר: ${r.p.text}`} onClick={() => setRows(rows.filter((x) => x.id !== r.id))}><Icon name="x" /></button>
+              </div>
+              {r.p.hidden && <>
+                <p className="muted small">ניחוש: שמן או רוטב שלא רואים בתמונה. היה? תקנו את הכמות. לא היה? הסירו.</p>
+                <ArticleLink slug="4-photos">למה תמונה מפספסת שמן?</ArticleLink>
+              </>}
+              {r.q !== undefined ? (
+                <div className="form">
+                  <div className="amount-row">
+                    <input type="search" autoFocus aria-label="חיפוש מזון אחר" placeholder="חיפוש מזון…" value={r.q} onChange={(e) => set(r.id, { q: e.target.value })} />
+                    <button className="btn" onClick={() => set(r.id, { q: undefined })}>ביטול</button>
+                  </div>
+                  <FoodHits ctx={ctx} q={r.q} onPick={(f) => pick(r, f)} />
                 </div>
-                <FoodHits ctx={ctx} q={r.q} onPick={(f) => pick(r, f)} />
-              </div>
-            ) : r.options.length ? (
-              <select value={r.food?.id} aria-label="מזון" onChange={(e) => choose(r, e.target.value)}>
-                {r.options.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                <option value="?">חיפוש מזון אחר…</option>
-                <option value="+">＋ מזון חדש: {r.p.query}</option>
-              </select>
-            ) : (
-              <div className="amount-row">
-                <span className="grow warn-text">לא נמצא ״{r.p.query}״</span>
-                <button className="btn small" onClick={() => set(r.id, { q: '' })}>חיפוש</button>
-                <button className="btn small" onClick={() => setCreating(r)}><Icon name="plus" />צור מזון</button>
-              </div>
-            )}
-            {r.food && r.q === undefined && (
-              <div className="amount-row">
-                <input type="number" inputMode="decimal" min="0" step="any" aria-label="כמות" value={r.qty} onChange={(e) => set(r.id, { qty: e.target.value })} />
-                <select value={r.unit.n} aria-label="יחידה" onChange={(e) => { const u = units.find((x) => x.n === e.target.value)!; set(r.id, { unit: u, qty: u.g === 1 ? String(r.food!.servingG) : '1' }); }}>
-                  {units.map((u) => <option key={u.n} value={u.n}>{u.g === 1 ? u.n : `${u.n} (${u.g} ג׳)`}</option>)}
+              ) : r.options.length ? (
+                <select value={r.food?.id} aria-label="מזון" onChange={(e) => choose(r, e.target.value)}>
+                  {r.options.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  <option value="?">חיפוש מזון אחר…</option>
+                  <option value="+">＋ מזון חדש: {r.p.query}</option>
                 </select>
-                <b className="nowrap">{it!.kcal} קק״ל</b>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="amount-row">
+                  <span className="grow warn-text">לא נמצא ״{r.p.query}״</span>
+                  <button className="btn small" onClick={() => set(r.id, { q: '' })}>חיפוש</button>
+                  <button className="btn small" onClick={() => setCreating(r)}><Icon name="plus" />צור מזון</button>
+                </div>
+              )}
+              {r.food && r.q === undefined && (
+                <div className="amount-row">
+                  <input type="number" inputMode="decimal" min="0" step="any" aria-label="כמות" value={r.qty} onChange={(e) => set(r.id, { qty: e.target.value })} />
+                  <select value={r.unit.n} aria-label="יחידה" onChange={(e) => { const u = units.find((x) => x.n === e.target.value)!; set(r.id, { unit: u, qty: u.g === 1 ? String(r.food!.servingG) : '1' }); }}>
+                    {units.map((u) => <option key={u.n} value={u.n}>{u.g === 1 ? u.n : `${u.n} (${u.g} ג׳)`}</option>)}
+                  </select>
+                  <b className="nowrap">{it!.kcal} קק״ל</b>
+                </div>
+              )}
+            </div>
+          </Fragment>
         );
       })}
       <form className="amount-row" onSubmit={(e) => { e.preventDefault(); if (more.trim()) addMore(); }}>

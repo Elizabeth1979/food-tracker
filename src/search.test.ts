@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { Food } from './db';
-import { GRAMS, isFFQ, kcalOff, matchFoods, parseLine, sameFood, searchFoods, splitAnd, unitFor } from './search.ts';
+import { GRAMS, candidatesFor, isFFQ, kcalOff, matchFoods, parseLine, pickedParsed, sameFood, searchFoods, splitAnd, unitFor } from './search.ts';
 
 const moh: Food[] = JSON.parse(readFileSync(new URL('../public/foods/moh.json', import.meta.url), 'utf8'));
 const first = (q: string, foods = moh, recent: string[] = []) => searchFoods(foods, q, recent)[0]?.name ?? '';
@@ -158,4 +158,28 @@ test('a food you already have: same name, or your own with the same numbers; 20%
   assert.equal(sameFood(foods, { name: 'יוגורט מולר 25 חלבון', servingG: 100, kcal: 1, protein: 0, fat: 0, carbs: 0 })?.id, 'y25'); // the name alone
   assert.equal(sameFood(foods, { ...y25 }), undefined); // editing it isn't a duplicate of itself
   assert.equal(sameFood([own('v', 'ויטמין D', { source: 'user' })], { name: 'מגנזיום', servingG: 100, kcal: 0, protein: 0, fat: 0, carbs: 0 }), undefined); // two supplements, both zero
+});
+
+test('the AI\'s picks: an offered food with its amount, a dish it lacks as ingredients, anything else the search\'s', () => {
+  const seen = [
+    { name: 'מרק תירס', qty: 1, unit: 'כוס', grams: 300, about: 'סמיך ושמנתי, ממסעדת סושי' },
+    { name: 'מרק תירס', qty: 1, unit: 'כוס', grams: 240 },
+    { name: 'ענבים', qty: 10, unit: 'יחידה', grams: 60 },
+    { name: 'לחם', qty: 1, unit: 'פרוסה', grams: 30 },
+  ];
+  const cands = candidatesFor(moh, seen, []);
+  assert.ok(cands[0].length > 1 && cands[0].length <= 10);
+  const chosen = cands[0].at(-1)!; // not the search's first
+  const out = pickedParsed(seen, [
+    { id: null, qty: 1, unit: 'כוס', grams: 300, parts: [{ name: 'תירס', qty: 120, unit: 'גרם', grams: 120 }, { name: 'שמנת מתוקה', qty: 3, unit: 'כף', grams: 45 }] },
+    { id: chosen.id, qty: 2, unit: 'כוס', grams: 480 },
+    { id: 'not-offered', qty: 10, unit: 'יחידה', grams: 60 },
+  ], cands);
+  assert.deepEqual(out.map((p) => [p.query, p.dish, p.foodId, p.qty]), [
+    ['תירס', 'מרק תירס', undefined, 120],
+    ['שמנת מתוקה', 'מרק תירס', undefined, 3],
+    ['מרק תירס', undefined, chosen.id, 2], // the size the answer gave
+    ['ענבים', undefined, undefined, 10], // an id that wasn't offered is ignored
+    ['לחם', undefined, undefined, 1], // no pick: the search's match
+  ]);
 });

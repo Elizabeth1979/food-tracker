@@ -50,6 +50,8 @@ export const hasPending = () => false;
 
 // A signed-in "test user", and a photo reader that answers with a fixed sample instead of calling Claude:
 // a meal, or for `mode: 'label'` a multivitamin's label (per tablet, with vitamins beyond the four columns in `extra`).
+// A note or description that mentions soup gets a corn soup with a question; picking it (`mode: 'pick'`) finds no
+// database food for it, so it comes back as ingredients. Every other item gets the search's first candidate.
 const session = { user: { id: 'test-user', email: 'מצב בדיקה' } };
 // Meal photos live in localStorage too (path → data URL), so they outlast a restore's reload. `list` gives one
 // level down, files or folders, like Storage.
@@ -77,23 +79,30 @@ export const supabase = {
     signOut: async () => { if (confirm('למחוק את כל נתוני הבדיקה?')) { localStorage.removeItem(KEY); localStorage.removeItem(PHOTOS); location.reload(); } },
   },
   functions: {
-    invoke: async <D,>(_name: string, opts: { body?: { mode?: string } }): Promise<{ data: D; error: null }> => {
+    invoke: async <D,>(_name: string, opts: { body?: Demo }): Promise<{ data: D; error: null }> => {
       await new Promise((r) => setTimeout(r, 800));
-      if (opts.body?.mode === 'label')
-        return {
-          data: {
-            label: {
-              name: 'מולטי ויטמין', kcal: 0, carbs: 0, fat: 0, protein: 0, sodium: null, calcium: 200, potassium: null, b12: 6,
-              extra: { 'ויטמין D (מק״ג)': 25, 'ויטמין C (מ״ג)': 80, 'ברזל (מ״ג)': 14, 'אבץ (מ״ג)': 10 },
-              unit: { n: 'טבליה', g: 1 }, perServing: true, basisG: 1,
-            },
-          } as D,
-          error: null,
-        };
-      return {
-        data: { items: [{ name: 'יוגורט', qty: 1, unit: 'גביע', grams: 150 }, { name: 'ענבים', qty: 10, unit: 'יחידה', grams: 60 }, { name: 'חמאת בוטנים', qty: 1, unit: 'כפית', grams: 10 }, { name: 'גרנולה', qty: 2, unit: 'כף', grams: 20 }, { name: 'שמן זית', qty: 1, unit: 'כף', grams: 10, hidden: true }] } as D,
-        error: null,
-      };
+      return { data: demoAnswer(opts.body ?? {}) as D, error: null };
     },
   },
 };
+
+type Demo = { mode?: string; note?: string; items?: { name: string; qty: number; unit: string; grams?: number; candidates: { id: string }[] }[] };
+function demoAnswer({ mode, note = '', items = [] }: Demo) {
+  if (mode === 'label')
+    return {
+      label: {
+        name: 'מולטי ויטמין', kcal: 0, carbs: 0, fat: 0, protein: 0, sodium: null, calcium: 200, potassium: null, b12: 6,
+        extra: { 'ויטמין D (מק״ג)': 25, 'ויטמין C (מ״ג)': 80, 'ברזל (מ״ג)': 14, 'אבץ (מ״ג)': 10 },
+        unit: { n: 'טבליה', g: 1 }, perServing: true, basisG: 1,
+      },
+    };
+  if (mode === 'pick')
+    return {
+      items: items.map((i) => (i.name === SOUP.name
+        ? { id: null, qty: i.qty, unit: i.unit, grams: i.grams, parts: [{ name: 'תירס גרעינים', qty: 120, unit: 'גרם', grams: 120 }, { name: 'שמנת מתוקה', qty: 3, unit: 'כף', grams: 45 }, { name: 'סוכר', qty: 1, unit: 'כפית', grams: 5 }] }
+        : { id: i.candidates[0]?.id ?? null, qty: i.qty, unit: i.unit, grams: i.grams, parts: [] })),
+    };
+  if (note.includes('מרק')) return { items: [SOUP], questions: [{ item: 0, text: 'איך היה המרק?', options: ['סמיך ושמנתי', 'צלול'] }] };
+  return { items: [{ name: 'יוגורט', qty: 1, unit: 'גביע', grams: 150 }, { name: 'ענבים', qty: 10, unit: 'יחידה', grams: 60 }, { name: 'חמאת בוטנים', qty: 1, unit: 'כפית', grams: 10 }, { name: 'גרנולה', qty: 2, unit: 'כף', grams: 20 }, { name: 'שמן זית', qty: 1, unit: 'כף', grams: 10, hidden: true }], questions: [] };
+}
+const SOUP = { name: 'מרק תירס', qty: 1, unit: 'כוס', grams: 300, about: 'מתוק, בסגנון מסעדת סושי' };

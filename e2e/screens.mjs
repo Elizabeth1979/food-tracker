@@ -159,6 +159,27 @@ test('add what the photo missed, then add all to the chosen meal', async () => {
   await dialog().waitFor({ state: 'detached' });
 });
 
+test('a restaurant dish the search doesn\'t know: a question, then its ingredients', async () => {
+  await openAdd();
+  await dialog().getByRole('searchbox', { name: 'חיפוש' }).fill('מרק תירס');
+  await button('זיהוי חכם: ״מרק תירס״', dialog()).tap();
+  // where the answer changes the calories a lot, the AI asks first: one tap, pressed until tapped again
+  const how = dialog().getByRole('group', { name: 'איך היה המרק?' });
+  await how.waitFor();
+  await button('סמיך ושמנתי', how).tap();
+  assert.equal(await button('סמיך ושמנתי', how).getAttribute('aria-pressed'), 'true');
+  assert.equal(await button('צלול', how).getAttribute('aria-pressed'), 'false');
+  await button('המשך', dialog()).tap();
+  // no database food is that soup, so it comes back as its ingredients, each matched and editable
+  await dialog().getByText('״מרק תירס״ לא נמצא במאגר, אז פירקנו אותו למרכיבים. אפשר לתקן כל אחד.').waitFor();
+  const foods = dialog().getByRole('combobox', { name: 'מזון' });
+  assert.equal(await foods.count(), 3);
+  assert.match(await foods.first().evaluate((s) => s.selectedOptions[0].text), /^תירס/);
+  await page.keyboard.press('Escape'); // back to the list, nothing added
+  await button('סיום', dialog()).tap();
+  await dialog().waitFor({ state: 'detached' });
+});
+
 test('the meal photo is kept with the meal; a backup carries it; delete, then restore it', async () => {
   const photo = button('תמונה 1: ארוחת ערב', meal('ארוחת ערב'));
   await photo.tap();

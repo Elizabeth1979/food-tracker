@@ -1,5 +1,7 @@
-// Names the foods in a meal photo, with rough amounts, for the app's review list.
-// The app matches each name to its food database itself, so calories never come from the model.
+// Names the foods in a meal photo (or a meal described in words, with no photo), with rough amounts, for the app's
+// review list, and asks the user up to 3 questions where the answer changes the calories a lot.
+// Then, with `mode: 'pick'`, it picks each item's database food from the closest ones the app found, or breaks a dish
+// the database lacks into ingredients. Calories always come from the app's database, never from the model.
 // With `mode: 'label'` it instead reads a printed nutrition table (טבלת ערכים תזונתיים) into per-100 g values
 // for the new-food form, which the user checks before saving; a supplement's table comes back per tablet, with
 // its vitamins and minerals in `extra` under the names the app sends (`names`).
@@ -20,6 +22,20 @@ const Meal = z.object({
     unit: z.enum(UNITS),
     grams: z.number().describe('Your estimate of the total weight in grams of this item as served, e.g. 4 lettuce leaves ≈ 40'),
     hidden: z.boolean().describe('true for a fat or sauce you infer from how the food looks cooked or dressed but cannot clearly see'),
+    about: z.string().describe('A few Hebrew words on what kind it is and how it was made, from the photo, the note and what such a dish usually is: "סמיך ושמנתי, מתוק, בסגנון מסעדת סושי", "ביתי", "מטוגן בשמן עמוק"'),
+  })),
+  questions: z.array(z.object({
+    item: z.number().describe('Index of the item in `items` the question is about'),
+    text: z.string().describe('Short Hebrew question, e.g. "המרק היה סמיך ושמנתי או צלול?"'),
+    options: z.array(z.string()).describe('2 to 4 short Hebrew answers to tap'),
+  })).describe('At most 3; none when the photo and note make it clear'),
+});
+const Item = z.object({ name: z.string(), qty: z.number(), unit: z.enum(UNITS), grams: z.number() });
+const Picks = z.object({
+  items: z.array(z.object({
+    id: z.string().nullable().describe('The chosen candidate\'s id, or null when no candidate is this food'),
+    qty: z.number(), unit: z.enum(UNITS), grams: z.number(),
+    parts: z.array(Item).describe('Only when id is null: the dish\'s ingredients; otherwise empty'),
   })),
 });
 
@@ -32,7 +48,16 @@ const SYSTEM = `You look at a photo of a meal and list the foods in it for a Heb
 - Also give each item's total weight in grams (\`grams\`); the app checks the unit against it.
 - Fat is what photos miss most. When food looks sautéed, roasted or fried in a pan, a salad looks dressed, bread looks buttered, or there is sauce, add the fat as its own item with \`hidden\` true, in spoons, under a plain name ("שמן זית", "שמן קנולה", "חמאה", "טחינה", "מיונז"). A food you name as fried ("שניצל מטוגן", "צ׳יפס") already counts its frying oil: don't add oil for it. Every other item has \`hidden\` false.
 - The user's note is more reliable than the photo: when it names a food or an amount, use it, and add foods it mentions that the photo hides.
+- With no photo, the note alone describes the meal: list its foods the same way.
+- Ask a question only where neither the photo nor the note tells and the answer changes the item's calories by a quarter or more: creamy or clear soup, fried or grilled, with or without sauce, sugar or not, the size when nothing in the photo shows scale. Not for small differences. Write \`about\` from what you know already; answers come later.
 - If the photo shows no food, return an empty list.`;
+
+const PICK_SYSTEM = `You match each food of a meal to an entry of a Hebrew food database (the Israeli Ministry of Health's, and the user's own foods), for a food diary.
+For each item you get what was seen (name, \`about\`, amount), the user's answers to questions about it, and candidate database entries with their kcal per 100 g. The user's note covers the whole meal.
+- Choose the candidate that is this food, made this way: home-cooked or from an instant powder, restaurant style, creamy or clear, fried or grilled, sweetened or not. Its kcal per 100 g should be plausible for what was described. An entry that is a different kind of the same food is not a match.
+- When no candidate is this food (a restaurant or foreign dish the database lacks, or only another kind is listed), set id to null and break the dish into its main ingredients in \`parts\`: plain, generic Hebrew names as such a database lists them ("תירס", "שמנת מתוקה 32%", "סוכר", "חמאה", "ציר עוף", "אטריות"), each with an amount, together weighing what the whole dish does. Include the fat, sugar and cream a restaurant would typically use.
+- Keep the amount, or correct it where an answer tells you better (a size, "two cups"). Same units as the item.
+- Return exactly one entry per item, in the same order.`;
 
 // The label is transcribed as printed; turning per-serving values into per-100 g is done below, not by the model.
 const num = (d: string) => z.number().describe(d);
@@ -96,6 +121,29 @@ async function readLabel(image: string, names: string[]) {
   });
 }
 
+// Picks each item's database food from the candidates the app sent (see PICK_SYSTEM). Text only, so it's quick and cheap.
+async function pick(note: string, items: unknown) {
+  if (!Array.isArray(items) || !items.length || items.length > 20) return reply({ error: 'בקשה לא תקינה' }, 400);
+  const str = (x: unknown, n: number) => (typeof x === 'string' ? x.slice(0, n) : '');
+  const list = items.map((i, k) => {
+    const c = Array.isArray(i?.candidates) ? i.candidates.slice(0, 12) : [];
+    const answers = Array.isArray(i?.answers) ? i.answers.slice(0, 3).map((a: unknown) => str(a, 200)) : [];
+    return [`${k}. ${str(i?.name, 100)}: ${Number(i?.qty) || 1} ${str(i?.unit, 20)} (${Number(i?.grams) || '?'} ג׳)${i?.about ? `, ${str(i.about, 200)}` : ''}`,
+      ...answers.map((a: string) => `   תשובה: ${a}`),
+      ...c.map((f: { id?: unknown; name?: unknown; kcal?: unknown }) => `   - id ${str(f?.id, 80)}: ${str(f?.name, 150)} (${Number(f?.kcal) || 0} קק״ל ל־100 ג׳)`),
+    ].join('\n');
+  });
+  const res = await new Anthropic().messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: 'low', format: zodOutputFormat(Picks) },
+    system: PICK_SYSTEM,
+    messages: [{ role: 'user', content: `${note.trim() ? `הערה: ${note.trim().slice(0, 500)}` : 'אין הערה.'}\n\n${list.join('\n\n')}` }],
+  });
+  if (res.stop_reason === 'refusal' || !res.parsed_output || res.parsed_output.items.length !== items.length) return reply({ error: 'ההתאמה נכשלה' });
+  return reply({ items: res.parsed_output.items.map((p) => ({ ...p, parts: p.parts.filter((x) => x.name.trim() && x.qty > 0) })) });
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -105,20 +153,25 @@ const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body)
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (!Deno.env.get('ANTHROPIC_API_KEY')) return reply({ error: 'זיהוי תמונות עוד לא הוגדר (חסר מפתח API בשרת).' });
-  let image: string, images: unknown, note: string, mode: string, names: unknown;
+  let image: unknown, images: unknown, note: unknown, mode: string, names: unknown, items: unknown;
   try {
-    ({ image, images, note = '', mode = 'meal', names = [] } = await req.json());
+    ({ image, images, note = '', mode = 'meal', names = [], items = [] } = await req.json());
   } catch {
     return reply({ error: 'בקשה לא תקינה' }, 400);
   }
-  // A meal can come as several photos (`images`, up to MAX_PHOTOS); a label is one (`image`).
-  const shots = Array.isArray(images) ? images : [image];
-  if (!shots.length || shots.length > MAX_PHOTOS || shots.some((s) => typeof s !== 'string' || !s || s.length > 3_000_000)) return reply({ error: 'התמונה חסרה או גדולה מדי' }, 400);
+  if (typeof note !== 'string') return reply({ error: 'בקשה לא תקינה' }, 400);
+  // A meal can come as several photos (`images`, up to MAX_PHOTOS), or as words alone (none); a label is one (`image`).
+  const shots = Array.isArray(images) ? images : image == null ? [] : [image];
+  if (mode !== 'pick') {
+    if (shots.length > MAX_PHOTOS || shots.some((s) => typeof s !== 'string' || !s || s.length > 3_000_000)) return reply({ error: 'התמונה גדולה מדי' }, 400);
+    if (!shots.length && (mode === 'label' || !note.trim())) return reply({ error: 'התמונה חסרה' }, 400);
+  }
   // The app's vitamin names (VITAMINS in src/lib.ts), so a nutrient is named the same on every label.
   const vitaminNames = Array.isArray(names) ? names.filter((n): n is string => typeof n === 'string' && n.length <= 40).slice(0, 60) : [];
 
   try {
-    if (mode === 'label') return await readLabel(shots[0], vitaminNames);
+    if (mode === 'pick') return await pick(note, items);
+    if (mode === 'label') return await readLabel(shots[0] as string, vitaminNames);
     const res = await new Anthropic().messages.parse({
       model: MODEL,
       max_tokens: 4000,
@@ -127,13 +180,19 @@ Deno.serve(async (req) => {
       messages: [{
         role: 'user',
         content: [
-          ...shots.map((data) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data } })),
-          { type: 'text', text: note.trim() ? `הערה: ${note.trim().slice(0, 500)}` : 'אין הערה.' },
+          ...shots.map((data) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: data as string } })),
+          { type: 'text', text: note.trim() ? `${shots.length ? 'הערה' : 'בלי תמונה. מה שאכלתי'}: ${note.trim().slice(0, 500)}` : 'אין הערה.' },
         ],
       }],
     });
-    if (res.stop_reason === 'refusal' || !res.parsed_output) return reply({ error: 'לא הצלחתי לזהות מזונות בתמונה. אפשר לכתוב את הארוחה במקום.' });
-    return reply({ items: res.parsed_output.items.filter((i) => i.name.trim() && i.qty > 0) });
+    if (res.stop_reason === 'refusal' || !res.parsed_output) return reply({ error: 'לא הצלחתי לזהות מזונות. אפשר לכתוב את הארוחה במקום.' });
+    const keep = res.parsed_output.items.map((i) => !!i.name.trim() && i.qty > 0);
+    const found = res.parsed_output.items.filter((_, k) => keep[k]);
+    // a question points at its item by index, which dropping empty items shifts
+    const questions = res.parsed_output.questions
+      .filter((q) => keep[q.item] && q.text.trim() && q.options.length >= 2)
+      .slice(0, 3).map((q) => ({ ...q, item: keep.slice(0, q.item).filter(Boolean).length, options: q.options.slice(0, 4) }));
+    return reply({ items: found, questions });
   } catch (e) {
     console.error(e);
     const status = e instanceof Anthropic.APIError ? e.status : undefined;

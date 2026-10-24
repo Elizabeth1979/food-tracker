@@ -166,6 +166,9 @@ main button.banner { width: 100%; }
 .seg button .i { color: var(--muted); }
 .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500; }
 .seg button.on .i { color: inherit; }
+/* answers to a question: as many as fit a line, long ones wrap */
+legend + .seg { flex-wrap: wrap; margin-top: 8px; }
+legend + .seg button { white-space: normal; }
 .list { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; }
 .list .row { padding-inline: 4px; }
 /* add dialog: one list of usual things; ＋ adds, tap again takes back; a food's name opens the amount */
