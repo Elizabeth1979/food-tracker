@@ -271,15 +271,27 @@ export function MicroLine({ n }: { n: Nut }) {
   return parts.length ? <div className="micro muted">{parts.map((p) => <span key={p}>{p}</span>)}</div> : null;
 }
 
+type FoodLike = Nut & { name: string; servingG: number; source?: string | null };
+
 // One-line nutrition summary for a food in lists: calories and macros for its serving size, in words.
 // Micronutrients show once a food is picked (NutLine). Own foods and FFQ group averages get a tag.
-export function FoodSummary({ f, tags = true }: { f: Nut & { name: string; servingG: number; source?: string | null }; tags?: boolean }) {
+export function FoodSummary({ f, tags = true, kcal = true }: { f: FoodLike; tags?: boolean; kcal?: boolean }) {
   return (
     <small className="muted food-sum">
       {tags && f.source !== 'moh' && <span className="tag">שלי</span>}
       {isFFQ(f) && <span className="tag warn" title="ממוצע של כמה מזונות משאלון תזונה, לא מזון מסוים">ממוצע כללי</span>}
-      <span>ל־{f.servingG} ג׳: <b className="kcal">{f.kcal} קק״ל</b> · פחמימות {f.carbs} · שומן {f.fat} · חלבון {f.protein}</span>
+      <span>ל־{f.servingG} ג׳: {kcal && <><b className="kcal">{f.kcal} קק״ל</b> · </>}פחמימות {f.carbs} · שומן {f.fat} · חלבון {f.protein}</span>
     </small>
+  );
+}
+
+// A search result: the name with its calories on the same line (like the usual foods), the macros under it.
+export function FoodHit({ f, onClick }: { f: FoodLike; onClick: () => void }) {
+  return (
+    <button className="row hit" onClick={onClick}>
+      <div className="grow"><div>{f.name}</div><FoodSummary f={f} kcal={false} /></div>
+      <span className="kcal">{f.kcal}<span className="sr-only"> קק״ל</span></span>
+    </button>
   );
 }
 

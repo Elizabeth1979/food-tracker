@@ -3,7 +3,7 @@ import type { Ctx } from './App';
 import { GRAMS, MEALS, addDays, addEntries, addUnit, json, amountLabel, client, fmtDate, itemFor, loadEntries, mealItems, parseLine, pickItem, readLabel, readPhoto, savePhoto, scale, searchFoods, sum, today, unitsOf, type Entry, type Food, type Item, type MealKey, type MealPhoto, type Nut, type Parsed, type SavedMeal, type Unit } from './lib';
 import { norm } from './search';
 import { goalsLeft, whatFits, type Goals } from './goals';
-import { FileButton, FoodSummary, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
+import { FileButton, FoodHit, Modal, PhotoPick, UNIT_HINT, UnitInputs, Why, unitOf, usePhotoUrl, type UnitDraft } from './ui';
 import { FoodForm, labelFood, saveFood } from './Foods';
 import { ReviewList } from './Review';
 import { Icon } from './icons';
@@ -247,9 +247,7 @@ export function AddDialog({ ctx, meal: meal0, date, fromFoods, left, onClose, on
               )}
             </>}
             {q && hits.map((f) => (
-              <button key={f.id} className="row" onClick={() => setSel(f)}>
-                <div className="grow"><div>{f.name}</div><FoodSummary f={f} /></div>
-              </button>
+              <FoodHit key={f.id} f={f} onClick={() => setSel(f)} />
             ))}
             {!q && !usual.length && <p className="muted">מה שתרשמו יופיע כאן בפעם הבאה, להוספה בלחיצה אחת.</p>}
             {q && <button className="row muted" onClick={() => setCreating({ name: q })}><Icon name="plus" />מזון חדש: ״{q}״</button>}
