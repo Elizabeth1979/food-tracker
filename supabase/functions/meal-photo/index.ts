@@ -9,6 +9,7 @@ import { zodOutputFormat } from 'npm:@anthropic-ai/sdk@0.129.0/helpers/zod';
 import { z } from 'npm:zod@4.6.5';
 
 const MODEL = Deno.env.get('MEAL_PHOTO_MODEL') ?? 'claude-haiku-5-5';
+const MAX_PHOTOS = 4; // the app's limit too (MAX_PHOTOS in src/lib.ts)
 // The unit words the app's parser and food database understand.
 const UNITS = ['גרם', 'כף', 'כפית', 'כוס', 'ספל', 'יחידה', 'פרוסה', 'גביע', 'מנה', 'חופן'] as const;
 
@@ -23,6 +24,7 @@ const Meal = z.object({
 });
 
 const SYSTEM = `You look at a photo of a meal and list the foods in it for a Hebrew food diary.
+- There may be several photos of the same meal (other angles, another dish, the drink): list each food once across all of them, never twice because two photos show it.
 - One item per food, Hebrew names as they appear in the Israeli Ministry of Health food database (צמרת): generic and short ("ענבים", "גבינה לבנה 5%", "לחם מלא"), no brands unless the packaging shows one. Mashed potato is "פירה".
 - Each food once: a potato that is cut, peeled or partly squashed is still one item, not "boiled" plus "mashed".
 - Estimate each amount in the most natural unit: pieces (יחידה) for countable foods, spoons (כף/כפית) for spreads and toppings, cups or a גביע for yogurt, grams when nothing else fits. A יחידה is one whole item (a whole head of lettuce, a whole potato): for leaves, slices or chunks of something use grams.
@@ -103,18 +105,20 @@ const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body)
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (!Deno.env.get('ANTHROPIC_API_KEY')) return reply({ error: 'זיהוי תמונות עוד לא הוגדר (חסר מפתח API בשרת).' });
-  let image: string, note: string, mode: string, names: unknown;
+  let image: string, images: unknown, note: string, mode: string, names: unknown;
   try {
-    ({ image, note = '', mode = 'meal', names = [] } = await req.json());
+    ({ image, images, note = '', mode = 'meal', names = [] } = await req.json());
   } catch {
     return reply({ error: 'בקשה לא תקינה' }, 400);
   }
-  if (typeof image !== 'string' || !image || image.length > 3_000_000) return reply({ error: 'התמונה חסרה או גדולה מדי' }, 400);
+  // A meal can come as several photos (`images`, up to MAX_PHOTOS); a label is one (`image`).
+  const shots = Array.isArray(images) ? images : [image];
+  if (!shots.length || shots.length > MAX_PHOTOS || shots.some((s) => typeof s !== 'string' || !s || s.length > 3_000_000)) return reply({ error: 'התמונה חסרה או גדולה מדי' }, 400);
   // The app's vitamin names (VITAMINS in src/lib.ts), so a nutrient is named the same on every label.
   const vitaminNames = Array.isArray(names) ? names.filter((n): n is string => typeof n === 'string' && n.length <= 40).slice(0, 60) : [];
 
   try {
-    if (mode === 'label') return await readLabel(image, vitaminNames);
+    if (mode === 'label') return await readLabel(shots[0], vitaminNames);
     const res = await new Anthropic().messages.parse({
       model: MODEL,
       max_tokens: 4000,
@@ -123,7 +127,7 @@ Deno.serve(async (req) => {
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+          ...shots.map((data) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data } })),
           { type: 'text', text: note.trim() ? `הערה: ${note.trim().slice(0, 500)}` : 'אין הערה.' },
         ],
       }],

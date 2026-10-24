@@ -158,8 +158,11 @@ async function shrunk(file: File, max: number) {
   return c;
 }
 const shrink = async (file: File, max = 1024) => (await shrunk(file, max)).toDataURL('image/jpeg', 0.8).split(',')[1];
-export async function readPhoto(file: File, note: string): Promise<Parsed[]> {
-  const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string; grams?: number; hidden?: boolean }[]; error?: string }>('meal-photo', { body: { image: await shrink(file), note } });
+// Several photos of one meal (another angle, the drink) are read together, so a food two photos show counts once.
+export const MAX_PHOTOS = 4; // the meal-photo function's limit too
+export async function readPhoto(files: File[], note: string): Promise<Parsed[]> {
+  const images = await Promise.all(files.map((f) => shrink(f)));
+  const { data, error } = await supabase.functions.invoke<{ items?: { name: string; qty: number; unit: string; grams?: number; hidden?: boolean }[]; error?: string }>('meal-photo', { body: { images, note } });
   if (error || !data?.items) throw new Error(data?.error ?? 'זיהוי התמונה לא זמין כרגע. אפשר לכתוב את הארוחה במקום.');
   return data.items.map((i) => ({ text: `${i.name}, ${i.qty} ${i.unit}`, query: i.name, qty: i.qty, unit: i.unit, grams: i.grams, hidden: i.hidden }));
 }
