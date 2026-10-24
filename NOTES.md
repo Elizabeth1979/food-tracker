@@ -2,6 +2,15 @@
 
 What was done in each work session and what's next. Newest first.
 
+## 2026-10-24: a photo's cooked rice was raw rice, and 3 spoons became 120 g
+
+**Done:**
+- The owner's leftover rice came back as "אורז, לבן, לא מבושל" (365 kcal/100 g instead of 130): the typed "מבושל" matched the "מבושל" in "לא מבושל". Search now pushes a food down when its name negates a typed word ("לא " + word); "אורז לא מבושל" still finds raw rice. Test in `search.test.ts`.
+- The photo said "3 כף" but 120 g, and the grams won (438 kcal). A weight guess now overrules a unit only when the unit is far heavier (the lettuce-heads case); otherwise the smaller amount stays, as the prompt already asks ("guess the smaller amount"). Test in `search.test.ts`.
+- Lettuce leaves: the photo can now answer in "עלה" (leaves) instead of grams, and typing "3 עלים חסה" works. `meal-photo` redeployed.
+
+**Next:** the photo model is Haiku (`claude-haiku-5-5`, unless the `MEAL_PHOTO_MODEL` secret says otherwise). Amount guesses are its weakest part; a bigger model costs more per photo, the owner's call.
+
 ## 2026-10-24: a photo's "מרק תירס" is a soup, not a packet
 
 **Done:**

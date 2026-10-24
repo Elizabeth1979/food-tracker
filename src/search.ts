@@ -57,6 +57,8 @@ export function searchFoods(foods: Food[], q: string, recent: string[]) {
     s += PROCESSED.filter((w) => !words.includes(w) && (has(what, w) || has(what, 'ו' + w))).length * 15;
     s += RARE.filter((w) => !words.includes(w) && has(name, w)).length * 20;
     if (has(name, 'לא מבושל') && !words.includes('מבושל')) s += 10;
+    // a typed word the name negates: "אורז מבושל" is not "אורז, לבן, לא מבושל" (365 kcal, not 130)
+    if (!words.includes('לא')) s += words.filter((w) => has(name, 'לא ' + w)).length * 40;
     if ((has(first, 'עם') || has(first, 'או')) && !words.includes('עם')) s += 10; // mixed dishes: "אורז עם בצל"
     // fresh produce: exactly what was typed ("גזר, טרי") before a longer name that starts with it ("גזר לבן", parsnip)
     if (FRESH.some((w) => has(name, w))) s -= forms(query).includes(first) ? 4 : 3;
@@ -82,7 +84,7 @@ const NUMBERS: Record<string, number> = {
 const UNITS: Record<string, string> = {
   גרם: GRAMS, גר: GRAMS, ג: GRAMS, g: GRAMS, gr: GRAMS, גרמים: GRAMS, מל: GRAMS, ml: GRAMS,
   כף: 'כף', כפות: 'כף', כפית: 'כפית', כפיות: 'כפית', כוס: 'כוס', כוסות: 'כוס', ספל: 'ספל', ספלים: 'ספל',
-  פרוסה: 'פרוסה', פרוסות: 'פרוסה', יחידה: 'יחידה', יחידות: 'יחידה', גביע: 'גביע', גביעים: 'גביע',
+  פרוסה: 'פרוסה', פרוסות: 'פרוסה', עלה: 'עלה', עלים: 'עלה', יחידה: 'יחידה', יחידות: 'יחידה', גביע: 'גביע', גביעים: 'גביע',
   מנה: 'מנה', מנות: 'מנה', חופן: 'חופן', חופנים: 'חופן', קערה: 'קערה', קערית: 'קערית', צלחת: 'צלחת', פלח: 'פלח', פלחים: 'פלח',
   ביס: 'ביס', ביסים: 'ביס', כדור: 'כדור', שקית: 'שקית', אריזה: 'אריזה', בקבוק: 'בקבוק', פחית: 'פחית', קופסה: 'קופסה',
 };
@@ -123,12 +125,13 @@ export function parseLine(text: string): Parsed[] {
   return out;
 }
 
-// Picks the food's unit for a parsed amount. A photo's weight guess overrules a unit far off it:
+// Picks the food's unit for a parsed amount. A photo's weight guess overrules a unit far heavier than it:
 // "4 יחידה" of lettuce meant 4 leaves, not 4 heads of 648 g. Then the food's unit that fits that count is used, else grams.
+// A guess far heavier than the unit doesn't: photos overestimate, so the smaller amount wins ("3 כף" of rice, not 120 g).
 export function unitFor(food: Food, p: Pick<Parsed, 'qty' | 'unit' | 'grams'>): { qty: number; unit: Unit } {
   const a = unitByName(food, p);
   const g = p.grams;
-  if (!g || off(a.qty * a.unit.g, g) < OFF) return a;
+  if (!g || a.qty * a.unit.g < g * OFF) return a;
   const best = unitsOf(food).slice(1).sort((x, y) => off(a.qty * x.g, g) - off(a.qty * y.g, g))[0];
   return best && off(a.qty * best.g, g) < OFF ? { qty: a.qty, unit: best } : { qty: Math.round(g), unit: unitsOf(food)[0] };
 }
