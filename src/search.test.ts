@@ -39,6 +39,10 @@ test('everyday searches: whole words, either/or names, niche versions last', () 
 test('a Hebrew plural finds the singular', () => {
   assert.match(first('ביצים'), /^ביצה/);
   assert.match(first('עגבניות'), /^עגבניה/);
+  // the owner couldn't find egg whites
+  assert.match(first('חלבונים'), /^ביצה חלבון/);
+  assert.match(first('חלבוני ביצה'), /^ביצה חלבון/); // the singular ends in a final letter
+  assert.match(first('לימונים'), /^לימון/);
 });
 
 test('FFQ averages come last', () => {

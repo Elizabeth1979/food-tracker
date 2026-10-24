@@ -19,17 +19,21 @@ const RARE = ['אם', 'תינוקות', 'הודו', 'בופאלו', 'נאקות'
   // organs, odd cuts and fast food: "עוף" means the meat, not its liver, feet or a McDonald's item
   'לב', 'לבבות', 'כבד', 'טחול', 'קורקבן', 'קורקבנים', 'כליות', 'לשון', 'מוח', 'קיבה', 'גב', 'צוואר', 'עצמות', 'רגליים',
   'מקדונלדס', 'גלוטן', 'הצומח']; // gluten-free and plant-based ("מן הצומח") versions only when typed
-// Words a photo or a person uses that the database names otherwise: mashed potato is "פירה".
-const SAME: Record<string, string> = { מעוך: 'פירה', מעוכים: 'פירה', מעוכה: 'פירה' };
+// Words a photo or a person uses that the database names otherwise: mashed potato is "פירה", and "חלבונים" are egg whites
+// ("חלבון" alone is protein too).
+const SAME: Record<string, string> = { מעוך: 'פירה', מעוכים: 'פירה', מעוכה: 'פירה', חלבונים: 'ביצה חלבון' };
 const FRESH = ['טרי', 'טריה', 'טריים', 'טריות', 'רגיל'];
 // Everyday staples whose plain entry loses on name length alone: "פיתה" means a regular pita, not a toasted one.
 const STAPLES: Record<string, string> = { פיתה: 'moh-1946' };
 // "ביצים" should find "ביצה", "עגבניות" "עגבניה": also accept a rough singular of Hebrew plurals.
-const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, w.slice(0, -2)] : w.endsWith('ות') ? [w, w.slice(0, -2) + 'ה', w.slice(0, -2)] : [w]);
+// A singular can end in a final letter: "לימונים", "חלבוני ביצה" find "לימון", "חלבון" (and "ביצים" still "ביצ…").
+const FINAL: Record<string, string> = { כ: 'ך', מ: 'ם', נ: 'ן', פ: 'ף', צ: 'ץ' };
+const cut = (w: string, n: number) => { const s = w.slice(0, -n); return FINAL[s.at(-1)!] ? [s, s.slice(0, -1) + FINAL[s.at(-1)!]] : [s]; };
+const forms = (w: string) => (w.length < 5 ? [w] : w.endsWith('ים') ? [w, ...cut(w, 2)] : w.endsWith('ות') ? [w, w.slice(0, -2) + 'ה', ...cut(w, 2)] : w.endsWith('י') ? [w, ...cut(w, 1)] : [w]);
 const sameWord = (a: string, w: string) => forms(w).some((x) => a === x || (x !== w && a.startsWith(x) && a.length <= x.length + 1));
 
 export function searchFoods(foods: Food[], q: string, recent: string[]) {
-  const words = norm(q).split(' ').filter(Boolean).map((w) => SAME[w] ?? w);
+  const words = norm(q).split(' ').filter(Boolean).flatMap((w) => (SAME[w] ?? w).split(' '));
   const query = words.join(' ');
   const has = (text: string, phrase: string) => ` ${text} `.includes(` ${phrase} `);
   const rank = (f: Food) => {
