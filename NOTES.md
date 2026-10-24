@@ -6,7 +6,7 @@ What was done in each work session and what's next. Newest first.
 
 **Done:**
 - The owner saw a cut-off row under "סיום" while searching "מסטיק": the button stuck to the bottom of the scrolling list, and rows scrolled through the space below it. `Modal` now takes a `footer` that sits under the scrolling body; the add window's "סיום" lives there. Screen test: at keyboard height, no result shows below "סיום" (fails on the old layout).
-- They couldn't tell their own foods from the MoH ones. Own and edited foods already carry "שלי" (none of the gums did: all MoH; the Bazooka logged today is first because it was logged). Search results now open with one line saying so (`MINE_HINT`, shared with the foods page).
+- They couldn't tell their own foods from the MoH ones. Own and edited foods already carry "שלי" (none of the gums did: all MoH; the Bazooka logged today is first because it was logged). Search results now open with one line saying so (`MINE_HINT`, shared with the foods page), shortened at the owner's ask to fit one line on the phone.
 
 ## 2026-10-24: egg whites in search
 
